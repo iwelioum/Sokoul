@@ -60,6 +60,7 @@
 		font-weight: 700;
 		color: var(--text-primary);
 		letter-spacing: -0.3px;
+		font-family: 'Playfair Display', serif;
 	}
 
 	.see-more {
