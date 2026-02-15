@@ -1,0 +1,149 @@
+version: "3.9"
+
+# Créez un fichier .env à la racine et définissez les variables ci-dessous
+# Exemple :
+# DB_PASSWORD=your_strong_password
+# GRAFANA_PASSWORD=your_strong_password
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: sokoul
+      POSTGRES_USER: sokoul
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "5432:5432"
+    # Les paramètres ci-dessous sont optimisés pour un serveur.
+    # Pour un développement simple, vous pouvez les commenter.
+    command: >
+      postgres
+        -c shared_buffers=256MB
+        -c effective_cache_size=512MB
+        -c work_mem=16MB
+        -c maintenance_work_mem=128MB
+        -c random_page_cost=1.1
+
+  redis:
+    image: redis:7.2-alpine
+    restart: unless-stopped
+    command: >
+      redis-server
+        --maxmemory 1gb
+        --maxmemory-policy allkeys-lru
+        --io-threads 4
+        --io-threads-do-reads yes
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+
+  nats:
+    image: nats:2.10-alpine
+    restart: unless-stopped
+    command: >
+      -js
+      -sd /data
+      -m 8222
+    volumes:
+      - nats_data:/data
+    ports:
+      - "4222:4222"
+      - "8222:8222"  # monitoring
+
+  flaresolverr:
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    container_name: flaresolverr
+    restart: unless-stopped
+    environment:
+      LOG_LEVEL: info # Adjust to "debug" for more verbose logging
+    ports:
+      - "8191:8191"
+
+  gluetun:
+    image: qmcgaw/gluetun:latest
+    container_name: gluetun
+    cap_add:
+      - NET_ADMIN
+    restart: unless-stopped
+    environment:
+      - VPNSP=${GLUETUN_VPN_PROVIDER}
+      - OPENVPN_USER=${GLUETUN_USER}
+      - OPENVPN_PASSWORD=${GLUETUN_PASSWORD}
+      - TZ=Europe/Paris
+    volumes:
+      - ./data/gluetun:/gluetun
+    ports:
+      - "9696:9696"
+      - "9117:9117"
+
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    restart: unless-stopped
+    network_mode: "service:gluetun"
+    depends_on:
+      - gluetun
+    environment:
+      PUID: 1000
+      PGID: 1000
+      TZ: Europe/Paris
+    volumes:
+      - ./data/prowlarr:/config
+
+  jackett:
+    image: linuxserver/jackett:latest
+    restart: unless-stopped
+    container_name: jackett
+    network_mode: "service:gluetun"
+    depends_on:
+      - gluetun
+    environment:
+      PUID: 1000
+      PGID: 1000
+      TZ: Europe/Paris
+    volumes:
+      - jackett_config:/config
+
+  prometheus:
+    image: prom/prometheus:latest
+    restart: unless-stopped
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prom_data:/prometheus
+    ports:
+      - "9090:9090"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  grafana:
+    image: grafana/grafana:latest
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+    volumes:
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3001:3000"
+
+  loki:
+    image: grafana/loki:latest
+    restart: unless-stopped
+    ports:
+      - "3100:3100"
+
+volumes:
+  pg_data:
+    driver: local
+  redis_data:
+    driver: local
+  nats_data:
+    driver: local
+  prowlarr_data:
+    driver: local
+  prom_data:
+  grafana_data:
+  jackett_config:

@@ -1,0 +1,17 @@
+pub mod auth;
+pub mod downloads;
+pub mod error;
+pub mod files;
+pub mod health;
+pub mod library;
+pub mod media;
+pub mod middleware;
+pub mod recommendations;
+pub mod search;
+pub mod storage;
+pub mod streaming;
+pub mod tasks;
+pub mod tmdb;
+pub mod watch_history;
+pub mod watchlist;
+pub mod ws;

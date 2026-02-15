@@ -1,0 +1,11 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: 'sokoul'
+    static_configs:
+      - targets: ['host.docker.internal:3000'] # Si Sokoul tourne en natif sur l'hôte
+
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['postgres:5432']

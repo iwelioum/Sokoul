@@ -1,0 +1,41 @@
+[package]
+name = "sokoul"
+version = "0.2.0"
+edition = "2021"
+
+[dependencies]
+tokio = { version = "1.36", features = ["full"] }
+axum = { version = "0.7", features = ["ws", "macros"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "rust_decimal", "migrate"] }
+redis = { version = "0.24", features = ["tokio-comp"] }
+async-nats = "0.33"
+reqwest = { version = "0.11", features = ["json"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+anyhow = "1.0"
+thiserror = "1.0"
+uuid = { version = "1.7", features = ["serde", "v4"] }
+chrono = { version = "0.4", features = ["serde"] }
+teloxide = { version = "0.12", features = ["macros"] }
+librqbit = "8.1"
+playwright = "0.0.20"
+futures = "0.3"
+once_cell = "1.19"
+dotenvy = "0.15"
+tower-http = { version = "0.5", features = ["cors", "trace"] }
+rust_decimal = "1.33"
+sysinfo = "0.30"
+async-trait = "0.1"
+strsim = "0.11"
+url = "2.5"
+axum-prometheus = "0.6"
+tower = { version = "0.4", features = ["util", "limit"] }
+tokio-util = { version = "0.7", features = ["io"] }
+
+[dev-dependencies]
+wiremock = "0.6"
+tokio-test = "0.4"
+regex = "1.10"
+urlencoding = "2.1"
