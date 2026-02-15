@@ -98,6 +98,18 @@ CREATE TABLE IF NOT EXISTS config (
     updated_at      TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Historique de visionnage
+CREATE TABLE IF NOT EXISTS watch_history (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    media_id        UUID NOT NULL REFERENCES media(id) ON DELETE CASCADE,
+    user_id         UUID NOT NULL,
+    watched_at      TIMESTAMPTZ DEFAULT NOW(),
+    progress_seconds INTEGER DEFAULT 0,
+    total_seconds   INTEGER DEFAULT 0,
+    completed       BOOLEAN DEFAULT FALSE,
+    UNIQUE (media_id, user_id)
+);
+
 -- Index optimisés
 CREATE INDEX IF NOT EXISTS idx_media_tmdb ON media(tmdb_id);
 CREATE INDEX IF NOT EXISTS idx_media_type ON media(media_type);
