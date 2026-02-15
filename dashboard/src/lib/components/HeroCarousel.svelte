@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { TmdbSearchItem } from '$lib/api/client';
 	import { tmdbImageUrl } from '$lib/api/client';
+	import { getDominantColor, getTextColor, getOverlayOpacity, getGradientMaskOpacity } from '$lib/utils/colorAnalysis';
 
 	interface Props {
 		items: TmdbSearchItem[];
@@ -15,6 +16,8 @@
 	let currentIndex = $state(0);
 	let isAutoPlaying = $state(true);
 	let autoPlayTimer: ReturnType<typeof setTimeout> | null = $state(null);
+	let textColorMode = $state<'light' | 'dark'>('light');
+	let overlayOpacity = $state(0.3);
 
 	// Derived
 	const currentSlide = $derived(items[currentIndex] ?? null);
@@ -45,6 +48,17 @@
 		return () => {
 			if (autoPlayTimer) clearTimeout(autoPlayTimer);
 		};
+	});
+
+	// Analyze image colors when slide changes
+	$effect(async () => {
+		if (!heroBackdrop) return;
+
+		const color = await getDominantColor(heroBackdrop);
+		if (color) {
+			textColorMode = getTextColor(color.luminance);
+			overlayOpacity = getOverlayOpacity(color.luminance);
+		}
 	});
 
 	// Functions
@@ -87,7 +101,9 @@
 
 <div
 	class="hero-carousel"
-	style={heroBackdrop ? `--backdrop-image: url('${heroBackdrop}')` : ''}
+	class:text-dark={textColorMode === 'dark'}
+	class:text-light={textColorMode === 'light'}
+	style={heroBackdrop ? `--backdrop-image: url('${heroBackdrop}'); --overlay-opacity: ${overlayOpacity}` : ''}
 	onmouseenter={handleMouseEnter}
 	onmouseleave={handleMouseLeave}
 	role="region"
@@ -236,8 +252,10 @@
 		width: 40%;
 		height: 100%;
 		background: var(--gradient-overlay);
+		opacity: var(--overlay-opacity, 0.3);
 		pointer-events: none;
 		z-index: 2;
+		transition: opacity var(--transition-smooth);
 	}
 
 	.hero-carousel-mask {
@@ -259,6 +277,29 @@
 		z-index: 3;
 		color: white;
 		text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+		transition: color var(--transition-smooth);
+	}
+
+	/* Dark image: light text */
+	.hero-carousel.text-light .hero-carousel-content {
+		color: white;
+		text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+	}
+
+	/* Bright image: dark text */
+	.hero-carousel.text-dark .hero-carousel-content {
+		color: var(--text-primary);
+		text-shadow: 0 1px 4px rgba(255, 255, 255, 0.3);
+	}
+
+	.hero-carousel.text-dark .btn-primary {
+		background: var(--accent);
+		color: white;
+	}
+
+	.hero-carousel.text-dark .btn-secondary {
+		border-color: var(--text-primary);
+		color: var(--text-primary);
 	}
 
 	.hero-carousel-meta {
