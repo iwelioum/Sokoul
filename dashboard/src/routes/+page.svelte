@@ -93,7 +93,7 @@
 	<title>SOKOUL — Accueil</title>
 </svelte:head>
 
-<!-- Hero Carousel -->
+<!-- Hero Carousel (Full Width) -->
 <HeroCarousel
 	items={trendingAll.slice(0, 5)}
 	onPlay={handleHeroPlay}
@@ -101,7 +101,7 @@
 	loading={loadingTrending}
 />
 
-<!-- Catalog -->
+<!-- Catalog (Contained) -->
 <div class="catalog">
 
 	{#if continueWatching.length > 0}
