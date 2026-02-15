@@ -23,17 +23,20 @@
 	--danger:        #E05252;
 	--info:          #5BA4CF;
 	--border:        #ECECEC;   /* Bordure Légère */
+	--placeholder:   #EFEBE9;   /* Placeholder Beige */
 	--radius:        12px;
 	--radius-sm:     8px;
 
 	/* ── Design tokens ── */
 	--gradient-accent:   linear-gradient(135deg, #C04A35, #8B7355);
-	--gradient-hero-mask: linear-gradient(to bottom, transparent 70%, #F9F7F2 100%);
+	--gradient-hero-mask: linear-gradient(to bottom, transparent 0%, rgba(249, 247, 242, 0.4) 40%, #F9F7F2 100%);
 	--gradient-overlay:   linear-gradient(to right, rgba(0,0,0,0.3) 0%, transparent 100%);
 	
 	--shadow-subtle:      0 4px 12px rgba(0,0,0,0.08);
 	--shadow-medium:      0 8px 24px rgba(0,0,0,0.12);
 	--shadow-elevated:    0 12px 48px rgba(0,0,0,0.15);
+	--shadow-warm:        0 10px 20px -5px rgba(60, 40, 30, 0.15);
+	--shadow-warm-md:     0 16px 32px -8px rgba(60, 40, 30, 0.18);
 	
 	--transition-fast:    0.15s ease;
 	--transition-smooth:  0.3s cubic-bezier(0.4, 0, 0.2, 1);

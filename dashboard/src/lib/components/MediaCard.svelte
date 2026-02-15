@@ -108,12 +108,12 @@
 		border-radius: var(--radius);
 		overflow: hidden;
 		background: var(--bg-card);
-		box-shadow: var(--shadow-subtle);
+		box-shadow: var(--shadow-warm);
 		transition: box-shadow var(--transition-smooth);
 	}
 
 	.media-card:hover .poster-wrap {
-		box-shadow: var(--shadow-medium);
+		box-shadow: var(--shadow-warm-md);
 	}
 
 	.poster-wrap img {

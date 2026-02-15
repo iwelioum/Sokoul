@@ -56,10 +56,10 @@
 	}
 
 	.row-title {
-		font-size: 18px;
+		font-size: 22px;
 		font-weight: 700;
-		color: var(--text-primary);
-		letter-spacing: -0.3px;
+		color: #3E2723;
+		letter-spacing: -0.5px;
 		font-family: 'Playfair Display', serif;
 	}
 
@@ -92,8 +92,12 @@
 	}
 
 	.empty-msg {
-		color: var(--text-muted);
+		color: var(--text-secondary);
 		font-size: 14px;
-		padding: 16px 0;
+		padding: 48px 16px;
+		text-align: center;
+		background: linear-gradient(135deg, rgba(239, 235, 233, 0.3) 0%, rgba(224, 215, 211, 0.2) 100%);
+		border-radius: var(--radius);
+		border: 1px dashed var(--border);
 	}
 </style>

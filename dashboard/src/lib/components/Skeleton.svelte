@@ -20,13 +20,14 @@
 	.skeleton {
 		background: linear-gradient(
 			90deg,
-			#242020 25%,
-			#2E2927 50%,
-			#242020 75%
+			#EFEBE9 25%,
+			#E0D7D3 50%,
+			#EFEBE9 75%
 		);
 		background-size: 200% 100%;
 		animation: shimmer 1.5s infinite;
 		flex-shrink: 0;
+		box-shadow: 0 10px 20px -5px rgba(60, 40, 30, 0.08);
 	}
 
 	@keyframes shimmer {
