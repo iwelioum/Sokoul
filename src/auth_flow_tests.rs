@@ -1,6 +1,5 @@
 #[cfg(test)]
 pub mod auth_flow_tests {
-    use std::time::SystemTime;
     use chrono::{Duration, Utc};
     use serde::{Deserialize, Serialize};
 
@@ -187,8 +186,8 @@ pub mod auth_flow_tests {
     fn test_auth_login_flow() {
         // Login with credentials
         struct LoginRequest {
-            email: String,
-            password: String,
+            _email: String,
+            _password: String,
         }
 
         struct LoginResponse {
@@ -216,8 +215,8 @@ pub mod auth_flow_tests {
     #[test]
     fn test_auth_token_refresh_flow() {
         // Refresh access token using refresh token
-        struct RefreshRequest {
-            refresh_token: String,
+        struct _RefreshRequest {
+            _refresh_token: String,
         }
 
         struct RefreshResponse {
@@ -237,7 +236,7 @@ pub mod auth_flow_tests {
     #[test]
     fn test_auth_logout_flow() {
         // Logout: invalidate tokens
-        let user_id = "user-123";
+        let _user_id = "user-123";
         let mut active_tokens = vec!["token-1", "token-2", "token-3"];
 
         // Logout: revoke all tokens
@@ -342,8 +341,8 @@ pub mod auth_flow_tests {
         struct Session {
             session_id: String,
             user_id: String,
-            device: String,
-            created_at: i64,
+            _device: String,
+            _created_at: i64,
         }
 
         let session1 = Session {
