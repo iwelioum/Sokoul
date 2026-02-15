@@ -102,11 +102,7 @@ pub mod precommit_hooks_tests {
         // AWS_SECRET_ACCESS_KEY=
         // PRIVATE_KEY=
         // password=
-        let dangerous_patterns = vec![
-            "AWS_SECRET_ACCESS_KEY=",
-            "PRIVATE_KEY=",
-            "password=",
-        ];
+        let dangerous_patterns = vec!["AWS_SECRET_ACCESS_KEY=", "PRIVATE_KEY=", "password="];
 
         for pattern in dangerous_patterns {
             assert!(!pattern.is_empty(), "Pattern defined");
@@ -159,10 +155,7 @@ pub mod precommit_hooks_tests {
         let _code_files = vec!["new_feature.rs"];
         let test_files = vec!["new_feature_tests.rs"];
 
-        assert!(
-            test_files.len() > 0,
-            "New code should have test file"
-        );
+        assert!(test_files.len() > 0, "New code should have test file");
     }
 
     #[test]
@@ -241,9 +234,9 @@ pub mod precommit_hooks_tests {
         let test_files = vec![".env", "private.key", "config_local.rs"];
 
         for file in test_files {
-            let is_protected = protected_patterns.iter().any(|pattern| {
-                file.starts_with(pattern) || file.contains(pattern)
-            });
+            let is_protected = protected_patterns
+                .iter()
+                .any(|pattern| file.starts_with(pattern) || file.contains(pattern));
             assert!(is_protected, "File {} should be protected", file);
         }
     }

@@ -1,4 +1,9 @@
-use crate::{api::error::ApiError, db, models::{AddWatchlistPayload, WatchlistEntry, PaginatedWatchlist}, AppState};
+use crate::{
+    api::error::ApiError,
+    db,
+    models::{AddWatchlistPayload, PaginatedWatchlist, WatchlistEntry},
+    AppState,
+};
 use axum::{
     extract::{Path, Query, State},
     http::StatusCode,

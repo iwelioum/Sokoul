@@ -1,21 +1,21 @@
 #[cfg(test)]
 pub mod performance_concurrency_tests {
+    use std::sync::Arc;
     use std::time::Instant;
     use tokio::sync::Mutex;
-    use std::sync::Arc;
 
     // ============ PERFORMANCE BENCHMARKS ============
     #[test]
     fn test_scoring_1000_torrents_performance() {
         // Should score 1000 torrents in <100ms
         let start = Instant::now();
-        
+
         for i in 0..1000 {
             let title = format!("Movie.{}.1080p.BluRay.x264", i);
             let _ = title.to_lowercase();
             // Simulate scoring
         }
-        
+
         let elapsed = start.elapsed();
         println!("Scored 1000 items in {}ms", elapsed.as_millis());
         assert!(elapsed.as_millis() < 100, "Scoring too slow");
@@ -25,18 +25,16 @@ pub mod performance_concurrency_tests {
     fn test_fuzzy_matching_performance() {
         // Should fuzzy match on 10k items in <1s
         let queries = vec!["The Matrix", "Breaking Bad", "Inception"];
-        let items: Vec<String> = (0..10000)
-            .map(|i| format!("Title {}", i))
-            .collect();
+        let items: Vec<String> = (0..10000).map(|i| format!("Title {}", i)).collect();
 
         let start = Instant::now();
-        
+
         for query in queries {
             for item in &items {
                 let _ = strsim::jaro(query, item);
             }
         }
-        
+
         let elapsed = start.elapsed();
         println!("Fuzzy matched 10k items in {}ms", elapsed.as_millis());
         assert!(elapsed.as_millis() < 1000, "Fuzzy matching too slow");
@@ -59,7 +57,7 @@ pub mod performance_concurrency_tests {
         let json_str = serde_json::to_string(&json_array).unwrap();
         let _parsed: Vec<serde_json::Value> = serde_json::from_str(&json_str).unwrap();
         let elapsed = start.elapsed();
-        
+
         println!("Parsed 1000 JSON items in {}ms", elapsed.as_millis());
         assert!(elapsed.as_millis() < 100, "JSON parsing too slow");
     }
@@ -132,9 +130,7 @@ pub mod performance_concurrency_tests {
     #[test]
     fn test_large_vector_allocation() {
         // Allocate 100k items, should not crash
-        let items: Vec<String> = (0..100_000)
-            .map(|i| format!("Item {}", i))
-            .collect();
+        let items: Vec<String> = (0..100_000).map(|i| format!("Item {}", i)).collect();
         assert_eq!(items.len(), 100_000);
     }
 
@@ -166,7 +162,7 @@ pub mod performance_concurrency_tests {
     async fn test_no_blocking_in_async() {
         // Should not block event loop
         let start = Instant::now();
-        
+
         let task1 = tokio::spawn(async {
             tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
             "task1"
@@ -182,7 +178,7 @@ pub mod performance_concurrency_tests {
 
         assert_eq!(r1.unwrap(), "task1");
         assert_eq!(r2.unwrap(), "task2");
-        
+
         // Should complete in ~10ms (parallel), not ~20ms (serial)
         println!("Async tasks completed in {}ms", elapsed.as_millis());
         assert!(elapsed.as_millis() < 100);
@@ -190,13 +186,11 @@ pub mod performance_concurrency_tests {
 
     #[tokio::test]
     async fn test_timeout_in_async() {
-        let result = tokio::time::timeout(
-            std::time::Duration::from_millis(100),
-            async {
-                tokio::time::sleep(std::time::Duration::from_secs(1)).await;
-                "done"
-            }
-        ).await;
+        let result = tokio::time::timeout(std::time::Duration::from_millis(100), async {
+            tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+            "done"
+        })
+        .await;
 
         assert!(result.is_err(), "Timeout should have triggered");
     }
@@ -232,14 +226,12 @@ pub mod performance_concurrency_tests {
 
         loop {
             attempt += 1;
-            
-            let result = tokio::time::timeout(
-                std::time::Duration::from_millis(100),
-                async {
-                    // Simulate operation
-                    Ok::<String, String>("success".to_string())
-                }
-            ).await;
+
+            let result = tokio::time::timeout(std::time::Duration::from_millis(100), async {
+                // Simulate operation
+                Ok::<String, String>("success".to_string())
+            })
+            .await;
 
             match result {
                 Ok(Ok(value)) => {
@@ -260,7 +252,7 @@ pub mod performance_concurrency_tests {
         // This test documents that the app should avoid unsafe{}
         // In production, use `cargo check --lib` with MIRI or loom
         // for data race detection
-        
+
         // Placeholder: just documents the requirement
         let safe_value = 42;
         assert_eq!(safe_value, 42);
@@ -270,7 +262,7 @@ pub mod performance_concurrency_tests {
     fn test_owned_vs_borrowed() {
         let owned_string = "owned".to_string();
         let borrowed = &owned_string;
-        
+
         assert_eq!(borrowed, "owned");
         // Rust borrow checker prevents use-after-free
     }
@@ -288,7 +280,7 @@ pub mod load_stress_tests {
     #[tokio::test]
     async fn test_stress_concurrent_tasks() {
         let mut handles = vec![];
-        
+
         for _ in 0..1000 {
             let handle = tokio::spawn(async {
                 let _ = 1 + 1;

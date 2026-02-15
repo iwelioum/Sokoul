@@ -1,5 +1,8 @@
 use crate::{api::error::ApiError, config::CONFIG, AppState};
-use axum::{extract::{Path, State}, Json};
+use axum::{
+    extract::{Path, State},
+    Json,
+};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 

@@ -32,7 +32,10 @@ pub mod chaos_engineering_tests {
             }
         }
 
-        assert_eq!(attempts, 2, "Should attempt connection twice before succeeding");
+        assert_eq!(
+            attempts, 2,
+            "Should attempt connection twice before succeeding"
+        );
         assert!(last_error.is_some(), "Should have recorded error");
     }
 
@@ -66,7 +69,10 @@ pub mod chaos_engineering_tests {
         let concurrent_requests = 20;
         let queued = concurrent_requests - pool_size;
 
-        assert_eq!(queued, 10, "10 requests should be queued when pool exhausted");
+        assert_eq!(
+            queued, 10,
+            "10 requests should be queued when pool exhausted"
+        );
     }
 
     #[test]
@@ -161,7 +167,10 @@ pub mod chaos_engineering_tests {
         let redeliveries = 3;
         let should_go_to_dlq = redeliveries >= max_redeliveries;
 
-        assert!(should_go_to_dlq, "Message should go to DLQ after max redeliveries");
+        assert!(
+            should_go_to_dlq,
+            "Message should go to DLQ after max redeliveries"
+        );
     }
 
     #[test]
@@ -183,7 +192,10 @@ pub mod chaos_engineering_tests {
         let redis_available = false;
         let fallback_to_db = !redis_available;
 
-        assert!(fallback_to_db, "Should fallback to database when Redis unavailable");
+        assert!(
+            fallback_to_db,
+            "Should fallback to database when Redis unavailable"
+        );
     }
 
     #[test]
@@ -243,7 +255,10 @@ pub mod chaos_engineering_tests {
         let success_rate = successful_packets as f64 / total_packets as f64;
 
         // With retransmissions, should still succeed
-        assert!(success_rate >= 0.90, "Should achieve >= 90% delivery with 5% loss");
+        assert!(
+            success_rate >= 0.90,
+            "Should achieve >= 90% delivery with 5% loss"
+        );
     }
 
     #[test]
@@ -318,16 +333,26 @@ pub mod chaos_engineering_tests {
             acknowledged += 1; // Ack each message
         }
 
-        assert_eq!(acknowledged, pending_messages, "All messages should be acked");
+        assert_eq!(
+            acknowledged, pending_messages,
+            "All messages should be acked"
+        );
     }
 
     #[test]
     fn test_graceful_shutdown_health_check_returns_unhealthy() {
         // During shutdown, health check should return unhealthy
         let shutting_down = true;
-        let health_status = if shutting_down { "unhealthy" } else { "healthy" };
+        let health_status = if shutting_down {
+            "unhealthy"
+        } else {
+            "healthy"
+        };
 
-        assert_eq!(health_status, "unhealthy", "Health check should be unhealthy");
+        assert_eq!(
+            health_status, "unhealthy",
+            "Health check should be unhealthy"
+        );
     }
 
     #[test]
@@ -403,10 +428,7 @@ pub mod chaos_engineering_tests {
         let total_workers = search_workers + download_workers;
 
         // If search overwhelmed, shouldn't affect downloads
-        assert!(
-            total_workers == 15,
-            "Workers should be isolated by type"
-        );
+        assert!(total_workers == 15, "Workers should be isolated by type");
     }
 
     #[test]
@@ -452,7 +474,10 @@ pub mod chaos_engineering_tests {
         let fd_available = fd_limit - fd_used;
 
         let should_reject_new = fd_available == 0;
-        assert!(should_reject_new, "Should reject new connections when FDs exhausted");
+        assert!(
+            should_reject_new,
+            "Should reject new connections when FDs exhausted"
+        );
     }
 
     // ============ PARTIAL FAILURE HANDLING ============

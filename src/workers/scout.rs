@@ -3,9 +3,13 @@ use crate::{
     config::CONFIG,
     db,
     events::{self, SearchRequestedPayload, SearchResultsFoundPayload, WsEvent},
-    models::CreateMediaPayload, AppState,
-    providers::{jackett::JackettProvider, prowlarr::ProwlarrProvider, streaming::StreamingProvider, ProviderRegistry},
+    models::CreateMediaPayload,
+    providers::{
+        jackett::JackettProvider, prowlarr::ProwlarrProvider, streaming::StreamingProvider,
+        ProviderRegistry,
+    },
     utils::scoring,
+    AppState,
 };
 use futures::stream::StreamExt;
 use std::sync::Arc;
@@ -72,19 +76,30 @@ pub async fn scout_worker(state: Arc<AppState>) -> anyhow::Result<()> {
         tracing::info!("Debut de la recherche TMDB pour: '{}'", payload.query);
 
         // Emit search started event
-        let _ = state.event_tx.send(WsEvent::SearchStarted {
-            query: payload.query.clone(),
-        }.to_json());
+        let _ = state.event_tx.send(
+            WsEvent::SearchStarted {
+                query: payload.query.clone(),
+            }
+            .to_json(),
+        );
 
         let tmdb_results = match tmdb_client.search_multi(&payload.query).await {
             Ok(results) => results,
             Err(e) => {
-                tracing::error!("Echec recherche TMDB pour '{}': {}. Le message sera re-traite.", payload.query, e);
+                tracing::error!(
+                    "Echec recherche TMDB pour '{}': {}. Le message sera re-traite.",
+                    payload.query,
+                    e
+                );
                 continue;
             }
         };
 
-        tracing::info!("TMDB a trouve {} resultat(s) pour '{}'. Traitement en parallele.", tmdb_results.len(), payload.query);
+        tracing::info!(
+            "TMDB a trouve {} resultat(s) pour '{}'. Traitement en parallele.",
+            tmdb_results.len(),
+            payload.query
+        );
 
         let event_tx_clone = state.event_tx.clone();
 

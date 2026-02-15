@@ -53,7 +53,11 @@ pub mod workers_idempotence_tests {
         }
 
         // Still just 1 (idempotent)
-        assert_eq!(processed_jobs.len(), 1, "Should have only 1 job (idempotent)");
+        assert_eq!(
+            processed_jobs.len(),
+            1,
+            "Should have only 1 job (idempotent)"
+        );
     }
 
     #[test]
@@ -76,7 +80,11 @@ pub mod workers_idempotence_tests {
         jobs.insert(job1);
         jobs.insert(job2);
 
-        assert_eq!(jobs.len(), 2, "Different job_ids should create separate entries");
+        assert_eq!(
+            jobs.len(),
+            2,
+            "Different job_ids should create separate entries"
+        );
     }
 
     #[test]
@@ -95,13 +103,18 @@ pub mod workers_idempotence_tests {
         downloads.insert(job.clone());
 
         // Only 1 entry (idempotent)
-        assert_eq!(downloads.len(), 1, "Should have only 1 download (idempotent)");
+        assert_eq!(
+            downloads.len(),
+            1,
+            "Should have only 1 download (idempotent)"
+        );
     }
 
     #[test]
     fn test_oracle_inference_cache_hit() {
         // Same prompt = cache hit (idempotent results)
-        let mut inference_cache: std::collections::HashMap<String, String> = std::collections::HashMap::new();
+        let mut inference_cache: std::collections::HashMap<String, String> =
+            std::collections::HashMap::new();
 
         let prompt = "Is this a valid download link?";
         let result = "yes";
@@ -117,7 +130,11 @@ pub mod workers_idempotence_tests {
         inference_cache.insert(prompt.to_string(), result.to_string());
 
         // Still 1 entry
-        assert_eq!(inference_cache.len(), 1, "Cache should have 1 entry (idempotent)");
+        assert_eq!(
+            inference_cache.len(),
+            1,
+            "Cache should have 1 entry (idempotent)"
+        );
     }
 
     // ============ MESSAGE REDELIVERY ============
@@ -213,7 +230,7 @@ pub mod workers_idempotence_tests {
     fn test_concurrent_jobs_deduplication() {
         // Multiple jobs, some duplicates
         let mut seen_jobs = HashSet::new();
-        
+
         let jobs_to_process = vec![
             SearchJob {
                 job_id: "s1".to_string(),

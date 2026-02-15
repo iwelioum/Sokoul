@@ -17,8 +17,14 @@ pub mod health_checks_tests {
         // Response should be JSON with status field
         let response_json = r#"{"status":"healthy","timestamp":"2026-02-15T16:49:54Z"}"#;
 
-        assert!(response_json.contains("status"), "Response should have status");
-        assert!(response_json.contains("healthy"), "Should indicate healthy state");
+        assert!(
+            response_json.contains("status"),
+            "Response should have status"
+        );
+        assert!(
+            response_json.contains("healthy"),
+            "Should indicate healthy state"
+        );
     }
 
     #[test]
@@ -103,7 +109,10 @@ pub mod health_checks_tests {
         let db_available = false;
         let health_status = if db_available { "healthy" } else { "unhealthy" };
 
-        assert_eq!(health_status, "unhealthy", "Health should reflect actual state");
+        assert_eq!(
+            health_status, "unhealthy",
+            "Health should reflect actual state"
+        );
     }
 
     // ============ PARTIAL HEALTH ============
@@ -144,7 +153,10 @@ pub mod health_checks_tests {
         // Health endpoint should not be cached (or minimal cache)
         let cache_control = "no-cache, no-store";
 
-        assert!(cache_control.contains("no-cache"), "Should not cache health");
+        assert!(
+            cache_control.contains("no-cache"),
+            "Should not cache health"
+        );
     }
 
     #[test]
@@ -211,7 +223,10 @@ pub mod health_checks_tests {
         ];
 
         for component in components {
-            assert!(component.response_time_ms > 0.0, "Should include response times");
+            assert!(
+                component.response_time_ms > 0.0,
+                "Should include response times"
+            );
         }
     }
 
@@ -239,7 +254,10 @@ pub mod health_checks_tests {
         let health_response_time_ms = 100;
         let timeout_ms = 5000;
 
-        assert!(health_response_time_ms < timeout_ms, "Health should respond");
+        assert!(
+            health_response_time_ms < timeout_ms,
+            "Health should respond"
+        );
     }
 
     #[test]
@@ -325,9 +343,16 @@ pub mod health_checks_tests {
     fn test_health_returns_unhealthy_during_shutdown() {
         // During graceful shutdown, health should return unhealthy
         let shutting_down = true;
-        let health_status = if shutting_down { "unhealthy" } else { "healthy" };
+        let health_status = if shutting_down {
+            "unhealthy"
+        } else {
+            "healthy"
+        };
 
-        assert_eq!(health_status, "unhealthy", "Should be unhealthy during shutdown");
+        assert_eq!(
+            health_status, "unhealthy",
+            "Should be unhealthy during shutdown"
+        );
     }
 
     #[test]

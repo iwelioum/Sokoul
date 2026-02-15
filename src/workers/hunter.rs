@@ -2,15 +2,18 @@ use crate::{
     config::CONFIG,
     db,
     events::{self, DownloadRequestedPayload, WsEvent},
-    utils::{fuzzy, retry::{self, RetryConfig}},
+    utils::{
+        fuzzy,
+        retry::{self, RetryConfig},
+    },
     AppState,
 };
 use futures::StreamExt;
 use librqbit::{AddTorrent, Session};
 use std::path::PathBuf;
-use url::Url;
 use std::sync::Arc;
 use tokio::sync::Semaphore;
+use url::Url;
 
 pub async fn hunter_worker(state: Arc<AppState>) -> anyhow::Result<()> {
     tracing::info!("Le worker Hunter demarre...");
@@ -40,18 +43,17 @@ pub async fn hunter_worker(state: Arc<AppState>) -> anyhow::Result<()> {
 
     let mut messages = consumer.messages().await?;
     while let Some(Ok(message)) = messages.next().await {
-        let payload: DownloadRequestedPayload =
-            match serde_json::from_slice(&message.payload) {
-                Ok(p) => p,
-                Err(e) => {
-                    tracing::error!("Payload invalide pour Hunter: {}", e);
-                    message
-                        .ack()
-                        .await
-                        .map_err(|e| anyhow::anyhow!("Ack failed: {}", e))?;
-                    continue;
-                }
-            };
+        let payload: DownloadRequestedPayload = match serde_json::from_slice(&message.payload) {
+            Ok(p) => p,
+            Err(e) => {
+                tracing::error!("Payload invalide pour Hunter: {}", e);
+                message
+                    .ack()
+                    .await
+                    .map_err(|e| anyhow::anyhow!("Ack failed: {}", e))?;
+                continue;
+            }
+        };
 
         tracing::info!(
             "Hunter: telechargement demande pour '{}' (media_id: {})",
@@ -63,7 +65,10 @@ pub async fn hunter_worker(state: Arc<AppState>) -> anyhow::Result<()> {
         let media = match db::media::get_media_by_id(&state.db_pool, payload.media_id).await {
             Ok(m) => Some(m),
             Err(e) => {
-                tracing::warn!("Hunter: impossible de charger le media pour validation fuzzy: {}", e);
+                tracing::warn!(
+                    "Hunter: impossible de charger le media pour validation fuzzy: {}",
+                    e
+                );
                 None
             }
         };
@@ -126,10 +131,13 @@ pub async fn hunter_worker(state: Arc<AppState>) -> anyhow::Result<()> {
                 let _ = db::tasks::update_task_status(&db_pool, tid, "running", None).await;
             }
 
-            let _ = event_tx.send(WsEvent::DownloadStarted {
-                media_id: media_id.to_string(),
-                title: payload.title.clone(),
-            }.to_json());
+            let _ = event_tx.send(
+                WsEvent::DownloadStarted {
+                    media_id: media_id.to_string(),
+                    title: payload.title.clone(),
+                }
+                .to_json(),
+            );
 
             // Retry avec backoff exponentiel
             let retry_config = RetryConfig {
@@ -176,11 +184,14 @@ pub async fn hunter_worker(state: Arc<AppState>) -> anyhow::Result<()> {
                         .await;
                     }
 
-                    let _ = event_tx.send(WsEvent::DownloadCompleted {
-                        media_id: media_id.to_string(),
-                        title: payload.title.clone(),
-                        file_path: output_name,
-                    }.to_json());
+                    let _ = event_tx.send(
+                        WsEvent::DownloadCompleted {
+                            media_id: media_id.to_string(),
+                            title: payload.title.clone(),
+                            file_path: output_name,
+                        }
+                        .to_json(),
+                    );
                 }
                 Err(e) => {
                     tracing::error!("Echec telechargement '{}': {}", payload.title, e);
@@ -195,11 +206,14 @@ pub async fn hunter_worker(state: Arc<AppState>) -> anyhow::Result<()> {
                         .await;
                     }
 
-                    let _ = event_tx.send(WsEvent::DownloadFailed {
-                        media_id: media_id.to_string(),
-                        title: payload.title.clone(),
-                        error: e.to_string(),
-                    }.to_json());
+                    let _ = event_tx.send(
+                        WsEvent::DownloadFailed {
+                            media_id: media_id.to_string(),
+                            title: payload.title.clone(),
+                            error: e.to_string(),
+                        }
+                        .to_json(),
+                    );
                 }
             }
         });
@@ -218,10 +232,7 @@ async fn download_torrent(session: &Arc<Session>, magnet_or_url: &str) -> anyhow
         .map_err(|e| anyhow::anyhow!("URL/magnet invalide: {}: {}", e, magnet_or_url))?;
 
     let handle = session
-        .add_torrent(
-            AddTorrent::from_url(magnet_or_url),
-            None,
-        )
+        .add_torrent(AddTorrent::from_url(magnet_or_url), None)
         .await?
         .into_handle()
         .ok_or_else(|| anyhow::anyhow!("Torrent deja gere ou echec d'ajout: {}", magnet_or_url))?;

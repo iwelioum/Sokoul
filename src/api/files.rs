@@ -19,12 +19,14 @@ pub async fn stream_file_handler(
 
     let path = std::path::Path::new(&file.file_path);
     if !path.exists() {
-        return Err(ApiError::NotFound("Fichier introuvable sur le disque".into()));
+        return Err(ApiError::NotFound(
+            "Fichier introuvable sur le disque".into(),
+        ));
     }
 
-    let tokio_file = tokio::fs::File::open(path)
-        .await
-        .map_err(|e| ApiError::Internal(anyhow::anyhow!("Impossible d'ouvrir le fichier: {}", e)))?;
+    let tokio_file = tokio::fs::File::open(path).await.map_err(|e| {
+        ApiError::Internal(anyhow::anyhow!("Impossible d'ouvrir le fichier: {}", e))
+    })?;
 
     let metadata = tokio_file
         .metadata()
@@ -85,11 +87,7 @@ pub async fn file_info_handler(
 }
 
 fn guess_content_type(filename: &str) -> &'static str {
-    let ext = filename
-        .rsplit('.')
-        .next()
-        .unwrap_or("")
-        .to_lowercase();
+    let ext = filename.rsplit('.').next().unwrap_or("").to_lowercase();
     match ext.as_str() {
         "mp4" | "m4v" => "video/mp4",
         "mkv" => "video/x-matroska",

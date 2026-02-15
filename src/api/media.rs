@@ -1,11 +1,15 @@
 use crate::{
     api::error::ApiError,
-    cache,
-    db,
+    cache, db,
     models::{CreateMediaPayload, Media, UpdateMediaPayload},
     AppState,
 };
-use axum::{extract::{Path, Query, State}, http::StatusCode, response::IntoResponse, Json};
+use axum::{
+    extract::{Path, Query, State},
+    http::StatusCode,
+    response::IntoResponse,
+    Json,
+};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use uuid::Uuid;
@@ -20,8 +24,12 @@ pub struct Pagination {
     media_type: Option<String>,
 }
 
-fn default_page() -> u32 { 1 }
-fn default_per_page() -> u32 { 30 }
+fn default_page() -> u32 {
+    1
+}
+fn default_per_page() -> u32 {
+    30
+}
 
 #[derive(Debug, Serialize)]
 pub struct PaginatedResponse<T: Serialize> {
@@ -39,11 +47,14 @@ const MAX_TITLE_LEN: usize = 500;
 fn validate_create_payload(payload: &CreateMediaPayload) -> Result<(), ApiError> {
     let title = payload.title.trim();
     if title.is_empty() {
-        return Err(ApiError::InvalidInput("Le titre ne peut pas etre vide.".into()));
+        return Err(ApiError::InvalidInput(
+            "Le titre ne peut pas etre vide.".into(),
+        ));
     }
     if title.len() > MAX_TITLE_LEN {
         return Err(ApiError::InvalidInput(format!(
-            "Le titre ne peut pas depasser {} caracteres.", MAX_TITLE_LEN
+            "Le titre ne peut pas depasser {} caracteres.",
+            MAX_TITLE_LEN
         )));
     }
     if !VALID_MEDIA_TYPES.contains(&payload.media_type.as_str()) {
@@ -60,7 +71,9 @@ fn validate_create_payload(payload: &CreateMediaPayload) -> Result<(), ApiError>
     }
     if let Some(rating) = payload.rating {
         if !(0.0..=10.0).contains(&rating) {
-            return Err(ApiError::InvalidInput("La note doit etre entre 0 et 10.".into()));
+            return Err(ApiError::InvalidInput(
+                "La note doit etre entre 0 et 10.".into(),
+            ));
         }
     }
     Ok(())

@@ -80,16 +80,7 @@ pub mod input_sanitization_tests {
     fn validate_sql_input(input: &str) -> bool {
         // Check for SQL injection patterns
         let sql_patterns = vec![
-            "';",
-            "DROP",
-            "DELETE",
-            "INSERT",
-            "UPDATE",
-            "UNION",
-            "SELECT",
-            "--",
-            "/*",
-            "*/",
+            "';", "DROP", "DELETE", "INSERT", "UPDATE", "UNION", "SELECT", "--", "/*", "*/",
         ];
 
         let upper = input.to_uppercase();
@@ -99,25 +90,37 @@ pub mod input_sanitization_tests {
     #[test]
     fn test_sql_injection_drop_table_blocked() {
         let payload = "'; DROP TABLE users; --";
-        assert!(!validate_sql_input(payload), "SQL injection should be blocked");
+        assert!(
+            !validate_sql_input(payload),
+            "SQL injection should be blocked"
+        );
     }
 
     #[test]
     fn test_sql_injection_union_select_blocked() {
         let payload = "' OR '1'='1' UNION SELECT * FROM passwords";
-        assert!(!validate_sql_input(payload), "UNION SELECT should be blocked");
+        assert!(
+            !validate_sql_input(payload),
+            "UNION SELECT should be blocked"
+        );
     }
 
     #[test]
     fn test_sql_injection_comment_bypass_blocked() {
         let payload = "admin' --";
-        assert!(!validate_sql_input(payload), "Comment-based bypass should be blocked");
+        assert!(
+            !validate_sql_input(payload),
+            "Comment-based bypass should be blocked"
+        );
     }
 
     #[test]
     fn test_sql_injection_time_based_blocked() {
         let payload = "' AND SLEEP(5) --";
-        assert!(!validate_sql_input(payload), "Time-based injection should be blocked");
+        assert!(
+            !validate_sql_input(payload),
+            "Time-based injection should be blocked"
+        );
     }
 
     #[test]
@@ -155,7 +158,11 @@ pub mod input_sanitization_tests {
         ];
 
         for path in paths {
-            assert!(!validate_file_path(path), "Path traversal should be blocked: {}", path);
+            assert!(
+                !validate_file_path(path),
+                "Path traversal should be blocked: {}",
+                path
+            );
         }
     }
 
@@ -164,7 +171,11 @@ pub mod input_sanitization_tests {
         let paths = vec!["./../../secrets", ".\\..\\..\\config"];
 
         for path in paths {
-            assert!(!validate_file_path(path), "Dot-slash traversal blocked: {}", path);
+            assert!(
+                !validate_file_path(path),
+                "Dot-slash traversal blocked: {}",
+                path
+            );
         }
     }
 
@@ -246,11 +257,11 @@ pub mod input_sanitization_tests {
         // Test that JSON parser validates structure properly
         // Attempt to inject extra fields in JSON
         let suspicious_json_str = r#"{"key": "value\"", "admin": "true"}"#;
-        
+
         // Try to parse this - if it parses, the parser is handling it
         // The real protection is that our models use serde with specific field definitions
         let result = serde_json::from_str::<serde_json::Value>(suspicious_json_str);
-        
+
         // This particular string might parse, but JSON injection defense comes from
         // using typed structs that reject unknown fields
         match result {
@@ -295,9 +306,9 @@ pub mod input_sanitization_tests {
     fn test_file_upload_size_limit() {
         let max_size_bytes = 10 * 1024 * 1024; // 10 MB
         let file_sizes = vec![
-            (5 * 1024 * 1024, true),  // 5 MB - OK
-            (10 * 1024 * 1024, true), // 10 MB - OK (at limit)
-            (11 * 1024 * 1024, false), // 11 MB - BLOCKED
+            (5 * 1024 * 1024, true),    // 5 MB - OK
+            (10 * 1024 * 1024, true),   // 10 MB - OK (at limit)
+            (11 * 1024 * 1024, false),  // 11 MB - BLOCKED
             (100 * 1024 * 1024, false), // 100 MB - BLOCKED
         ];
 
@@ -330,10 +341,22 @@ pub mod input_sanitization_tests {
         for (input, _expected_pattern) in test_cases {
             let sanitized = sanitize_filename(input);
             // After filtering alphanumeric + - + _, no dots or slashes should remain
-            assert!(!sanitized.contains("."), "Sanitized filename should not contain dots");
-            assert!(!sanitized.contains("/"), "Sanitized filename should not contain /");
-            assert!(!sanitized.contains("<"), "Sanitized filename should not contain <");
-            assert!(!sanitized.contains(":"), "Sanitized filename should not contain :");
+            assert!(
+                !sanitized.contains("."),
+                "Sanitized filename should not contain dots"
+            );
+            assert!(
+                !sanitized.contains("/"),
+                "Sanitized filename should not contain /"
+            );
+            assert!(
+                !sanitized.contains("<"),
+                "Sanitized filename should not contain <"
+            );
+            assert!(
+                !sanitized.contains(":"),
+                "Sanitized filename should not contain :"
+            );
         }
     }
 
@@ -342,7 +365,10 @@ pub mod input_sanitization_tests {
     #[test]
     fn test_email_format_validation() {
         fn is_valid_email(email: &str) -> bool {
-            email.contains('@') && email.contains('.') && email.len() > 5 && email.find('@').map(|i| i > 0).unwrap_or(false)
+            email.contains('@')
+                && email.contains('.')
+                && email.len() > 5
+                && email.find('@').map(|i| i > 0).unwrap_or(false)
         }
 
         let valid_emails = vec!["user@example.com", "test.user@domain.co.uk"];
@@ -353,7 +379,11 @@ pub mod input_sanitization_tests {
         }
 
         for email in invalid_emails {
-            assert!(!is_valid_email(email), "Invalid email should fail: {}", email);
+            assert!(
+                !is_valid_email(email),
+                "Invalid email should fail: {}",
+                email
+            );
         }
     }
 
@@ -377,7 +407,11 @@ pub mod input_sanitization_tests {
         }
 
         for url in invalid_urls {
-            assert!(!is_valid_url_scheme(url), "Invalid URL scheme should fail: {}", url);
+            assert!(
+                !is_valid_url_scheme(url),
+                "Invalid URL scheme should fail: {}",
+                url
+            );
         }
     }
 

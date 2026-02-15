@@ -137,7 +137,10 @@ pub mod release_automation_tests {
         // Docker image should be: sokoul:v0.2.0
         let docker_tag = "sokoul:v0.2.0";
 
-        assert!(docker_tag.contains("v0.2.0"), "Docker image should be versioned");
+        assert!(
+            docker_tag.contains("v0.2.0"),
+            "Docker image should be versioned"
+        );
     }
 
     // ============ DOCKER REGISTRY PUSH ============

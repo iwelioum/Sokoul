@@ -9,13 +9,43 @@ pub fn normalize_torrent_title(title: &str) -> String {
 
     // Retirer les indicateurs de qualité
     let quality_patterns = [
-        "bluray", "blu ray", "bdrip", "brrip", "webrip", "web dl", "webdl",
-        "hdtv", "dvdrip", "hdrip", "remux", "proper", "repack",
-        "2160p", "1080p", "720p", "480p", "360p",
-        "x264", "x265", "h264", "h265", "hevc", "avc",
-        "hdr", "hdr10", "hdr10plus", "dolby vision", "dv",
-        "aac", "ac3", "dts", "truehd", "atmos", "flac",
-        "10bit", "8bit",
+        "bluray",
+        "blu ray",
+        "bdrip",
+        "brrip",
+        "webrip",
+        "web dl",
+        "webdl",
+        "hdtv",
+        "dvdrip",
+        "hdrip",
+        "remux",
+        "proper",
+        "repack",
+        "2160p",
+        "1080p",
+        "720p",
+        "480p",
+        "360p",
+        "x264",
+        "x265",
+        "h264",
+        "h265",
+        "hevc",
+        "avc",
+        "hdr",
+        "hdr10",
+        "hdr10plus",
+        "dolby vision",
+        "dv",
+        "aac",
+        "ac3",
+        "dts",
+        "truehd",
+        "atmos",
+        "flac",
+        "10bit",
+        "8bit",
     ];
     for pattern in quality_patterns {
         result = result.replace(pattern, " ");
@@ -23,8 +53,8 @@ pub fn normalize_torrent_title(title: &str) -> String {
 
     // Retirer les groupes de release courants
     let groups = [
-        "yify", "yts", "rarbg", "eztv", "ettv", "sparks", "geckos",
-        "fgt", "mkvcage", "evo", "tigole", "qxr",
+        "yify", "yts", "rarbg", "eztv", "ettv", "sparks", "geckos", "fgt", "mkvcage", "evo",
+        "tigole", "qxr",
     ];
     for group in groups {
         result = result.replace(group, " ");
@@ -38,10 +68,7 @@ pub fn normalize_torrent_title(title: &str) -> String {
         .collect::<Vec<_>>()
         .windows(4)
         .filter_map(|w| {
-            if w.len() == 4
-                && w[1].0 == w[0].0 + 1
-                && w[2].0 == w[1].0 + 1
-                && w[3].0 == w[2].0 + 1
+            if w.len() == 4 && w[1].0 == w[0].0 + 1 && w[2].0 == w[1].0 + 1 && w[3].0 == w[2].0 + 1
             {
                 let year_str: String = w.iter().map(|(_, s)| s.to_string()).collect::<String>();
                 if let Ok(year) = year_str.parse::<u32>() {

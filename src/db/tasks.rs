@@ -54,12 +54,10 @@ pub async fn update_task_status(
 }
 
 pub async fn list_recent(pool: &PgPool, limit: i64) -> Result<Vec<Task>, sqlx::Error> {
-    let tasks = sqlx::query_as::<_, Task>(
-        "SELECT * FROM tasks ORDER BY created_at DESC LIMIT $1",
-    )
-    .bind(limit)
-    .fetch_all(pool)
-    .await?;
+    let tasks = sqlx::query_as::<_, Task>("SELECT * FROM tasks ORDER BY created_at DESC LIMIT $1")
+        .bind(limit)
+        .fetch_all(pool)
+        .await?;
 
     Ok(tasks)
 }

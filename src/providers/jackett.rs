@@ -34,7 +34,11 @@ pub struct JackettProvider {
 }
 
 impl JackettProvider {
-    pub fn new(api_key: String, base_url: String, flaresolverr_client: Option<FlareSolverrClient>) -> Self {
+    pub fn new(
+        api_key: String,
+        base_url: String,
+        flaresolverr_client: Option<FlareSolverrClient>,
+    ) -> Self {
         Self {
             client: Client::new(),
             api_key,
@@ -46,39 +50,40 @@ impl JackettProvider {
     async fn do_search(&self, query: &str, categories: &str) -> anyhow::Result<Vec<TorrentResult>> {
         let url = format!("{}/api/v2.0/indexers/all/results", self.base_url);
 
-        let mut params = vec![
-            ("apikey", self.api_key.as_str()),
-            ("Query", query),
-        ];
+        let mut params = vec![("apikey", self.api_key.as_str()), ("Query", query)];
         if !categories.is_empty() {
             params.push(("Category[]", categories));
         }
 
-        let resp_result = self
-            .client
-            .get(&url)
-            .query(&params)
-            .send()
-            .await;
+        let resp_result = self.client.get(&url).query(&params).send().await;
 
         let response = match resp_result {
             Ok(r) => r.error_for_status()?.json::<JackettResponse>().await?,
             Err(e) => {
                 tracing::warn!("Jackett direct request failed: {}. Attempting with FlareSolverr if configured.", e);
                 if let Some(flaresolverr) = &self.flaresolverr_client {
-                    tracing::info!("Attempting Jackett search with FlareSolverr for query: {}", query);
-                    let flaresolverr_url = self.client.get(&url)
+                    tracing::info!(
+                        "Attempting Jackett search with FlareSolverr for query: {}",
+                        query
+                    );
+                    let flaresolverr_url = self
+                        .client
+                        .get(&url)
                         .query(&params)
                         .build()?
                         .url()
                         .to_string();
 
                     let body = flaresolverr.get(&flaresolverr_url).await?;
-                    serde_json::from_str(&body)
-                        .map_err(|e| {
-                            tracing::error!("Jackett: erreur deserialization pour '{}': {} - debut reponse: {}", query, e, &body[..body.len().min(500)]);
-                            e
-                        })?
+                    serde_json::from_str(&body).map_err(|e| {
+                        tracing::error!(
+                            "Jackett: erreur deserialization pour '{}': {} - debut reponse: {}",
+                            query,
+                            e,
+                            &body[..body.len().min(500)]
+                        );
+                        e
+                    })?
                 } else {
                     return Err(e.into());
                 }

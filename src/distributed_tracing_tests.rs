@@ -32,7 +32,10 @@ pub mod distributed_tracing_tests {
             _timestamp: 1739640000,
         };
 
-        assert!(!message.request_id.is_empty(), "Should propagate request ID");
+        assert!(
+            !message.request_id.is_empty(),
+            "Should propagate request ID"
+        );
     }
 
     #[test]
@@ -40,7 +43,10 @@ pub mod distributed_tracing_tests {
         // Worker logs should include request ID
         let log_entry = "Processing job [req-456] job_id=job-123 status=running";
 
-        assert!(log_entry.contains("req-456"), "Request ID should be in logs");
+        assert!(
+            log_entry.contains("req-456"),
+            "Request ID should be in logs"
+        );
     }
 
     #[test]
@@ -59,7 +65,10 @@ pub mod distributed_tracing_tests {
         };
 
         assert!(response.status_code == 200, "Response should have status");
-        assert!(!response.request_id.is_empty(), "Response should have request ID");
+        assert!(
+            !response.request_id.is_empty(),
+            "Response should have request ID"
+        );
     }
 
     // ============ DISTRIBUTED TRACE CONTEXT ============
@@ -99,11 +108,7 @@ pub mod distributed_tracing_tests {
     fn test_child_spans_created() {
         // Each operation creates child span (NATS send, DB query, etc)
         let _root_span = "POST /search";
-        let child_spans = vec![
-            "database:query",
-            "nats:publish",
-            "cache:lookup",
-        ];
+        let child_spans = vec!["database:query", "nats:publish", "cache:lookup"];
 
         for child_span in child_spans {
             assert!(!child_span.is_empty(), "Should create child spans");
@@ -255,7 +260,10 @@ pub mod distributed_tracing_tests {
             _span_id: "span-789".to_string(),
         };
 
-        assert!(!message.trace_id.is_empty(), "NATS message should have trace ID");
+        assert!(
+            !message.trace_id.is_empty(),
+            "NATS message should have trace ID"
+        );
     }
 
     #[test]
@@ -316,7 +324,10 @@ pub mod distributed_tracing_tests {
         };
 
         assert!(!config.exporter_type.is_empty(), "Should have exporter");
-        assert!(!config.endpoint.is_empty(), "Should have collector endpoint");
+        assert!(
+            !config.endpoint.is_empty(),
+            "Should have collector endpoint"
+        );
     }
 
     #[test]
@@ -407,7 +418,10 @@ pub mod distributed_tracing_tests {
     fn test_span_id_unique_per_operation() {
         // Each operation should have unique span ID
         let span_ids = vec!["span-1", "span-2", "span-3"];
-        let unique_count = span_ids.iter().collect::<std::collections::HashSet<_>>().len();
+        let unique_count = span_ids
+            .iter()
+            .collect::<std::collections::HashSet<_>>()
+            .len();
 
         assert_eq!(unique_count, span_ids.len(), "Span IDs should be unique");
     }

@@ -85,11 +85,16 @@ async fn handle_search(
         return Ok(());
     }
 
-    bot.send_message(msg.chat.id, format!("🔍 Recherche en cours pour \"{}\"...", query))
-        .await?;
+    bot.send_message(
+        msg.chat.id,
+        format!("🔍 Recherche en cours pour \"{}\"...", query),
+    )
+    .await?;
 
     // Publish search event to NATS
-    let payload = SearchRequestedPayload { query: query.clone() };
+    let payload = SearchRequestedPayload {
+        query: query.clone(),
+    };
     let event_data = serde_json::to_vec(&payload).unwrap();
 
     if let Err(e) = state
@@ -135,7 +140,12 @@ async fn handle_search(
         ));
 
         buttons.push(vec![InlineKeyboardButton::callback(
-            format!("{}. {} {}", i + 1, media.title.chars().take(30).collect::<String>(), year_str),
+            format!(
+                "{}. {} {}",
+                i + 1,
+                media.title.chars().take(30).collect::<String>(),
+                year_str
+            ),
             format!("results:{}", media.id),
         )]);
     }
@@ -150,11 +160,7 @@ async fn handle_search(
     Ok(())
 }
 
-async fn handle_downloads(
-    bot: Bot,
-    msg: Message,
-    state: Arc<AppState>,
-) -> ResponseResult<()> {
+async fn handle_downloads(bot: Bot, msg: Message, state: Arc<AppState>) -> ResponseResult<()> {
     let tasks = sqlx::query_as::<_, crate::models::Task>(
         "SELECT * FROM tasks WHERE task_type = 'download' ORDER BY created_at DESC LIMIT 10",
     )
@@ -199,11 +205,7 @@ async fn handle_downloads(
     Ok(())
 }
 
-async fn handle_library(
-    bot: Bot,
-    msg: Message,
-    state: Arc<AppState>,
-) -> ResponseResult<()> {
+async fn handle_library(bot: Bot, msg: Message, state: Arc<AppState>) -> ResponseResult<()> {
     let media_list = db::media::list_media(&state.db_pool, 20, 0)
         .await
         .unwrap_or_default();
@@ -237,11 +239,7 @@ async fn handle_library(
     Ok(())
 }
 
-async fn handle_status(
-    bot: Bot,
-    msg: Message,
-    state: Arc<AppState>,
-) -> ResponseResult<()> {
+async fn handle_status(bot: Bot, msg: Message, state: Arc<AppState>) -> ResponseResult<()> {
     let db_ok = sqlx::query("SELECT 1")
         .execute(&state.db_pool)
         .await
@@ -280,11 +278,7 @@ async fn handle_status(
     Ok(())
 }
 
-async fn handle_callback(
-    bot: Bot,
-    q: CallbackQuery,
-    state: Arc<AppState>,
-) -> ResponseResult<()> {
+async fn handle_callback(bot: Bot, q: CallbackQuery, state: Arc<AppState>) -> ResponseResult<()> {
     let data = match q.data {
         Some(ref d) => d.clone(),
         None => return Ok(()),
@@ -307,10 +301,9 @@ async fn handle_callback(
             }
         };
 
-        let results =
-            db::search_results::get_results_by_media_id(&state.db_pool, media_id)
-                .await
-                .unwrap_or_default();
+        let results = db::search_results::get_results_by_media_id(&state.db_pool, media_id)
+            .await
+            .unwrap_or_default();
 
         if results.is_empty() {
             bot.send_message(chat_id, "Aucune source torrent trouvée pour ce média\\.")
@@ -334,7 +327,12 @@ async fn handle_callback(
 
             if result.magnet_link.is_some() || result.url.is_some() {
                 buttons.push(vec![InlineKeyboardButton::callback(
-                    format!("⬇️ {}. {} ({}MB)", i + 1, result.title.chars().take(25).collect::<String>(), size_mb),
+                    format!(
+                        "⬇️ {}. {} ({}MB)",
+                        i + 1,
+                        result.title.chars().take(25).collect::<String>(),
+                        size_mb
+                    ),
                     format!("dl:{}:{}", media_id, result.id),
                 )]);
             }
@@ -362,10 +360,9 @@ async fn handle_callback(
             Err(_) => return Ok(()),
         };
 
-        let results =
-            db::search_results::get_results_by_media_id(&state.db_pool, media_id)
-                .await
-                .unwrap_or_default();
+        let results = db::search_results::get_results_by_media_id(&state.db_pool, media_id)
+            .await
+            .unwrap_or_default();
 
         let result = match results.iter().find(|r| r.id == search_result_id) {
             Some(r) => r,
@@ -417,7 +414,9 @@ async fn handle_callback(
 
 /// Escape special characters for MarkdownV2
 fn escape_md(text: &str) -> String {
-    let special = ['_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!'];
+    let special = [
+        '_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!',
+    ];
     let mut result = String::with_capacity(text.len());
     for ch in text.chars() {
         if special.contains(&ch) {

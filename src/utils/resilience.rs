@@ -7,9 +7,9 @@ use tokio::sync::Mutex;
 #[derive(Debug, Clone, Copy, PartialEq)]
 #[allow(dead_code)]
 pub enum CircuitState {
-    Closed,      // Normal operation
-    Open,        // Failing, reject fast
-    HalfOpen,    // Testing if recovered
+    Closed,   // Normal operation
+    Open,     // Failing, reject fast
+    HalfOpen, // Testing if recovered
 }
 
 /// Circuit Breaker for resilient external calls
@@ -19,9 +19,9 @@ pub struct CircuitBreaker {
     failure_count: Arc<AtomicU32>,
     success_count: Arc<AtomicU32>,
     last_failure_time: Arc<Mutex<Option<Instant>>>,
-    failure_threshold: u32,    // Failures before opening
-    success_threshold: u32,    // Successes in half-open to close
-    timeout: Duration,         // How long to stay open
+    failure_threshold: u32, // Failures before opening
+    success_threshold: u32, // Successes in half-open to close
+    timeout: Duration,      // How long to stay open
 }
 
 #[allow(dead_code)]
@@ -40,7 +40,7 @@ impl CircuitBreaker {
 
     pub async fn is_open(&self) -> bool {
         let state = *self.state.lock().await;
-        
+
         if state == CircuitState::Open {
             // Check if timeout has elapsed to transition to HalfOpen
             if let Some(last_fail) = *self.last_failure_time.lock().await {
@@ -59,7 +59,7 @@ impl CircuitBreaker {
 
     pub async fn record_success(&self) {
         let mut state = self.state.lock().await;
-        
+
         match *state {
             CircuitState::Closed => {
                 // Reset failure count on success
@@ -80,7 +80,7 @@ impl CircuitBreaker {
 
     pub async fn record_failure(&self) {
         let mut state = self.state.lock().await;
-        
+
         match *state {
             CircuitState::Closed => {
                 self.failure_count.fetch_add(1, Ordering::Relaxed);
@@ -121,8 +121,7 @@ impl RetryPolicy {
     }
 
     pub fn calculate_delay(&self, attempt: u32) -> Duration {
-        let backoff = self.initial_delay.as_millis() as f64
-            * self.multiplier.powi(attempt as i32);
+        let backoff = self.initial_delay.as_millis() as f64 * self.multiplier.powi(attempt as i32);
         let millis = backoff.min(self.max_delay.as_millis() as f64);
         Duration::from_millis(millis as u64)
     }
@@ -139,7 +138,7 @@ where
     E: std::fmt::Display,
 {
     let mut attempt = 0;
-    
+
     loop {
         match operation().await {
             Ok(result) => return Ok(result),
@@ -153,7 +152,7 @@ where
                     );
                     return Err(err);
                 }
-                
+
                 let delay = policy.calculate_delay(attempt - 1);
                 tracing::warn!(
                     "Operation failed (attempt {}), retrying in {:?}: {}",
@@ -174,46 +173,46 @@ mod tests {
     #[tokio::test]
     async fn test_circuit_breaker_opens_after_failures() {
         let cb = CircuitBreaker::new(3, 1, Duration::from_secs(1));
-        
+
         assert!(!cb.is_open().await);
-        
+
         cb.record_failure().await;
         cb.record_failure().await;
         cb.record_failure().await;
-        
+
         assert!(cb.is_open().await);
     }
 
     #[tokio::test]
     async fn test_circuit_breaker_closes_after_recovery() {
         let cb = CircuitBreaker::new(2, 2, Duration::from_millis(100));
-        
+
         // Trip the breaker
         cb.record_failure().await;
         cb.record_failure().await;
         assert!(cb.is_open().await);
-        
+
         // Wait for timeout
         tokio::time::sleep(Duration::from_millis(150)).await;
-        
+
         // Should be half-open now
         assert!(!cb.is_open().await);
-        
+
         // Recover
         cb.record_success().await;
         cb.record_success().await;
-        
+
         assert!(!cb.is_open().await);
     }
 
     #[test]
     fn test_retry_delay_exponential() {
         let policy = RetryPolicy::default_exponential();
-        
+
         let d1 = policy.calculate_delay(0);
         let d2 = policy.calculate_delay(1);
         let d3 = policy.calculate_delay(2);
-        
+
         assert!(d2 > d1);
         assert!(d3 > d2);
     }

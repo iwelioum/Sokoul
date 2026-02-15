@@ -25,20 +25,30 @@ pub struct TmdbSearchResult {
 
 impl TmdbSearchResult {
     pub fn get_title(&self) -> String {
-        self.title.clone().or_else(|| self.name.clone()).unwrap_or_default()
+        self.title
+            .clone()
+            .or_else(|| self.name.clone())
+            .unwrap_or_default()
     }
 
     pub fn get_year(&self) -> Option<i32> {
-        let date_str = self.release_date.as_ref().or(self.first_air_date.as_ref())?;
+        let date_str = self
+            .release_date
+            .as_ref()
+            .or(self.first_air_date.as_ref())?;
         date_str.split('-').next()?.parse::<i32>().ok()
     }
 
     pub fn poster_url(&self) -> Option<String> {
-        self.poster_path.as_ref().map(|p| format!("{}/w500{}", TMDB_IMAGE_BASE, p))
+        self.poster_path
+            .as_ref()
+            .map(|p| format!("{}/w500{}", TMDB_IMAGE_BASE, p))
     }
 
     pub fn backdrop_url(&self) -> Option<String> {
-        self.backdrop_path.as_ref().map(|p| format!("{}/w1280{}", TMDB_IMAGE_BASE, p))
+        self.backdrop_path
+            .as_ref()
+            .map(|p| format!("{}/w1280{}", TMDB_IMAGE_BASE, p))
     }
 }
 
@@ -274,32 +284,53 @@ impl TmdbClient {
         params.push(("query", query.to_string()));
         params.push(("include_adult", "false".to_string()));
 
-        let response = self.client.get(&url)
+        let response = self
+            .client
+            .get(&url)
             .query(&params)
-            .send().await?
+            .send()
+            .await?
             .error_for_status()?
-            .json::<TmdbPaginatedResponse>().await?;
+            .json::<TmdbPaginatedResponse>()
+            .await?;
 
-        Ok(response.results.into_iter()
+        Ok(response
+            .results
+            .into_iter()
             .filter(|r| r.media_type == "movie" || r.media_type == "tv")
             .collect())
     }
 
     // ── Trending ──
 
-    pub async fn trending(&self, media_type: &str, time_window: &str) -> Result<Vec<TmdbSearchResult>, reqwest::Error> {
-        let url = format!("{}/trending/{}/{}", TMDB_API_BASE_URL, media_type, time_window);
-        let response = self.client.get(&url)
+    pub async fn trending(
+        &self,
+        media_type: &str,
+        time_window: &str,
+    ) -> Result<Vec<TmdbSearchResult>, reqwest::Error> {
+        let url = format!(
+            "{}/trending/{}/{}",
+            TMDB_API_BASE_URL, media_type, time_window
+        );
+        let response = self
+            .client
+            .get(&url)
             .query(&self.base_params())
-            .send().await?
+            .send()
+            .await?
             .error_for_status()?
-            .json::<TmdbPaginatedResponse>().await?;
+            .json::<TmdbPaginatedResponse>()
+            .await?;
         Ok(response.results)
     }
 
     // ── Discover ──
 
-    pub async fn discover(&self, media_type: &str, params: &DiscoverParams) -> Result<TmdbPaginatedResponse, reqwest::Error> {
+    pub async fn discover(
+        &self,
+        media_type: &str,
+        params: &DiscoverParams,
+    ) -> Result<TmdbPaginatedResponse, reqwest::Error> {
         let url = format!("{}/discover/{}", TMDB_API_BASE_URL, media_type);
         let mut query = self.base_params();
         query.push(("include_adult", "false".to_string()));
@@ -326,78 +357,123 @@ impl TmdbClient {
         }
         query.push(("page", params.page.unwrap_or(1).to_string()));
 
-        self.client.get(&url)
+        self.client
+            .get(&url)
             .query(&query)
-            .send().await?
+            .send()
+            .await?
             .error_for_status()?
-            .json::<TmdbPaginatedResponse>().await
+            .json::<TmdbPaginatedResponse>()
+            .await
     }
 
     // ── Movie Details ──
 
     pub async fn movie_details(&self, id: i32) -> Result<TmdbMovieDetail, reqwest::Error> {
         let url = format!("{}/movie/{}", TMDB_API_BASE_URL, id);
-        self.client.get(&url)
+        self.client
+            .get(&url)
             .query(&self.base_params())
-            .send().await?
+            .send()
+            .await?
             .error_for_status()?
-            .json::<TmdbMovieDetail>().await
+            .json::<TmdbMovieDetail>()
+            .await
     }
 
     // ── TV Details ──
 
     pub async fn tv_details(&self, id: i32) -> Result<TmdbTvDetail, reqwest::Error> {
         let url = format!("{}/tv/{}", TMDB_API_BASE_URL, id);
-        self.client.get(&url)
+        self.client
+            .get(&url)
             .query(&self.base_params())
-            .send().await?
+            .send()
+            .await?
             .error_for_status()?
-            .json::<TmdbTvDetail>().await
+            .json::<TmdbTvDetail>()
+            .await
     }
 
     // ── TV Season Detail ──
 
-    pub async fn season_details(&self, tv_id: i32, season_number: i32) -> Result<TmdbSeasonDetail, reqwest::Error> {
-        let url = format!("{}/tv/{}/season/{}", TMDB_API_BASE_URL, tv_id, season_number);
-        self.client.get(&url)
+    pub async fn season_details(
+        &self,
+        tv_id: i32,
+        season_number: i32,
+    ) -> Result<TmdbSeasonDetail, reqwest::Error> {
+        let url = format!(
+            "{}/tv/{}/season/{}",
+            TMDB_API_BASE_URL, tv_id, season_number
+        );
+        self.client
+            .get(&url)
             .query(&self.base_params())
-            .send().await?
+            .send()
+            .await?
             .error_for_status()?
-            .json::<TmdbSeasonDetail>().await
+            .json::<TmdbSeasonDetail>()
+            .await
     }
 
     // ── Credits ──
 
-    pub async fn credits(&self, media_type: &str, id: i32) -> Result<TmdbCreditsResponse, reqwest::Error> {
+    pub async fn credits(
+        &self,
+        media_type: &str,
+        id: i32,
+    ) -> Result<TmdbCreditsResponse, reqwest::Error> {
         let url = format!("{}/{}/{}/credits", TMDB_API_BASE_URL, media_type, id);
-        self.client.get(&url)
+        self.client
+            .get(&url)
             .query(&self.base_params())
-            .send().await?
+            .send()
+            .await?
             .error_for_status()?
-            .json::<TmdbCreditsResponse>().await
+            .json::<TmdbCreditsResponse>()
+            .await
     }
 
     // ── Videos ──
 
-    pub async fn videos(&self, media_type: &str, id: i32) -> Result<Vec<TmdbVideo>, reqwest::Error> {
+    pub async fn videos(
+        &self,
+        media_type: &str,
+        id: i32,
+    ) -> Result<Vec<TmdbVideo>, reqwest::Error> {
         let url = format!("{}/{}/{}/videos", TMDB_API_BASE_URL, media_type, id);
-        let resp = self.client.get(&url)
+        let resp = self
+            .client
+            .get(&url)
             .query(&self.base_params())
-            .send().await?
+            .send()
+            .await?
             .error_for_status()?
-            .json::<TmdbVideosResponse>().await?;
+            .json::<TmdbVideosResponse>()
+            .await?;
         Ok(resp.results)
     }
 
     // ── Watch Providers ──
 
-    pub async fn watch_providers(&self, media_type: &str, id: i32) -> Result<Option<TmdbWatchProviderCountry>, reqwest::Error> {
-        let url = format!("{}/{}/{}/watch/providers", TMDB_API_BASE_URL, media_type, id);
-        let resp = self.client.get(&url)
+    pub async fn watch_providers(
+        &self,
+        media_type: &str,
+        id: i32,
+    ) -> Result<Option<TmdbWatchProviderCountry>, reqwest::Error> {
+        let url = format!(
+            "{}/{}/{}/watch/providers",
+            TMDB_API_BASE_URL, media_type, id
+        );
+        let resp = self
+            .client
+            .get(&url)
             .query(&self.base_params())
-            .send().await?
+            .send()
+            .await?
             .error_for_status()?
-            .json::<TmdbWatchProviderResponse>().await?;
+            .json::<TmdbWatchProviderResponse>()
+            .await?;
         Ok(resp.results.get("FR").cloned())
     }
 
@@ -405,32 +481,50 @@ impl TmdbClient {
 
     pub async fn person_details(&self, id: i32) -> Result<TmdbPersonDetail, reqwest::Error> {
         let url = format!("{}/person/{}", TMDB_API_BASE_URL, id);
-        self.client.get(&url)
+        self.client
+            .get(&url)
             .query(&self.base_params())
-            .send().await?
+            .send()
+            .await?
             .error_for_status()?
-            .json::<TmdbPersonDetail>().await
+            .json::<TmdbPersonDetail>()
+            .await
     }
 
-    pub async fn person_combined_credits(&self, id: i32) -> Result<Vec<TmdbPersonCredit>, reqwest::Error> {
+    pub async fn person_combined_credits(
+        &self,
+        id: i32,
+    ) -> Result<Vec<TmdbPersonCredit>, reqwest::Error> {
         let url = format!("{}/person/{}/combined_credits", TMDB_API_BASE_URL, id);
-        let resp = self.client.get(&url)
+        let resp = self
+            .client
+            .get(&url)
             .query(&self.base_params())
-            .send().await?
+            .send()
+            .await?
             .error_for_status()?
-            .json::<TmdbPersonCreditsResponse>().await?;
+            .json::<TmdbPersonCreditsResponse>()
+            .await?;
         Ok(resp.cast)
     }
 
     // ── Similar ──
 
-    pub async fn similar(&self, media_type: &str, id: i32) -> Result<Vec<TmdbSearchResult>, reqwest::Error> {
+    pub async fn similar(
+        &self,
+        media_type: &str,
+        id: i32,
+    ) -> Result<Vec<TmdbSearchResult>, reqwest::Error> {
         let url = format!("{}/{}/{}/similar", TMDB_API_BASE_URL, media_type, id);
-        let resp = self.client.get(&url)
+        let resp = self
+            .client
+            .get(&url)
             .query(&self.base_params())
-            .send().await?
+            .send()
+            .await?
             .error_for_status()?
-            .json::<TmdbPaginatedResponse>().await?;
+            .json::<TmdbPaginatedResponse>()
+            .await?;
         Ok(resp.results)
     }
 }

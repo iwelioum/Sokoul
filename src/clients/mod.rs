@@ -1,2 +1,2 @@
-pub mod tmdb;
 pub mod flaresolverr;
+pub mod tmdb;

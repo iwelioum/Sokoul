@@ -15,11 +15,17 @@ pub async fn run_scheduler(state: Arc<AppState>) {
         match db::search_results::delete_expired(&state.db_pool).await {
             Ok(deleted_count) => {
                 if deleted_count > 0 {
-                    tracing::info!("Scheduler: {} anciens résultats de recherche ont été nettoyés.", deleted_count);
+                    tracing::info!(
+                        "Scheduler: {} anciens résultats de recherche ont été nettoyés.",
+                        deleted_count
+                    );
                 }
             }
             Err(e) => {
-                tracing::error!("Scheduler: Erreur lors du nettoyage des résultats de recherche expirés: {}", e);
+                tracing::error!(
+                    "Scheduler: Erreur lors du nettoyage des résultats de recherche expirés: {}",
+                    e
+                );
             }
         }
     }

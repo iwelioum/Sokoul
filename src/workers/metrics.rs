@@ -1,7 +1,7 @@
-use std::sync::Arc;
-use std::sync::atomic::{AtomicU64, AtomicU32, Ordering};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
+use std::sync::Arc;
 use tokio::sync::RwLock;
 
 /// Worker status and metrics
@@ -12,7 +12,7 @@ pub struct WorkerMetrics {
     pub last_heartbeat: DateTime<Utc>,
     pub processed_messages: u64,
     pub errors_last_5m: u32,
-    pub lag_messages: u32,     // NATS consumer lag
+    pub lag_messages: u32, // NATS consumer lag
     pub uptime_seconds: u64,
 }
 
@@ -67,7 +67,7 @@ impl WorkerMetricsCollector {
         let last_hb = *self.last_heartbeat.read().await;
         let now = Utc::now();
         let time_since_hb = (now - last_hb).num_seconds() as u64;
-        
+
         // If no heartbeat in 2 minutes, mark as down
         let status = if time_since_hb > 120 {
             WorkerStatus::Down
@@ -104,7 +104,7 @@ mod tests {
     async fn test_worker_metrics_creation() {
         let collector = WorkerMetricsCollector::new("scout");
         assert_eq!(collector.name, "scout");
-        
+
         let metrics = collector.get_metrics(0).await;
         assert_eq!(metrics.status, WorkerStatus::Healthy);
         assert_eq!(metrics.processed_messages, 0);
@@ -113,11 +113,11 @@ mod tests {
     #[tokio::test]
     async fn test_worker_metrics_error_tracking() {
         let collector = WorkerMetricsCollector::new("hunter");
-        
+
         for _ in 0..15 {
             collector.record_error();
         }
-        
+
         let metrics = collector.get_metrics(0).await;
         assert_eq!(metrics.status, WorkerStatus::Degraded);
         assert_eq!(metrics.errors_last_5m, 15);

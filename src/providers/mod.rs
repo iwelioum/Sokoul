@@ -33,7 +33,11 @@ pub trait SearchProvider: Send + Sync {
 
     /// Recherche structurée par ID TMDB
     #[allow(dead_code)]
-    async fn search_by_tmdb_id(&self, tmdb_id: i32, media_type: &str) -> anyhow::Result<Vec<TorrentResult>>;
+    async fn search_by_tmdb_id(
+        &self,
+        tmdb_id: i32,
+        media_type: &str,
+    ) -> anyhow::Result<Vec<TorrentResult>>;
 }
 
 pub struct ProviderRegistry {
@@ -50,34 +54,50 @@ impl ProviderRegistry {
         self.providers.push(provider);
     }
 
-    pub async fn search_all(&self, title: &str, _media_type: &str, _tmdb_id: Option<i32>) -> Vec<TorrentResult> {
+    pub async fn search_all(
+        &self,
+        title: &str,
+        _media_type: &str,
+        _tmdb_id: Option<i32>,
+    ) -> Vec<TorrentResult> {
         use futures::future::join_all;
 
         // Always use text search - public indexers don't support TMDB ID search
         let futures = self.providers.iter().map(|provider| {
             let title = title.to_string();
             async move {
-                tracing::info!("Provider '{}': recherche textuelle pour '{}'", provider.name(), title);
+                tracing::info!(
+                    "Provider '{}': recherche textuelle pour '{}'",
+                    provider.name(),
+                    title
+                );
                 let result = provider.search(&title).await;
                 (provider.name(), result)
             }
         });
 
-        let results: Vec<TorrentResult> = join_all(futures).await.into_iter().flat_map(|(name, result)| match result {
-            Ok(res) => {
-                tracing::info!("Provider '{}': {} source(s) trouvee(s)", name, res.len());
-                res
-            },
-            Err(e) => {
-                tracing::error!("Erreur du provider '{}': {}", name, e);
-                vec![]
-            }
-        }).collect();
+        let results: Vec<TorrentResult> = join_all(futures)
+            .await
+            .into_iter()
+            .flat_map(|(name, result)| match result {
+                Ok(res) => {
+                    tracing::info!("Provider '{}': {} source(s) trouvee(s)", name, res.len());
+                    res
+                }
+                Err(e) => {
+                    tracing::error!("Erreur du provider '{}': {}", name, e);
+                    vec![]
+                }
+            })
+            .collect();
 
         results
     }
 
     pub fn list_enabled_names(&self) -> Vec<String> {
-        self.providers.iter().map(|p| p.name().to_string()).collect()
+        self.providers
+            .iter()
+            .map(|p| p.name().to_string())
+            .collect()
     }
 }

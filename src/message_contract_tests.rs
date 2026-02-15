@@ -103,7 +103,10 @@ pub mod message_contract_tests {
 
         // V1 deserializer should ignore unknown fields
         let result: Result<MessageV1, _> = serde_json::from_value(v2_msg);
-        assert!(result.is_ok(), "Should ignore unknown fields (forward compatible)");
+        assert!(
+            result.is_ok(),
+            "Should ignore unknown fields (forward compatible)"
+        );
 
         let msg = result.unwrap();
         assert_eq!(msg.job_id, "search-456");
@@ -169,7 +172,10 @@ pub mod message_contract_tests {
         // Using Option for new fields maintains compatibility
 
         let result: Result<MessageV1, _> = serde_json::from_value(v1_json);
-        assert!(result.is_ok(), "V1 message should deserialize in V1 consumer");
+        assert!(
+            result.is_ok(),
+            "V1 message should deserialize in V1 consumer"
+        );
     }
 
     // ============ VERSION FIELD ============
@@ -191,7 +197,10 @@ pub mod message_contract_tests {
         let serialized = serde_json::to_string(&v3_msg).unwrap();
         let deserialized: MessageV3 = serde_json::from_str(&serialized).unwrap();
 
-        assert_eq!(deserialized.version, "3.0", "Version field should be present");
+        assert_eq!(
+            deserialized.version, "3.0",
+            "Version field should be present"
+        );
     }
 
     #[test]
@@ -272,7 +281,10 @@ pub mod message_contract_tests {
         });
 
         let result: Result<MessageV1, _> = serde_json::from_value(invalid_json);
-        assert!(result.is_err(), "Type mismatch in optional field should fail");
+        assert!(
+            result.is_err(),
+            "Type mismatch in optional field should fail"
+        );
     }
 
     // ============ SCHEMA EVOLUTION ============

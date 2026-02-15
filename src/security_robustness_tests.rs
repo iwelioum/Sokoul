@@ -16,11 +16,11 @@ pub mod security_tests {
         // This is a conceptual test showing the pattern
         // In real code: sqlx::query!("SELECT * FROM torrents WHERE title = ?", title)
         // NOT: format!("SELECT * FROM torrents WHERE title = '{}'", title)
-        
+
         let malicious_input = "'; DROP TABLE torrents; --";
         // If sqlx parameterized: treated as literal string
         // If string interpolation: would execute DROP command
-        
+
         // This test just documents the requirement
         assert!(!malicious_input.is_empty());
     }
@@ -96,13 +96,10 @@ pub mod security_tests {
     #[test]
     fn test_string_to_int_coercion() {
         let inputs = vec![
-            "123",
-            "0123",      // Octal?
-            "+123",
-            "-123",
-            "0x1A",      // Hex?
-            "1.23e2",    // Scientific?
-            "  123  ",   // Whitespace?
+            "123", "0123", // Octal?
+            "+123", "-123", "0x1A",    // Hex?
+            "1.23e2",  // Scientific?
+            "  123  ", // Whitespace?
         ];
 
         for input in inputs {
@@ -118,10 +115,10 @@ pub mod security_tests {
         let inputs = vec![
             ("true", true),
             ("false", false),
-            ("1", false),  // Should not parse as true
-            ("0", false),  // Should not parse as false
-            ("yes", false),  // Should not parse as true
-            ("on", false),   // Should not parse as true
+            ("1", false),   // Should not parse as true
+            ("0", false),   // Should not parse as false
+            ("yes", false), // Should not parse as true
+            ("on", false),  // Should not parse as true
         ];
 
         for (input, expected) in inputs {
@@ -135,11 +132,11 @@ pub mod security_tests {
     fn test_no_api_key_in_error_message() {
         let api_key = "secret_key_abc123def456";
         let error_message = format!("Failed to authenticate with API key: {}", api_key);
-        
+
         // In production, error_message should NOT contain the key
         // This test documents the vulnerability to fix
         assert!(error_message.contains(api_key));
-        
+
         // Correct approach:
         let safe_error_message = "Failed to authenticate with API key: [REDACTED]";
         assert!(!safe_error_message.contains(api_key));
@@ -149,10 +146,10 @@ pub mod security_tests {
     fn test_no_password_in_logs() {
         let password = "super_secret_password_123";
         let log_entry = format!("User login failed: wrong password '{}'", password);
-        
+
         // Should not log password
         assert!(log_entry.contains(password));
-        
+
         // Correct:
         let safe_log = "User login failed: wrong password [REDACTED]";
         assert!(!safe_log.contains(password));
@@ -162,10 +159,10 @@ pub mod security_tests {
     fn test_no_database_url_in_logs() {
         let db_url = "postgres://user:pass@localhost/db";
         let error = format!("Failed to connect: {}", db_url);
-        
+
         // Should not log connection string with password
         assert!(error.contains("pass"));
-        
+
         // Correct:
         let safe_error = "Failed to connect: postgres://[REDACTED]@localhost/db";
         assert!(!safe_error.contains("pass"));
@@ -266,10 +263,10 @@ pub mod robustness_edge_cases {
     #[test]
     fn test_config_invalid_server_address() {
         let addresses = vec![
-            "localhost",           // No port
-            "localhost:99999",     // Port out of range
-            "invalid:port",        // Non-numeric port
-            "::1:8080",           // IPv6 edge case
+            "localhost",       // No port
+            "localhost:99999", // Port out of range
+            "invalid:port",    // Non-numeric port
+            "::1:8080",        // IPv6 edge case
         ];
 
         for addr in addresses {
@@ -310,9 +307,7 @@ pub mod robustness_edge_cases {
 
     #[test]
     fn test_cors_origins_many_entries() {
-        let cors_origins: Vec<&str> = (0..1000)
-            .map(|_i| "http://localhost:5173")
-            .collect();
+        let cors_origins: Vec<&str> = (0..1000).map(|_i| "http://localhost:5173").collect();
         assert_eq!(cors_origins.len(), 1000);
         // Should handle or reject large CORS lists
     }
@@ -343,11 +338,11 @@ pub mod robustness_edge_cases {
     fn test_integer_overflow_i64() {
         let max_i64 = i64::MAX;
         let min_i64 = i64::MIN;
-        
+
         // Display shouldn't crash
         let display_max = format!("{}", max_i64);
         let display_min = format!("{}", min_i64);
-        
+
         assert!(!display_max.is_empty());
         assert!(!display_min.is_empty());
     }

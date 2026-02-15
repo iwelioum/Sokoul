@@ -7,7 +7,7 @@ pub mod integration_tests_level1 {
     fn test_config_env_to_scoring() {
         // Read MAX_CONCURRENT_DOWNLOADS, ensure it's used properly
         env::set_var("MAX_CONCURRENT_DOWNLOADS", "10");
-        
+
         let max_concurrent: usize = env::var("MAX_CONCURRENT_DOWNLOADS")
             .unwrap_or_else(|_| "3".to_string())
             .parse()
@@ -24,7 +24,7 @@ pub mod integration_tests_level1 {
     fn test_config_rate_limit_to_api() {
         // RATE_LIMIT_RPS should be used in API middleware
         env::set_var("RATE_LIMIT_RPS", "50");
-        
+
         let rate_limit: u64 = env::var("RATE_LIMIT_RPS")
             .unwrap_or_else(|_| "30".to_string())
             .parse()
@@ -39,9 +39,9 @@ pub mod integration_tests_level1 {
     // ============ MOCK HTTP TO RETRY INTEGRATION ============
     #[tokio::test]
     async fn test_http_timeout_triggers_retry() {
-        use wiremock::{MockServer, Mock, ResponseTemplate};
-        use wiremock::matchers::method;
         use std::time::Duration;
+        use wiremock::matchers::method;
+        use wiremock::{Mock, MockServer, ResponseTemplate};
 
         let mock_server = MockServer::start().await;
 
@@ -50,7 +50,7 @@ pub mod integration_tests_level1 {
             .respond_with(
                 ResponseTemplate::new(200)
                     .set_delay(Duration::from_secs(5))
-                    .set_body_string("timeout_response")
+                    .set_body_string("timeout_response"),
             )
             .mount(&mock_server)
             .await;
@@ -60,16 +60,19 @@ pub mod integration_tests_level1 {
             .build()
             .unwrap();
 
-        let result = client.get(format!("{}/test", mock_server.uri())).send().await;
-        
+        let result = client
+            .get(format!("{}/test", mock_server.uri()))
+            .send()
+            .await;
+
         // Should timeout
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_http_429_retry_after() {
-        use wiremock::{MockServer, Mock, ResponseTemplate};
         use wiremock::matchers::method;
+        use wiremock::{Mock, MockServer, ResponseTemplate};
 
         let mock_server = MockServer::start().await;
 
@@ -77,16 +80,20 @@ pub mod integration_tests_level1 {
             .respond_with(
                 ResponseTemplate::new(429)
                     .append_header("retry-after", "2")
-                    .set_body_string("Rate limited")
+                    .set_body_string("Rate limited"),
             )
             .mount(&mock_server)
             .await;
 
         let client = reqwest::Client::new();
-        let response = client.get(format!("{}/test", mock_server.uri())).send().await.unwrap();
-        
+        let response = client
+            .get(format!("{}/test", mock_server.uri()))
+            .send()
+            .await
+            .unwrap();
+
         assert_eq!(response.status(), 429);
-        
+
         // Real client should respect Retry-After header
         let retry_after = response.headers().get("retry-after");
         assert!(retry_after.is_some());
@@ -97,13 +104,13 @@ pub mod integration_tests_level1 {
     fn test_fixture_builder_chain() {
         // Use TestTorrentBuilder from fixtures to create test data
         let mut torrents = vec![];
-        
+
         for i in 0..10 {
             let torrent_title = format!("Movie.{}.1080p.BluRay", i);
             let _torrents_count = torrents.len();
             torrents.push(torrent_title);
         }
-        
+
         assert_eq!(torrents.len(), 10);
     }
 
@@ -112,13 +119,13 @@ pub mod integration_tests_level1 {
         // Use TestConfig builder to setup test environment
         env::set_var("TMDB_API_KEY", "test_key_123");
         env::set_var("PROWLARR_URL", "http://localhost:9696");
-        
+
         let tmdb_key = env::var("TMDB_API_KEY").unwrap();
         let prowlarr_url = env::var("PROWLARR_URL").unwrap();
-        
+
         assert_eq!(tmdb_key, "test_key_123");
         assert_eq!(prowlarr_url, "http://localhost:9696");
-        
+
         env::remove_var("TMDB_API_KEY");
         env::remove_var("PROWLARR_URL");
     }
@@ -127,7 +134,7 @@ pub mod integration_tests_level1 {
     #[test]
     fn test_malformed_input_to_error_message() {
         let malicious_input = "'; DROP TABLE torrents; --";
-        
+
         // Should not crash
         let safe_query = format!("SELECT * FROM torrents WHERE title = $1");
         assert!(safe_query.contains("$1")); // Parameterized
@@ -169,14 +176,14 @@ pub mod integration_tests_level1 {
         // 3. Score (would use compute_score in real code)
         let title_lower = title.to_lowercase();
         let mut score = 0.0;
-        
+
         if title_lower.contains("1080p") {
             score += 20.0;
         }
         if title_lower.contains("x265") {
             score += 10.0;
         }
-        
+
         assert!(score > 0.0);
         assert!(score <= 100.0);
 
@@ -195,13 +202,9 @@ pub mod integration_tests_level1 {
     #[tokio::test]
     async fn test_async_operation_chain() {
         // Simulate async operations chaining
-        let task1 = async { 
-            "task1_result".to_string() 
-        };
+        let task1 = async { "task1_result".to_string() };
 
-        let task2 = async { 
-            "task2_result".to_string() 
-        };
+        let task2 = async { "task2_result".to_string() };
 
         let (result1, result2) = tokio::join!(task1, task2);
 
@@ -214,8 +217,8 @@ pub mod integration_tests_level1 {
     fn test_min_max_boundaries() {
         // Test minimum and maximum valid values
         let test_cases = vec![
-            (1, 999_999),              // Reasonable range
-            (i32::MIN as i64, i32::MAX as i64),  // Extreme
+            (1, 999_999),                       // Reasonable range
+            (i32::MIN as i64, i32::MAX as i64), // Extreme
         ];
 
         for (min, max) in test_cases {
@@ -226,7 +229,7 @@ pub mod integration_tests_level1 {
     #[test]
     fn test_off_by_one_errors() {
         let max_length = 500;
-        
+
         assert_eq!(max_length - 1, 499);
         assert_eq!(max_length, 500);
         assert_eq!(max_length + 1, 501);
@@ -286,9 +289,7 @@ pub mod integration_tests_level1 {
 
     #[tokio::test]
     async fn test_task_cleanup() {
-        let handle = tokio::spawn(async {
-            42
-        });
+        let handle = tokio::spawn(async { 42 });
 
         let result = handle.await.unwrap();
         assert_eq!(result, 42);

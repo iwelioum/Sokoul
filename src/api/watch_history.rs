@@ -1,4 +1,9 @@
-use crate::{api::error::ApiError, db, models::{UpdateWatchProgressPayload, WatchHistoryEntry}, AppState};
+use crate::{
+    api::error::ApiError,
+    db,
+    models::{UpdateWatchProgressPayload, WatchHistoryEntry},
+    AppState,
+};
 use axum::{
     extract::{Query, State},
     http::StatusCode,
@@ -37,7 +42,7 @@ pub async fn continue_watching_handler(
     let items = db::watch_history::get_continue_watching(&state.db_pool, limit)
         .await
         .map_err(|e| ApiError::Database(e))?;
-    
+
     let models_items: Vec<WatchHistoryEntry> = items
         .into_iter()
         .map(|item| WatchHistoryEntry {
@@ -48,6 +53,6 @@ pub async fn continue_watching_handler(
             last_watched_at: item.last_watched_at.unwrap_or_else(chrono::Utc::now),
         })
         .collect();
-    
+
     Ok(Json(models_items))
 }

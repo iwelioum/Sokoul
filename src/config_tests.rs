@@ -24,7 +24,8 @@ pub mod config_tests {
     #[test]
     fn test_optional_defaults() {
         // These should have defaults if not set
-        let redis_url = env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
+        let redis_url =
+            env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
         assert!(!redis_url.is_empty());
 
         let nats_url = env::var("NATS_URL").unwrap_or_else(|_| "nats://127.0.0.1:4222".to_string());
@@ -35,11 +36,13 @@ pub mod config_tests {
     fn test_bool_parsing() {
         // Test telegram_enabled parsing
         env::set_var("TELEGRAM_ENABLED", "true");
-        let telegram_enabled = env::var("TELEGRAM_ENABLED").unwrap_or_else(|_| "false".to_string()) == "true";
+        let telegram_enabled =
+            env::var("TELEGRAM_ENABLED").unwrap_or_else(|_| "false".to_string()) == "true";
         assert!(telegram_enabled);
 
         env::set_var("TELEGRAM_ENABLED", "false");
-        let telegram_enabled = env::var("TELEGRAM_ENABLED").unwrap_or_else(|_| "false".to_string()) == "true";
+        let telegram_enabled =
+            env::var("TELEGRAM_ENABLED").unwrap_or_else(|_| "false".to_string()) == "true";
         assert!(!telegram_enabled);
 
         env::remove_var("TELEGRAM_ENABLED");
@@ -112,11 +115,11 @@ pub mod utils_tests {
         // Scoring should prefer high seeders
         let high_seeders = 1000i32;
         let low_seeders = 1i32;
-        
+
         // Logarithmic scoring: ln(1000) ~= 6.9, ln(1) = 0
         let score_high = (high_seeders as f64).ln();
         let score_low = (low_seeders as f64).ln();
-        
+
         assert!(score_high > score_low);
     }
 
@@ -150,11 +153,11 @@ pub mod utils_tests {
         let seeders1 = 500i32;
         let leechers1 = 100i32;
         let ratio1 = seeders1 as f64 / (leechers1 as f64 + 1.0);
-        
+
         let seeders2 = 500i32;
         let leechers2 = 500i32;
         let ratio2 = seeders2 as f64 / (leechers2 as f64 + 1.0);
-        
+
         assert!(ratio1 > ratio2);
     }
 }
@@ -181,7 +184,7 @@ pub mod retry_tests {
     fn test_exponential_backoff_max_cap() {
         let max_ms = 10_000.0_f64;
         let mut delay = 1000.0_f64;
-        
+
         for _ in 0..10 {
             let capped = delay.min(max_ms);
             assert!(capped <= max_ms);

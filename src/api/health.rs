@@ -3,13 +3,17 @@ use axum::{extract::State, http::StatusCode, Json};
 use serde_json::{json, Value};
 use std::sync::Arc;
 
-pub async fn health_check_handler(
-    State(state): State<Arc<AppState>>,
-) -> (StatusCode, Json<Value>) {
-    let db_ok = sqlx::query("SELECT 1").execute(&state.db_pool).await.is_ok();
+pub async fn health_check_handler(State(state): State<Arc<AppState>>) -> (StatusCode, Json<Value>) {
+    let db_ok = sqlx::query("SELECT 1")
+        .execute(&state.db_pool)
+        .await
+        .is_ok();
 
     let redis_ok = match state.redis_client.get_multiplexed_async_connection().await {
-        Ok(mut con) => redis::cmd("PING").query_async::<_, String>(&mut con).await.is_ok(),
+        Ok(mut con) => redis::cmd("PING")
+            .query_async::<_, String>(&mut con)
+            .await
+            .is_ok(),
         Err(_) => false,
     };
 

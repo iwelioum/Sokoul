@@ -1,8 +1,8 @@
 #[cfg(test)]
 pub mod tmdb_client_tests {
-    use wiremock::{MockServer, Mock, ResponseTemplate};
-    use wiremock::matchers::{method, path, query_param};
     use serde_json::json;
+    use wiremock::matchers::{method, path, query_param};
+    use wiremock::{Mock, MockServer, ResponseTemplate};
 
     #[tokio::test]
     async fn test_tmdb_search_movie_mock() {
@@ -32,12 +32,15 @@ pub mod tmdb_client_tests {
 
         // Would call: tmdb_client.search_movie("The Matrix")
         // and verify response parsing here
-        
+
         // For now, just verify mock setup works
         let client = reqwest::Client::new();
-        let url = format!("{}/3/search/movie?api_key=test_key&query=The+Matrix", mock_server.uri());
+        let url = format!(
+            "{}/3/search/movie?api_key=test_key&query=The+Matrix",
+            mock_server.uri()
+        );
         let response = client.get(&url).send().await.unwrap();
-        
+
         assert_eq!(response.status(), 200);
         let body: serde_json::Value = response.json().await.unwrap();
         assert_eq!(body["results"][0]["title"], "The Matrix");
@@ -67,9 +70,12 @@ pub mod tmdb_client_tests {
             .await;
 
         let client = reqwest::Client::new();
-        let url = format!("{}/3/search/tv?api_key=test_key&query=Breaking+Bad", mock_server.uri());
+        let url = format!(
+            "{}/3/search/tv?api_key=test_key&query=Breaking+Bad",
+            mock_server.uri()
+        );
         let response = client.get(&url).send().await.unwrap();
-        
+
         assert_eq!(response.status(), 200);
         let body: serde_json::Value = response.json().await.unwrap();
         assert_eq!(body["results"][0]["name"], "Breaking Bad");
@@ -92,9 +98,12 @@ pub mod tmdb_client_tests {
             .await;
 
         let client = reqwest::Client::new();
-        let url = format!("{}/3/search/movie?api_key=invalid_key&query=test", mock_server.uri());
+        let url = format!(
+            "{}/3/search/movie?api_key=invalid_key&query=test",
+            mock_server.uri()
+        );
         let response = client.get(&url).send().await.unwrap();
-        
+
         assert_eq!(response.status(), 401);
     }
 
@@ -114,9 +123,12 @@ pub mod tmdb_client_tests {
             .await;
 
         let client = reqwest::Client::new();
-        let url = format!("{}/3/search/movie?api_key=test_key&query=nonexistent", mock_server.uri());
+        let url = format!(
+            "{}/3/search/movie?api_key=test_key&query=nonexistent",
+            mock_server.uri()
+        );
         let response = client.get(&url).send().await.unwrap();
-        
+
         let body: serde_json::Value = response.json().await.unwrap();
         assert_eq!(body["results"].as_array().unwrap().len(), 0);
     }
@@ -124,9 +136,9 @@ pub mod tmdb_client_tests {
 
 #[cfg(test)]
 pub mod flaresolverr_client_tests {
-    use wiremock::{MockServer, Mock, ResponseTemplate};
-    use wiremock::matchers::{method, path};
     use serde_json::json;
+    use wiremock::matchers::{method, path};
+    use wiremock::{Mock, MockServer, ResponseTemplate};
 
     #[tokio::test]
     async fn test_flaresolverr_request_success() {
@@ -150,19 +162,14 @@ pub mod flaresolverr_client_tests {
 
         let client = reqwest::Client::new();
         let url = format!("{}/v1", mock_server.uri());
-        
+
         let payload = serde_json::json!({
             "cmd": "request.get",
             "url": "https://example.com",
             "maxTimeout": 60000
         });
 
-        let response = client
-            .post(&url)
-            .json(&payload)
-            .send()
-            .await
-            .unwrap();
+        let response = client.post(&url).json(&payload).send().await.unwrap();
 
         assert_eq!(response.status(), 200);
         let body: serde_json::Value = response.json().await.unwrap();
@@ -195,7 +202,7 @@ pub mod flaresolverr_client_tests {
         });
 
         let response = client.post(&url).json(&payload).send().await.unwrap();
-        
+
         let body: serde_json::Value = response.json().await.unwrap();
         assert_eq!(body["status"], "ok");
     }
@@ -222,7 +229,7 @@ pub mod flaresolverr_client_tests {
         });
 
         let response = client.post(&url).json(&payload).send().await.unwrap();
-        
+
         let body: serde_json::Value = response.json().await.unwrap();
         assert_eq!(body["status"], "error");
     }
@@ -237,7 +244,7 @@ pub mod flaresolverr_client_tests {
             .respond_with(
                 ResponseTemplate::new(200)
                     .set_delay(std::time::Duration::from_secs(2))
-                    .set_body_json(json!({"status": "ok"}))
+                    .set_body_json(json!({"status": "ok"})),
             )
             .mount(&mock_server)
             .await;
@@ -260,9 +267,9 @@ pub mod flaresolverr_client_tests {
 
 #[cfg(test)]
 pub mod http_mock_integration_tests {
-    use wiremock::{MockServer, Mock, ResponseTemplate};
-    use wiremock::matchers::method;
     use serde_json::json;
+    use wiremock::matchers::method;
+    use wiremock::{Mock, MockServer, ResponseTemplate};
 
     #[tokio::test]
     async fn test_multiple_api_calls() {
@@ -275,11 +282,19 @@ pub mod http_mock_integration_tests {
             .await;
 
         let client = reqwest::Client::new();
-        
-        let res1 = client.get(format!("{}/api/test1", mock_server.uri())).send().await.unwrap();
+
+        let res1 = client
+            .get(format!("{}/api/test1", mock_server.uri()))
+            .send()
+            .await
+            .unwrap();
         assert_eq!(res1.status(), 200);
 
-        let res2 = client.get(format!("{}/api/test2", mock_server.uri())).send().await.unwrap();
+        let res2 = client
+            .get(format!("{}/api/test2", mock_server.uri()))
+            .send()
+            .await
+            .unwrap();
         assert_eq!(res2.status(), 200);
     }
 }

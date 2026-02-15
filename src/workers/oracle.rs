@@ -52,25 +52,42 @@ pub async fn oracle_worker(state: Arc<AppState>) -> anyhow::Result<()> {
             Ok(p) => p,
             Err(e) => {
                 tracing::error!("Payload invalide pour Oracle: {}", e);
-                message.ack().await.map_err(|e| anyhow::anyhow!("Ack failed: {}", e))?;
+                message
+                    .ack()
+                    .await
+                    .map_err(|e| anyhow::anyhow!("Ack failed: {}", e))?;
                 continue;
             }
         };
 
-        tracing::info!("Oracle: Analyse demandee pour media_id {}", payload.media_id);
+        tracing::info!(
+            "Oracle: Analyse demandee pour media_id {}",
+            payload.media_id
+        );
 
         let media = match db::media::get_media_by_id(&state.db_pool, payload.media_id).await {
             Ok(m) => m,
             Err(e) => {
-                tracing::error!("Oracle: impossible de charger le media {}: {}", payload.media_id, e);
-                message.ack().await.map_err(|e| anyhow::anyhow!("Ack failed: {}", e))?;
+                tracing::error!(
+                    "Oracle: impossible de charger le media {}: {}",
+                    payload.media_id,
+                    e
+                );
+                message
+                    .ack()
+                    .await
+                    .map_err(|e| anyhow::anyhow!("Ack failed: {}", e))?;
                 continue;
             }
         };
-        let results = db::search_results::get_results_by_media_id(&state.db_pool, payload.media_id).await?;
+        let results =
+            db::search_results::get_results_by_media_id(&state.db_pool, payload.media_id).await?;
 
         if results.is_empty() {
-            message.ack().await.map_err(|e| anyhow::anyhow!("Ack failed: {}", e))?;
+            message
+                .ack()
+                .await
+                .map_err(|e| anyhow::anyhow!("Ack failed: {}", e))?;
             continue;
         }
 
@@ -83,7 +100,8 @@ pub async fn oracle_worker(state: Arc<AppState>) -> anyhow::Result<()> {
             media.title, media.year, titles
         );
 
-        match client.post(format!("{}/completion", CONFIG.oracle_url))
+        match client
+            .post(format!("{}/completion", CONFIG.oracle_url))
             .json(&json!({
                 "prompt": prompt,
                 "n_predict": 512,
@@ -117,8 +135,14 @@ pub async fn oracle_worker(state: Arc<AppState>) -> anyhow::Result<()> {
                                             result_id,
                                             entry.score,
                                             entry.valid,
-                                        ).await {
-                                            tracing::error!("Erreur MAJ score result_id {}: {}", result_id, e);
+                                        )
+                                        .await
+                                        {
+                                            tracing::error!(
+                                                "Erreur MAJ score result_id {}: {}",
+                                                result_id,
+                                                e
+                                            );
                                         } else {
                                             updated += 1;
                                         }
@@ -126,22 +150,33 @@ pub async fn oracle_worker(state: Arc<AppState>) -> anyhow::Result<()> {
                                 }
                                 tracing::info!(
                                     "Oracle: {} resultats mis a jour pour media_id {}",
-                                    updated, payload.media_id
+                                    updated,
+                                    payload.media_id
                                 );
 
                                 // Emit oracle validated event
-                                let _ = state.event_tx.send(WsEvent::OracleValidated {
-                                    media_id: payload.media_id.to_string(),
-                                    validated_count: updated,
-                                }.to_json());
+                                let _ = state.event_tx.send(
+                                    WsEvent::OracleValidated {
+                                        media_id: payload.media_id.to_string(),
+                                        validated_count: updated,
+                                    }
+                                    .to_json(),
+                                );
                             }
                             Err(e) => {
-                                tracing::error!("Oracle: Impossible de parser la reponse IA: {} - contenu: {}", e, llama_resp.content);
+                                tracing::error!(
+                                    "Oracle: Impossible de parser la reponse IA: {} - contenu: {}",
+                                    e,
+                                    llama_resp.content
+                                );
                             }
                         }
                     }
                     Err(e) => {
-                        tracing::error!("Oracle: Erreur de deserialisation de la reponse llama.cpp: {}", e);
+                        tracing::error!(
+                            "Oracle: Erreur de deserialisation de la reponse llama.cpp: {}",
+                            e
+                        );
                     }
                 }
             }
@@ -150,7 +185,10 @@ pub async fn oracle_worker(state: Arc<AppState>) -> anyhow::Result<()> {
             }
         }
 
-        message.ack().await.map_err(|e| anyhow::anyhow!("Ack failed: {}", e))?;
+        message
+            .ack()
+            .await
+            .map_err(|e| anyhow::anyhow!("Ack failed: {}", e))?;
     }
 
     Ok(())

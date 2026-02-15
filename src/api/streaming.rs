@@ -1,5 +1,8 @@
 use crate::{api::error::ApiError, db, AppState};
-use axum::{extract::{Path, Query, State}, Json};
+use axum::{
+    extract::{Path, Query, State},
+    Json,
+};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use uuid::Uuid;
@@ -26,7 +29,12 @@ pub struct StreamQuery {
 }
 
 /// Build embed sources from TMDB ID, media type, and optional season/episode
-fn build_sources(tmdb_id: i32, media_type: &str, season: Option<i32>, episode: Option<i32>) -> Vec<StreamSource> {
+fn build_sources(
+    tmdb_id: i32,
+    media_type: &str,
+    season: Option<i32>,
+    episode: Option<i32>,
+) -> Vec<StreamSource> {
     let s = season.unwrap_or(1);
     let e = episode.unwrap_or(1);
     let mut sources = Vec::new();
@@ -55,7 +63,10 @@ fn build_sources(tmdb_id: i32, media_type: &str, season: Option<i32>, episode: O
     sources.push(StreamSource {
         name: "SuperEmbed".to_string(),
         url: match media_type {
-            "tv" => format!("https://multiembed.mov/?video_id={}&tmdb=1&s={}&e={}", tmdb_id, s, e),
+            "tv" => format!(
+                "https://multiembed.mov/?video_id={}&tmdb=1&s={}&e={}",
+                tmdb_id, s, e
+            ),
             _ => format!("https://multiembed.mov/?video_id={}&tmdb=1", tmdb_id),
         },
         quality: "Multi".to_string(),
@@ -75,7 +86,10 @@ fn build_sources(tmdb_id: i32, media_type: &str, season: Option<i32>, episode: O
     sources.push(StreamSource {
         name: "VidSrc.xyz".to_string(),
         url: match media_type {
-            "tv" => format!("https://vidsrc.xyz/embed/tv?tmdb={}&season={}&episode={}", tmdb_id, s, e),
+            "tv" => format!(
+                "https://vidsrc.xyz/embed/tv?tmdb={}&season={}&episode={}",
+                tmdb_id, s, e
+            ),
             _ => format!("https://vidsrc.xyz/embed/movie?tmdb={}", tmdb_id),
         },
         quality: "Multi".to_string(),

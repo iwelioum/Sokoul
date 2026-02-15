@@ -23,8 +23,14 @@ sokoul_api_requests_total{endpoint="/search",method="GET"} 1234
 sokoul_api_requests_total{endpoint="/downloads",method="POST"} 567
 "#;
 
-        assert!(metrics_response.contains("# HELP"), "Should have HELP lines");
-        assert!(metrics_response.contains("# TYPE"), "Should have TYPE lines");
+        assert!(
+            metrics_response.contains("# HELP"),
+            "Should have HELP lines"
+        );
+        assert!(
+            metrics_response.contains("# TYPE"),
+            "Should have TYPE lines"
+        );
         assert!(
             metrics_response.contains("sokoul_"),
             "Should have sokoul_ prefixed metrics"
@@ -255,11 +261,7 @@ sokoul_api_requests_total{endpoint="/downloads",method="POST"} 567
         let safe_labels = vec!["endpoint", "method", "status_code", "worker_type"];
 
         for label in safe_labels {
-            assert!(
-                !label.contains("id"),
-                "Avoid ID-based labels: {}",
-                label
-            );
+            assert!(!label.contains("id"), "Avoid ID-based labels: {}", label);
         }
     }
 
@@ -413,10 +415,7 @@ sokoul_api_requests_total{endpoint="/downloads",method="POST"} 567
         // (If auth required, Prometheus can't scrape)
         let requires_auth = false;
 
-        assert!(
-            !requires_auth,
-            "Metrics endpoint should not require auth"
-        );
+        assert!(!requires_auth, "Metrics endpoint should not require auth");
     }
 
     #[test]

@@ -1,71 +1,71 @@
 mod api;
-mod cache;
-mod clients;
-mod config;
-mod db;
-mod events;
-mod models;
-mod providers;
-mod telegram;
-mod scheduler;
-mod utils;
-mod workers;
-#[cfg(test)]
-mod tests;
-#[cfg(test)]
-mod config_tests;
-#[cfg(test)]
-mod client_tests;
-#[cfg(test)]
-mod security_robustness_tests;
-#[cfg(test)]
-mod performance_concurrency_tests;
-#[cfg(test)]
-mod integration_tests_level1;
-#[cfg(test)]
-mod nats_integration_tests;
-#[cfg(test)]
-mod workers_idempotence_tests;
-#[cfg(test)]
-mod message_contract_tests;
 #[cfg(test)]
 mod auth_flow_tests;
-#[cfg(test)]
-mod input_sanitization_tests;
-#[cfg(test)]
-mod rate_limiting_tests;
-#[cfg(test)]
-mod secrets_audit_tests;
-#[cfg(test)]
-mod load_testing_tests;
+mod cache;
 #[cfg(test)]
 mod chaos_engineering_tests;
 #[cfg(test)]
-mod prometheus_metrics_tests;
+mod client_tests;
+mod clients;
+mod config;
+#[cfg(test)]
+mod config_tests;
+mod db;
 #[cfg(test)]
 mod distributed_tracing_tests;
-#[cfg(test)]
-mod health_checks_tests;
-#[cfg(test)]
-mod precommit_hooks_tests;
+mod events;
 #[cfg(test)]
 mod github_actions_tests;
 #[cfg(test)]
+mod health_checks_tests;
+#[cfg(test)]
+mod input_sanitization_tests;
+#[cfg(test)]
+mod integration_tests_level1;
+#[cfg(test)]
+mod load_testing_tests;
+#[cfg(test)]
+mod message_contract_tests;
+mod models;
+#[cfg(test)]
+mod nats_integration_tests;
+#[cfg(test)]
+mod performance_concurrency_tests;
+#[cfg(test)]
+mod precommit_hooks_tests;
+#[cfg(test)]
+mod prometheus_metrics_tests;
+mod providers;
+#[cfg(test)]
+mod rate_limiting_tests;
+#[cfg(test)]
 mod release_automation_tests;
+mod scheduler;
+#[cfg(test)]
+mod secrets_audit_tests;
+#[cfg(test)]
+mod security_robustness_tests;
+mod telegram;
+#[cfg(test)]
+mod tests;
+mod utils;
+mod workers;
+#[cfg(test)]
+mod workers_idempotence_tests;
 
 use axum::{
     middleware,
-    routing::{get, post, delete},
+    routing::{delete, get, post},
     Router,
 };
 use axum_prometheus::PrometheusMetricLayer;
-use playwright::Playwright;
 use config::CONFIG;
+use playwright::Playwright;
 use sqlx::postgres::PgPoolOptions;
 use std::{net::SocketAddr, sync::Arc, time::Duration};
 use tokio::net::TcpListener;
-use tokio::sync::broadcast;
 use tokio::signal;
+use tokio::sync::broadcast;
 use tower::limit::ConcurrencyLimitLayer;
 use tower_http::cors::{AllowOrigin, CorsLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -126,7 +126,7 @@ async fn main() -> anyhow::Result<()> {
         let mut retries = 10;
         let mut last_error = None;
         let mut pool = None;
-        
+
         while retries > 0 && pool.is_none() {
             match PgPoolOptions::new()
                 .acquire_timeout(Duration::from_secs(10))
@@ -142,32 +142,38 @@ async fn main() -> anyhow::Result<()> {
                     last_error = Some(e);
                     retries -= 1;
                     if retries > 0 {
-                        tracing::warn!("❌ Connexion DB echouee, nouvelle tentative ({} restantes)...", retries);
+                        tracing::warn!(
+                            "❌ Connexion DB echouee, nouvelle tentative ({} restantes)...",
+                            retries
+                        );
                         tokio::time::sleep(Duration::from_secs(2)).await;
                     }
                 }
             }
         }
-        
+
         pool.unwrap_or_else(|| {
-            panic!("Impossible de se connecter a la base de donnees apres 3 tentatives: {:?}", last_error)
+            panic!(
+                "Impossible de se connecter a la base de donnees apres 3 tentatives: {:?}",
+                last_error
+            )
         })
     };
 
     // Run migrations (toggle via RUN_MIGRATIONS env var; default: disabled to avoid migration mismatches)
-    let run_migrations = std::env::var("RUN_MIGRATIONS").unwrap_or_else(|_| "false".to_string()) == "true";
+    let run_migrations =
+        std::env::var("RUN_MIGRATIONS").unwrap_or_else(|_| "false".to_string()) == "true";
     if run_migrations {
         tracing::info!("Execution des migrations SQL...");
-        match sqlx::migrate!("./migrations")
-            .run(&db_pool)
-            .await
-        {
+        match sqlx::migrate!("./migrations").run(&db_pool).await {
             Ok(_) => {
                 tracing::info!("✅ Migrations SQL terminees avec succes");
             }
             Err(e) => {
                 tracing::warn!("⚠️ Migrations SQL echouees (non-bloquant): {}", e);
-                tracing::warn!("Le serveur demarrera quand meme, mais les tables peuvent ne pas exister");
+                tracing::warn!(
+                    "Le serveur demarrera quand meme, mais les tables peuvent ne pas exister"
+                );
             }
         }
     } else {
@@ -175,11 +181,11 @@ async fn main() -> anyhow::Result<()> {
     }
 
     // Connexion Redis
-    let redis_client = redis::Client::open(CONFIG.redis_url.as_str())
-        .expect("URL Redis invalide");
+    let redis_client = redis::Client::open(CONFIG.redis_url.as_str()).expect("URL Redis invalide");
 
     // Connexion NATS
-    let nats_client = async_nats::connect(&CONFIG.nats_url).await
+    let nats_client = async_nats::connect(&CONFIG.nats_url)
+        .await
         .expect("Impossible de se connecter a NATS");
     let jetstream_context = async_nats::jetstream::new(nats_client);
 
@@ -191,8 +197,13 @@ async fn main() -> anyhow::Result<()> {
 
     // Client FlareSolverr
     let flaresolverr_client = if !CONFIG.flaresolverr_url.is_empty() {
-        tracing::info!("Initialisation du client FlareSolverr a l'URL: {}", CONFIG.flaresolverr_url);
-        Some(clients::flaresolverr::FlareSolverrClient::new(CONFIG.flaresolverr_url.clone()))
+        tracing::info!(
+            "Initialisation du client FlareSolverr a l'URL: {}",
+            CONFIG.flaresolverr_url
+        );
+        Some(clients::flaresolverr::FlareSolverrClient::new(
+            CONFIG.flaresolverr_url.clone(),
+        ))
     } else {
         tracing::warn!("FlareSolverr non configure. Les requetes de scraping protegees par Cloudflare peuvent echouer.");
         None
@@ -218,7 +229,10 @@ async fn main() -> anyhow::Result<()> {
                 }
             }
             Err(e) => {
-                tracing::error!("Echec initialisation Playwright: {}. Streaming desactive.", e);
+                tracing::error!(
+                    "Echec initialisation Playwright: {}. Streaming desactive.",
+                    e
+                );
                 None
             }
         }
@@ -277,38 +291,96 @@ async fn main() -> anyhow::Result<()> {
     // Protected API routes (require API key)
     let protected_routes = Router::new()
         // Media CRUD
-        .route("/media", post(api::media::create_media_handler).get(api::media::list_media_handler))
-        .route("/media/:id", get(api::media::get_media_handler).put(api::media::update_media_handler).delete(api::media::delete_media_handler))
-        .route("/media/:id/files", get(api::downloads::list_media_files_handler))
-        .route("/media/:id/results", get(api::search::get_search_results_handler))
+        .route(
+            "/media",
+            post(api::media::create_media_handler).get(api::media::list_media_handler),
+        )
+        .route(
+            "/media/:id",
+            get(api::media::get_media_handler)
+                .put(api::media::update_media_handler)
+                .delete(api::media::delete_media_handler),
+        )
+        .route(
+            "/media/:id/files",
+            get(api::downloads::list_media_files_handler),
+        )
+        .route(
+            "/media/:id/results",
+            get(api::search::get_search_results_handler),
+        )
         .route("/media/:id/episodes", get(api::media::get_episodes_handler))
-        .route("/media/:id/recommendations", get(api::recommendations::get_recommendations_handler))
-        .route("/media/:id/stream", get(api::streaming::get_stream_links_handler))
+        .route(
+            "/media/:id/recommendations",
+            get(api::recommendations::get_recommendations_handler),
+        )
+        .route(
+            "/media/:id/stream",
+            get(api::streaming::get_stream_links_handler),
+        )
         // Search & Downloads
         .route("/search", post(api::search::trigger_search_handler))
-        .route("/search/:media_id", get(api::search::get_search_results_handler))
-        .route("/downloads", post(api::downloads::start_download_handler).get(api::downloads::list_downloads_handler))
+        .route(
+            "/search/:media_id",
+            get(api::search::get_search_results_handler),
+        )
+        .route(
+            "/downloads",
+            post(api::downloads::start_download_handler)
+                .get(api::downloads::list_downloads_handler),
+        )
         // Tasks
-        .route("/tasks", post(api::tasks::create_task_handler).get(api::tasks::list_tasks_handler))
+        .route(
+            "/tasks",
+            post(api::tasks::create_task_handler).get(api::tasks::list_tasks_handler),
+        )
         .route("/tasks/:id", get(api::tasks::get_task_handler))
         // Storage
         .route("/storage", get(api::storage::get_storage_handler))
         // File streaming
-        .route("/files/:file_id/stream", get(api::files::stream_file_handler))
+        .route(
+            "/files/:file_id/stream",
+            get(api::files::stream_file_handler),
+        )
         .route("/files/:file_id/info", get(api::files::file_info_handler))
         .merge(api::tmdb::tmdb_routes())
         // Direct streaming (no DB needed)
-        .route("/streaming/direct/:media_type/:tmdb_id", get(api::streaming::direct_stream_handler))
+        .route(
+            "/streaming/direct/:media_type/:tmdb_id",
+            get(api::streaming::direct_stream_handler),
+        )
         // Library (favorites)
-        .route("/library", post(api::library::add_to_library_handler).get(api::library::list_library_handler))
-        .route("/library/:media_id", delete(api::library::remove_from_library_handler))
-        .route("/library/status/:media_id", get(api::library::library_status_handler))
+        .route(
+            "/library",
+            post(api::library::add_to_library_handler).get(api::library::list_library_handler),
+        )
+        .route(
+            "/library/:media_id",
+            delete(api::library::remove_from_library_handler),
+        )
+        .route(
+            "/library/status/:tmdb_id/:media_type",
+            get(api::library::library_status_handler),
+        )
         // Watchlist
-        .route("/watchlist", post(api::watchlist::add_to_watchlist_handler).get(api::watchlist::list_watchlist_handler))
-        .route("/watchlist/:media_id", delete(api::watchlist::remove_from_watchlist_handler))
+        .route(
+            "/watchlist",
+            post(api::watchlist::add_to_watchlist_handler)
+                .get(api::watchlist::list_watchlist_handler),
+        )
+        .route(
+            "/watchlist/:media_id",
+            delete(api::watchlist::remove_from_watchlist_handler),
+        )
         // Watch History
-        .route("/watch-history", post(api::watch_history::update_watch_progress_handler))
-        .route("/watch-history/continue", get(api::watch_history::continue_watching_handler))
+        .route(
+            "/watch-history",
+            post(api::watch_history::update_watch_progress_handler),
+        )
+        .route(
+            "/watch-history/continue",
+            get(api::watch_history::continue_watching_handler),
+        )
         .layer(middleware::from_fn(api::auth::api_key_middleware));
 
     // Public routes (no auth needed)

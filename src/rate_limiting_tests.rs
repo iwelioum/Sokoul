@@ -1,8 +1,8 @@
 #[cfg(test)]
 pub mod rate_limiting_tests {
+    use chrono::Utc;
     use std::collections::HashMap;
     use std::sync::{Arc, Mutex};
-    use chrono::Utc;
 
     // ============ RATE LIMITER IMPLEMENTATION ============
 
@@ -129,7 +129,10 @@ pub mod rate_limiting_tests {
 
         // User 2: should have separate limit
         for _ in 0..3 {
-            assert!(limiter.check_limit(user2, now), "User 2 should have own limit");
+            assert!(
+                limiter.check_limit(user2, now),
+                "User 2 should have own limit"
+            );
         }
         assert!(!limiter.check_limit(user2, now));
     }
@@ -339,10 +342,16 @@ pub mod rate_limiting_tests {
 
         // First request from user should pass
         let user_key = "user-0";
-        assert!(limiter.check_limit(user_key, now), "First request should pass");
-        
+        assert!(
+            limiter.check_limit(user_key, now),
+            "First request should pass"
+        );
+
         // Subsequent requests in same window should fail
-        assert!(!limiter.check_limit(user_key, now), "Second request should fail (limit = 1)");
+        assert!(
+            !limiter.check_limit(user_key, now),
+            "Second request should fail (limit = 1)"
+        );
     }
 
     // ============ RETRY-AFTER HEADER ============

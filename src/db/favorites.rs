@@ -1,7 +1,7 @@
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 use sqlx::{PgPool, Row};
 use uuid::Uuid;
-use serde::{Serialize, Deserialize};
-use chrono::{DateTime, Utc};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Favorite {
@@ -10,10 +10,7 @@ pub struct Favorite {
     pub added_at: Option<DateTime<Utc>>,
 }
 
-pub async fn add_favorite(
-    pool: &PgPool,
-    media_id: Uuid,
-) -> Result<Favorite, sqlx::Error> {
+pub async fn add_favorite(pool: &PgPool, media_id: Uuid) -> Result<Favorite, sqlx::Error> {
     let row = sqlx::query(
         r#"
         INSERT INTO favorites (media_id)
@@ -34,10 +31,7 @@ pub async fn add_favorite(
     })
 }
 
-pub async fn remove_favorite(
-    pool: &PgPool,
-    media_id: Uuid,
-) -> Result<u64, sqlx::Error> {
+pub async fn remove_favorite(pool: &PgPool, media_id: Uuid) -> Result<u64, sqlx::Error> {
     sqlx::query(
         r#"
         DELETE FROM favorites
@@ -68,17 +62,17 @@ pub async fn list_favorites(
     .fetch_all(pool)
     .await?;
 
-    Ok(rows.into_iter().map(|row| Favorite {
-        id: row.get("id"),
-        media_id: row.get("media_id"),
-        added_at: row.get("added_at"),
-    }).collect())
+    Ok(rows
+        .into_iter()
+        .map(|row| Favorite {
+            id: row.get("id"),
+            media_id: row.get("media_id"),
+            added_at: row.get("added_at"),
+        })
+        .collect())
 }
 
-pub async fn is_favorite(
-    pool: &PgPool,
-    media_id: Uuid,
-) -> Result<bool, sqlx::Error> {
+pub async fn is_favorite(pool: &PgPool, media_id: Uuid) -> Result<bool, sqlx::Error> {
     let row = sqlx::query(
         r#"
         SELECT COUNT(*) as count

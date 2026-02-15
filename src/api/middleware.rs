@@ -1,8 +1,4 @@
-use axum::{
-    extract::Request,
-    middleware::Next,
-    response::Response,
-};
+use axum::{extract::Request, middleware::Next, response::Response};
 use std::time::Instant;
 use tokio::time::{timeout, Duration};
 
@@ -14,7 +10,7 @@ pub async fn timeout_middleware(
     next: Next,
 ) -> Result<Response, axum::http::StatusCode> {
     let timeout_duration = Duration::from_secs(30);
-    
+
     match timeout(timeout_duration, next.run(req)).await {
         Ok(response) => Ok(response),
         Err(_) => {
@@ -26,19 +22,16 @@ pub async fn timeout_middleware(
 
 /// Middleware pour logger les requêtes avec timing
 #[allow(dead_code)]
-pub async fn request_logging_middleware(
-    req: Request,
-    next: Next,
-) -> Response {
+pub async fn request_logging_middleware(req: Request, next: Next) -> Response {
     let method = req.method().clone();
     let path = req.uri().path().to_string();
     let start = Instant::now();
-    
+
     let response = next.run(req).await;
-    
+
     let elapsed = start.elapsed();
     let status = response.status();
-    
+
     if status.is_client_error() || status.is_server_error() {
         tracing::warn!(
             "{} {} → {} ({:.2}ms)",
@@ -56,7 +49,7 @@ pub async fn request_logging_middleware(
             elapsed.as_secs_f64() * 1000.0
         );
     }
-    
+
     response
 }
 
@@ -65,7 +58,7 @@ pub async fn request_logging_middleware(
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
 pub struct AuditLog {
-    pub user_id: Option<String>,      // From API key (if known)
+    pub user_id: Option<String>, // From API key (if known)
     pub operation: AuditOperation,
     pub resource_type: String,
     pub resource_id: String,
@@ -124,7 +117,7 @@ impl AuditLog {
             AuditStatus::Success => "✓",
             AuditStatus::Failure => "✗",
         };
-        
+
         let user_str = self.user_id.as_deref().unwrap_or("anonymous");
         let op_str = match self.operation {
             AuditOperation::Create => "CREATE",
@@ -132,7 +125,7 @@ impl AuditLog {
             AuditOperation::Update => "UPDATE",
             AuditOperation::Delete => "DELETE",
         };
-        
+
         if let Some(details) = &self.details {
             tracing::info!(
                 "[AUDIT] {} {} {} {}/{} - {}",
@@ -172,7 +165,7 @@ mod tests {
         let log = AuditLog::new(AuditOperation::Delete, "media", "uuid-123")
             .with_user("user-456")
             .with_failure("Permission denied");
-        
+
         assert_eq!(log.status, AuditStatus::Failure);
         assert_eq!(log.user_id, Some("user-456".to_string()));
     }

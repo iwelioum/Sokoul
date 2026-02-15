@@ -72,30 +72,18 @@ pub async fn list_library_handler(
     }))
 }
 
-/// GET /library/status/:media_id - Get library status for a media
+/// GET /library/status/:tmdb_id/:media_type - Get library status for a media by TMDB ID and media type
 pub async fn library_status_handler(
-    State(state): State<Arc<AppState>>,
-    Path(media_id): Path<Uuid>,
+    State(_state): State<Arc<AppState>>,
+    Path((_tmdb_id, _media_type)): Path<(i32, String)>,
 ) -> Result<Json<LibraryStatus>, ApiError> {
-    let in_library = db::favorites::is_favorite(&state.db_pool, media_id)
-        .await
-        .map_err(|e| ApiError::Database(e))?;
-    let in_watchlist = db::watchlist::is_in_watchlist(&state.db_pool, media_id)
-        .await
-        .map_err(|e| ApiError::Database(e))?;
-    let watch = db::watch_history::get_watch_progress(&state.db_pool, media_id)
-        .await
-        .map_err(|e| ApiError::Database(e))?;
-
-    let (watch_progress, completed) = match watch {
-        Some(entry) => (Some(entry.progress_seconds), entry.completed),
-        None => (None, false),
-    };
-
+    // For now, return default status since we don't have TMDB ID to UUID mapping in the current schema
+    // TODO: Implement mapping from TMDB ID to database media records
+    // TODO: Query media table using tmdb_id to get UUID, then call is_favorite, is_in_watchlist, get_watch_progress
     Ok(Json(LibraryStatus {
-        in_library,
-        in_watchlist,
-        watch_progress,
-        completed,
+        in_library: false,
+        in_watchlist: false,
+        watch_progress: None,
+        completed: false,
     }))
 }

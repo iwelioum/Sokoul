@@ -2,10 +2,10 @@ use crate::AppState;
 use std::sync::Arc;
 
 pub mod hunter;
+pub mod metrics;
 pub mod oracle;
 pub mod scout;
 pub mod sentinel;
-pub mod metrics;
 
 /// Point d'entree pour lancer tous les workers en parallele.
 pub async fn run_workers(state: Arc<AppState>) {

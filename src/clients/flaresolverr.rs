@@ -71,7 +71,10 @@ impl FlareSolverrClient {
 
         let flaresolverr_response: FlareSolverrResponse = resp.json().await?;
 
-        debug!("FlareSolverr response status: {}", flaresolverr_response.status);
+        debug!(
+            "FlareSolverr response status: {}",
+            flaresolverr_response.status
+        );
 
         if flaresolverr_response.status != "ok" {
             error!(
@@ -95,7 +98,9 @@ impl FlareSolverrClient {
                         solution.status
                     ));
                 }
-                solution.response.ok_or_else(|| anyhow!("No response from FlareSolverr solution"))
+                solution
+                    .response
+                    .ok_or_else(|| anyhow!("No response from FlareSolverr solution"))
             }
             None => Err(anyhow!("No solution found in FlareSolverr response")),
         }

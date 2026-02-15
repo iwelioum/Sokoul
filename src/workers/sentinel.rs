@@ -18,24 +18,36 @@ pub async fn sentinel_worker(state: Arc<AppState>) -> anyhow::Result<()> {
         interval.tick().await;
 
         // 1. Health Check DB
-        let db_ok = sqlx::query("SELECT 1").execute(&state.db_pool).await.is_ok();
+        let db_ok = sqlx::query("SELECT 1")
+            .execute(&state.db_pool)
+            .await
+            .is_ok();
         if !db_ok {
             tracing::error!("Sentinel: ALERTE DB DOWN");
-            let _ = state.event_tx.send(WsEvent::SystemAlert {
-                level: "critical".to_string(),
-                message: "Base de donnees inaccessible".to_string(),
-            }.to_json());
+            let _ = state.event_tx.send(
+                WsEvent::SystemAlert {
+                    level: "critical".to_string(),
+                    message: "Base de donnees inaccessible".to_string(),
+                }
+                .to_json(),
+            );
         }
 
         // 2. Health Check Redis
         let redis_ok = match state.redis_client.get_multiplexed_async_connection().await {
-            Ok(mut con) => redis::cmd("PING").query_async::<_, String>(&mut con).await.is_ok(),
+            Ok(mut con) => redis::cmd("PING")
+                .query_async::<_, String>(&mut con)
+                .await
+                .is_ok(),
             Err(e) => {
                 tracing::error!("Sentinel: ALERTE REDIS DOWN: {}", e);
-                let _ = state.event_tx.send(WsEvent::SystemAlert {
-                    level: "critical".to_string(),
-                    message: "Redis inaccessible".to_string(),
-                }.to_json());
+                let _ = state.event_tx.send(
+                    WsEvent::SystemAlert {
+                        level: "critical".to_string(),
+                        message: "Redis inaccessible".to_string(),
+                    }
+                    .to_json(),
+                );
                 false
             }
         };
@@ -72,31 +84,44 @@ pub async fn sentinel_worker(state: Arc<AppState>) -> anyhow::Result<()> {
             let total = disk.total_space();
             let free = disk.available_space();
             let used = total.saturating_sub(free);
-            let disk_percent = if total > 0 { (used as f64 / total as f64) * 100.0 } else { 0.0 };
+            let disk_percent = if total > 0 {
+                (used as f64 / total as f64) * 100.0
+            } else {
+                0.0
+            };
 
-            let _ = state.event_tx.send(WsEvent::StorageUpdate {
-                total_gb: total as f64 / 1_073_741_824.0,
-                used_gb: used as f64 / 1_073_741_824.0,
-                free_gb: free as f64 / 1_073_741_824.0,
-                usage_percent: disk_percent,
-            }.to_json());
+            let _ = state.event_tx.send(
+                WsEvent::StorageUpdate {
+                    total_gb: total as f64 / 1_073_741_824.0,
+                    used_gb: used as f64 / 1_073_741_824.0,
+                    free_gb: free as f64 / 1_073_741_824.0,
+                    usage_percent: disk_percent,
+                }
+                .to_json(),
+            );
 
             if disk_percent > 90.0 {
                 tracing::warn!("Sentinel: ALERTE STOCKAGE CRITIQUE ({:.1}%)", disk_percent);
-                let _ = state.event_tx.send(WsEvent::SystemAlert {
-                    level: "warning".to_string(),
-                    message: format!("Stockage critique: {:.1}% utilise", disk_percent),
-                }.to_json());
+                let _ = state.event_tx.send(
+                    WsEvent::SystemAlert {
+                        level: "warning".to_string(),
+                        message: format!("Stockage critique: {:.1}% utilise", disk_percent),
+                    }
+                    .to_json(),
+                );
             }
         }
 
         // Alert if RAM critical (> 90%)
         if mem_percent > 90.0 {
             tracing::warn!("Sentinel: ALERTE MEMOIRE CRITIQUE ({:.1}%)", mem_percent);
-            let _ = state.event_tx.send(WsEvent::SystemAlert {
-                level: "warning".to_string(),
-                message: format!("Memoire critique: {:.1}% utilisee", mem_percent),
-            }.to_json());
+            let _ = state.event_tx.send(
+                WsEvent::SystemAlert {
+                    level: "warning".to_string(),
+                    message: format!("Memoire critique: {:.1}% utilisee", mem_percent),
+                }
+                .to_json(),
+            );
         }
     }
 }

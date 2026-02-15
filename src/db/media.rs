@@ -2,7 +2,10 @@ use crate::models::{CreateMediaPayload, Media, UpdateMediaPayload};
 use sqlx::PgPool;
 use uuid::Uuid;
 
-pub async fn create_media(pool: &PgPool, payload: &CreateMediaPayload) -> Result<Media, sqlx::Error> {
+pub async fn create_media(
+    pool: &PgPool,
+    payload: &CreateMediaPayload,
+) -> Result<Media, sqlx::Error> {
     let id = Uuid::new_v4();
 
     let media = sqlx::query_as::<_, Media>(
@@ -53,7 +56,12 @@ pub async fn list_media(pool: &PgPool, limit: i64, offset: i64) -> Result<Vec<Me
     Ok(media_list)
 }
 
-pub async fn list_media_by_type(pool: &PgPool, media_type: &str, limit: i64, offset: i64) -> Result<Vec<Media>, sqlx::Error> {
+pub async fn list_media_by_type(
+    pool: &PgPool,
+    media_type: &str,
+    limit: i64,
+    offset: i64,
+) -> Result<Vec<Media>, sqlx::Error> {
     let media_list = sqlx::query_as::<_, Media>(
         "SELECT * FROM media WHERE media_type = $1 ORDER BY updated_at DESC LIMIT $2 OFFSET $3",
     )
@@ -92,7 +100,11 @@ pub async fn count_media_by_type(pool: &PgPool, media_type: &str) -> Result<i64,
     Ok(count.0)
 }
 
-pub async fn search_media(pool: &PgPool, query: &str, limit: i64) -> Result<Vec<Media>, sqlx::Error> {
+pub async fn search_media(
+    pool: &PgPool,
+    query: &str,
+    limit: i64,
+) -> Result<Vec<Media>, sqlx::Error> {
     let media_list = sqlx::query_as::<_, Media>(
         r#"
         SELECT * FROM media
@@ -120,8 +132,14 @@ pub async fn update_media_by_id(
     let title = payload.title.as_deref().unwrap_or(&current.title);
     let year = payload.year.or(current.year);
     let overview = payload.overview.as_deref().or(current.overview.as_deref());
-    let poster_url = payload.poster_url.as_deref().or(current.poster_url.as_deref());
-    let backdrop_url = payload.backdrop_url.as_deref().or(current.backdrop_url.as_deref());
+    let poster_url = payload
+        .poster_url
+        .as_deref()
+        .or(current.poster_url.as_deref());
+    let backdrop_url = payload
+        .backdrop_url
+        .as_deref()
+        .or(current.backdrop_url.as_deref());
     let status = payload.status.as_deref().or(current.status.as_deref());
     let genres = payload.genres.as_ref().or(current.genres.as_ref());
 

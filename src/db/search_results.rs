@@ -60,14 +60,12 @@ pub async fn update_score(
     score: i32,
     ai_validated: bool,
 ) -> Result<(), sqlx::Error> {
-    sqlx::query(
-        "UPDATE search_results SET score = $1, ai_validated = $2 WHERE id = $3",
-    )
-    .bind(score)
-    .bind(ai_validated)
-    .bind(id)
-    .execute(pool)
-    .await?;
+    sqlx::query("UPDATE search_results SET score = $1, ai_validated = $2 WHERE id = $3")
+        .bind(score)
+        .bind(ai_validated)
+        .bind(id)
+        .execute(pool)
+        .await?;
 
     Ok(())
 }

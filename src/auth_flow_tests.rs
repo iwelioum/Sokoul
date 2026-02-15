@@ -7,9 +7,9 @@ pub mod auth_flow_tests {
 
     #[derive(Serialize, Deserialize, Debug, Clone)]
     struct JwtClaims {
-        sub: String,        // Subject (user_id)
-        exp: i64,          // Expiration time
-        iat: i64,          // Issued at
+        sub: String, // Subject (user_id)
+        exp: i64,    // Expiration time
+        iat: i64,    // Issued at
         user_id: String,
         email: String,
     }
@@ -71,8 +71,14 @@ pub mod auth_flow_tests {
         let current_time = now.timestamp();
 
         // Check expiration
-        assert!(expired_claims.exp < current_time, "Expired token should be invalid");
-        assert!(valid_claims.exp > current_time, "Valid token should not be expired");
+        assert!(
+            expired_claims.exp < current_time,
+            "Expired token should be invalid"
+        );
+        assert!(
+            valid_claims.exp > current_time,
+            "Valid token should not be expired"
+        );
     }
 
     #[test]
@@ -93,7 +99,8 @@ pub mod auth_flow_tests {
         // Token signature should match expected key
         let jwt_secret = "secret-key-123";
 
-        let payload = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyLTEyMyIsImV4cCI6MTczOTY0MDAwMH0";
+        let payload =
+            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyLTEyMyIsImV4cCI6MTczOTY0MDAwMH0";
 
         // In real code: HMAC-SHA256(payload, secret) should match signature
         // For test: verify signature bytes are present
@@ -156,8 +163,14 @@ pub mod auth_flow_tests {
 
         let now = Utc::now().timestamp();
 
-        assert!(expired_token.expires_at < now, "Expired token should be invalid");
-        assert!(valid_token.expires_at > now, "Valid token should not be expired");
+        assert!(
+            expired_token.expires_at < now,
+            "Expired token should be invalid"
+        );
+        assert!(
+            valid_token.expires_at > now,
+            "Valid token should not be expired"
+        );
     }
 
     // ============ AUTHENTICATION FLOW ============
@@ -230,7 +243,10 @@ pub mod auth_flow_tests {
         };
 
         assert!(!response.access_token.is_empty());
-        assert!(response.refresh_token.is_some(), "Refresh token rotation supported");
+        assert!(
+            response.refresh_token.is_some(),
+            "Refresh token rotation supported"
+        );
     }
 
     #[test]
@@ -254,7 +270,10 @@ pub mod auth_flow_tests {
         let invalid_password = "short";
 
         assert!(valid_password.len() >= 8, "Valid password length check");
-        assert!(invalid_password.len() < 8, "Short password should be rejected");
+        assert!(
+            invalid_password.len() < 8,
+            "Short password should be rejected"
+        );
     }
 
     #[test]
@@ -269,8 +288,14 @@ pub mod auth_flow_tests {
         };
 
         // Verify it doesn't look like plaintext (contains hash markers)
-        assert!(account.password_hash.starts_with("$2b$"), "Should be bcrypt hash");
-        assert!(!account.password_hash.contains("password123"), "No plaintext password");
+        assert!(
+            account.password_hash.starts_with("$2b$"),
+            "Should be bcrypt hash"
+        );
+        assert!(
+            !account.password_hash.contains("password123"),
+            "No plaintext password"
+        );
     }
 
     #[test]
@@ -282,7 +307,8 @@ pub mod auth_flow_tests {
         let expiration_time = reset_link_expires.timestamp();
         let current_time = now.timestamp();
 
-        let is_valid = (expiration_time - current_time) > 0 && (expiration_time - current_time) <= 900; // 900s = 15min
+        let is_valid =
+            (expiration_time - current_time) > 0 && (expiration_time - current_time) <= 900; // 900s = 15min
         assert!(is_valid, "Reset link should be valid for 15 minutes");
     }
 
@@ -306,16 +332,15 @@ pub mod auth_flow_tests {
     #[test]
     fn test_invalid_token_format_rejected() {
         // Invalid token format should be rejected
-        let invalid_tokens = vec![
-            "not_a_token",
-            "way.too.many.parts.here",
-            "",
-            "null",
-        ];
+        let invalid_tokens = vec!["not_a_token", "way.too.many.parts.here", "", "null"];
 
         for token in invalid_tokens {
             let parts: Vec<&str> = token.split('.').collect();
-            assert!(parts.len() != 3 || token.is_empty(), "Invalid token should not have exactly 3 parts: {}", token);
+            assert!(
+                parts.len() != 3 || token.is_empty(),
+                "Invalid token should not have exactly 3 parts: {}",
+                token
+            );
         }
     }
 
@@ -359,7 +384,10 @@ pub mod auth_flow_tests {
             _created_at: Utc::now().timestamp(),
         };
 
-        assert_ne!(session1.session_id, session2.session_id, "Different sessions");
+        assert_ne!(
+            session1.session_id, session2.session_id,
+            "Different sessions"
+        );
         assert_eq!(session1.user_id, session2.user_id, "Same user");
     }
 
@@ -371,6 +399,9 @@ pub mod auth_flow_tests {
         let last_activity = now - chrono::Duration::minutes(35);
 
         let is_expired = (now - last_activity).num_minutes() > session_timeout_minutes as i64;
-        assert!(is_expired, "Session should be expired after 35 minutes inactivity");
+        assert!(
+            is_expired,
+            "Session should be expired after 35 minutes inactivity"
+        );
     }
 }

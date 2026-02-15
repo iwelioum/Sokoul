@@ -1,7 +1,7 @@
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 use sqlx::{PgPool, Row};
 use uuid::Uuid;
-use serde::{Serialize, Deserialize};
-use chrono::{DateTime, Utc};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct WatchHistoryItem {
@@ -61,13 +61,16 @@ pub async fn get_continue_watching(
     .fetch_all(pool)
     .await?;
 
-    Ok(rows.into_iter().map(|row| WatchHistoryItem {
-        id: row.get("id"),
-        media_id: row.get("media_id"),
-        progress_seconds: row.get("progress_seconds"),
-        completed: row.get("completed"),
-        last_watched_at: row.get("last_watched_at"),
-    }).collect())
+    Ok(rows
+        .into_iter()
+        .map(|row| WatchHistoryItem {
+            id: row.get("id"),
+            media_id: row.get("media_id"),
+            progress_seconds: row.get("progress_seconds"),
+            completed: row.get("completed"),
+            last_watched_at: row.get("last_watched_at"),
+        })
+        .collect())
 }
 
 pub async fn get_watch_progress(

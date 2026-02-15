@@ -21,7 +21,11 @@ impl StreamingProvider {
         search_url: &str,
         search_query: &str,
     ) -> anyhow::Result<Vec<TorrentResult>> {
-        tracing::info!("Scraping en cours sur '{}' pour '{}'...", search_url, search_query);
+        tracing::info!(
+            "Scraping en cours sur '{}' pour '{}'...",
+            search_url,
+            search_query
+        );
 
         // Naviguer vers l'URL
         page.goto_builder(search_url).goto().await?;
@@ -93,7 +97,11 @@ impl SearchProvider for StreamingProvider {
         result
     }
 
-    async fn search_by_tmdb_id(&self, tmdb_id: i32, media_type: &str) -> anyhow::Result<Vec<TorrentResult>> {
+    async fn search_by_tmdb_id(
+        &self,
+        tmdb_id: i32,
+        media_type: &str,
+    ) -> anyhow::Result<Vec<TorrentResult>> {
         let search_url = match media_type {
             "movie" => format!("https://vidsrc.to/embed/movie/{}", tmdb_id),
             "tv" => format!("https://vidsrc.to/embed/tv/{}", tmdb_id),

@@ -92,9 +92,15 @@ pub mod load_testing_tests {
         }
 
         let m = metrics.lock().unwrap();
-        assert_eq!(m.total_connections, 100, "All 100 connections should complete");
+        assert_eq!(
+            m.total_connections, 100,
+            "All 100 connections should complete"
+        );
         assert_eq!(m.peak_connections, 100, "Peak should be 100 concurrent");
-        assert!(m.avg_response_time_ms > 0.0, "Response times should be recorded");
+        assert!(
+            m.avg_response_time_ms > 0.0,
+            "Response times should be recorded"
+        );
     }
 
     #[tokio::test]
@@ -132,7 +138,10 @@ pub mod load_testing_tests {
 
         assert!(reqs >= 990, "Should have ~990 successful requests");
         assert_eq!(errs, 10, "Should have ~10 failed requests");
-        assert!(reqs as f64 / (reqs + errs) as f64 >= 0.99, "Success rate >= 99%");
+        assert!(
+            reqs as f64 / (reqs + errs) as f64 >= 0.99,
+            "Success rate >= 99%"
+        );
     }
 
     // ============ SPIKE TESTING ============

@@ -1,7 +1,7 @@
 #[cfg(test)]
 pub mod nats_jetstream_tests {
     // Placeholder tests - full NATS testing would require proper integration with async-nats API
-    
+
     #[tokio::test]
     async fn test_nats_connection_placeholder() {
         // NATS connection test - verifies connectivity
@@ -16,8 +16,10 @@ pub mod nats_jetstream_tests {
         let client = async_nats::connect("nats://127.0.0.1:4222")
             .await
             .expect("Failed to connect");
-        
-        let result = client.publish("test.nats.placeholder", "test message".into()).await;
+
+        let result = client
+            .publish("test.nats.placeholder", "test message".into())
+            .await;
         assert!(result.is_ok(), "Should publish message");
     }
 
@@ -94,7 +96,7 @@ pub mod nats_jetstream_tests {
         }
 
         let msg_status = MessageAckStatus::Acked;
-        
+
         match msg_status {
             MessageAckStatus::Acked => assert!(true),
             MessageAckStatus::Nacked => assert!(false, "Should not nack in this test"),

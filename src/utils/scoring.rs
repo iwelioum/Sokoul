@@ -38,19 +38,28 @@ pub fn compute_score(result: &TorrentResult) -> i32 {
     }
 
     // HDR bonus (0-5 points)
-    if title_lower.contains("hdr") || title_lower.contains("dolby vision") || title_lower.contains("dv") {
+    if title_lower.contains("hdr")
+        || title_lower.contains("dolby vision")
+        || title_lower.contains("dv")
+    {
         score += 5.0;
     }
 
     // Audio bonus (0-5 points)
-    if title_lower.contains("atmos") || title_lower.contains("truehd") || title_lower.contains("dts-hd") {
+    if title_lower.contains("atmos")
+        || title_lower.contains("truehd")
+        || title_lower.contains("dts-hd")
+    {
         score += 5.0;
     } else if title_lower.contains("aac") || title_lower.contains("ac3") {
         score += 2.0;
     }
 
     // Source quality bonus
-    if title_lower.contains("bluray") || title_lower.contains("blu-ray") || title_lower.contains("remux") {
+    if title_lower.contains("bluray")
+        || title_lower.contains("blu-ray")
+        || title_lower.contains("remux")
+    {
         score += 5.0;
     } else if title_lower.contains("web-dl") || title_lower.contains("webdl") {
         score += 3.0;
@@ -59,7 +68,11 @@ pub fn compute_score(result: &TorrentResult) -> i32 {
     }
 
     // Penalty: CAM/TS/screener
-    if title_lower.contains("cam") || title_lower.contains("hdts") || title_lower.contains("screener") || title_lower.contains("telecine") {
+    if title_lower.contains("cam")
+        || title_lower.contains("hdts")
+        || title_lower.contains("screener")
+        || title_lower.contains("telecine")
+    {
         score -= 30.0;
     }
 

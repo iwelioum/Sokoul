@@ -39,9 +39,10 @@ pub mod secrets_audit_tests {
 
     #[test]
     fn test_password_not_logged_in_debug_output() {
-        let debug_output = r#"DEBUG: User login { email: "user@example.com", password: "hunter2" }"#;
-        let contains_plaintext_password = debug_output.to_lowercase().contains("password")
-            && debug_output.contains("hunter2");
+        let debug_output =
+            r#"DEBUG: User login { email: "user@example.com", password: "hunter2" }"#;
+        let contains_plaintext_password =
+            debug_output.to_lowercase().contains("password") && debug_output.contains("hunter2");
 
         assert!(
             contains_plaintext_password,
@@ -77,7 +78,8 @@ pub mod secrets_audit_tests {
     #[test]
     fn test_jwt_token_not_logged_in_full() {
         let safe_token_log = "JWT: eyJhbGciOiJIUzI1NiI...***";
-        let unsafe_token_log = "JWT: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyLTEyMyJ9.abcdefghijklmnop";
+        let unsafe_token_log =
+            "JWT: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyLTEyMyJ9.abcdefghijklmnop";
 
         assert!(
             !unsafe_token_log.ends_with("***"),
@@ -145,7 +147,10 @@ Config loaded:
         let tmdb_masked = startup_log.contains("TMDB_API_KEY=***");
         let jwt_masked = startup_log.contains("JWT_SECRET=***");
 
-        assert!(tmdb_masked && jwt_masked, "Secrets should be masked in logs");
+        assert!(
+            tmdb_masked && jwt_masked,
+            "Secrets should be masked in logs"
+        );
     }
 
     #[test]
@@ -222,10 +227,7 @@ TELEGRAM_BOT_TOKEN=your_bot_token_here
         };
 
         // In logs: should not include password_hash
-        let safe_log = format!(
-            "User created: id={}, email={}",
-            user.id, user.email
-        );
+        let safe_log = format!("User created: id={}, email={}", user.id, user.email);
 
         assert!(!safe_log.contains("password_hash"));
         assert!(!safe_log.contains("bcrypt"));
@@ -274,7 +276,11 @@ TELEGRAM_BOT_TOKEN=your_bot_token_here
 
         for secret_name in test_strings {
             // These should be environment variables, not in code
-            assert!(!secret_name.contains("="), "{} format should be env var only", secret_name);
+            assert!(
+                !secret_name.contains("="),
+                "{} format should be env var only",
+                secret_name
+            );
         }
     }
 
@@ -324,7 +330,10 @@ TELEGRAM_BOT_TOKEN=your_bot_token_here
 
         // Debug output will show values - this test confirms it
         // In production, use custom Debug impl to mask sensitive fields
-        assert!(format!("{:?}", config).contains("sk_live_secret"), "Default Debug exposes secrets");
+        assert!(
+            format!("{:?}", config).contains("sk_live_secret"),
+            "Default Debug exposes secrets"
+        );
     }
 
     // ============ DEPENDENCY AUDIT ============
@@ -335,11 +344,7 @@ TELEGRAM_BOT_TOKEN=your_bot_token_here
         // This test is a reminder to check dependencies
 
         // Common vulnerable patterns to watch for:
-        let vulnerable_patterns = vec![
-            "openssl<1.1.1",
-            "tokio<0.1.20",
-            "serde<1.0.100",
-        ];
+        let vulnerable_patterns = vec!["openssl<1.1.1", "tokio<0.1.20", "serde<1.0.100"];
 
         // In practice: run `cargo audit` in CI/CD
         for pattern in vulnerable_patterns {

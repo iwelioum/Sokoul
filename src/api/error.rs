@@ -30,7 +30,9 @@ pub enum ApiError {
 impl From<sqlx::Error> for ApiError {
     fn from(err: sqlx::Error) -> Self {
         match err {
-            sqlx::Error::RowNotFound => ApiError::NotFound("La ressource demandée n'a pas été trouvée.".to_string()),
+            sqlx::Error::RowNotFound => {
+                ApiError::NotFound("La ressource demandée n'a pas été trouvée.".to_string())
+            }
             _ => ApiError::Database(err),
         }
     }
@@ -48,17 +50,27 @@ impl IntoResponse for ApiError {
             }
             ApiError::Internal(e) => {
                 tracing::error!("Erreur interne: {:?}", e);
-                (StatusCode::INTERNAL_SERVER_ERROR, "Une erreur interne est survenue.".to_string())
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "Une erreur interne est survenue.".to_string(),
+                )
             }
             ApiError::InvalidInput(msg) => (StatusCode::BAD_REQUEST, msg),
             ApiError::NotFound(msg) => (StatusCode::NOT_FOUND, msg),
             ApiError::MessageBus(e) => {
                 tracing::error!("Erreur du bus de messages: {:?}", e);
-                (StatusCode::INTERNAL_SERVER_ERROR, "Une erreur interne est survenue lors de la communication avec les workers.".to_string())
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "Une erreur interne est survenue lors de la communication avec les workers."
+                        .to_string(),
+                )
             }
             ApiError::InternalServerError => {
                 tracing::error!("Erreur interne du serveur sans détail spécifique.");
-                (StatusCode::INTERNAL_SERVER_ERROR, "Une erreur interne inattendue est survenue.".to_string())
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "Une erreur interne inattendue est survenue.".to_string(),
+                )
             }
         };
 

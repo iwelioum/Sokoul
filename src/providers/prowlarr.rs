@@ -30,7 +30,11 @@ pub struct ProwlarrProvider {
 }
 
 impl ProwlarrProvider {
-    pub fn new(api_key: String, base_url: String, flaresolverr_client: Option<FlareSolverrClient>) -> Self {
+    pub fn new(
+        api_key: String,
+        base_url: String,
+        flaresolverr_client: Option<FlareSolverrClient>,
+    ) -> Self {
         Self {
             client: Client::new(),
             api_key,
@@ -67,8 +71,13 @@ impl SearchProvider for ProwlarrProvider {
             Err(e) => {
                 tracing::warn!("Prowlarr direct request failed: {}. Attempting with FlareSolverr if configured.", e);
                 if let Some(flaresolverr) = &self.flaresolverr_client {
-                    tracing::info!("Attempting Prowlarr search with FlareSolverr for query: {}", query);
-                    let flaresolverr_url = self.client.get(&url)
+                    tracing::info!(
+                        "Attempting Prowlarr search with FlareSolverr for query: {}",
+                        query
+                    );
+                    let flaresolverr_url = self
+                        .client
+                        .get(&url)
                         .query(&[
                             ("apikey", self.api_key.as_str()),
                             ("query", query),
@@ -111,11 +120,15 @@ impl SearchProvider for ProwlarrProvider {
         let body = resp.text().await?;
         tracing::info!("Prowlarr: reponse {} octets pour '{}'", body.len(), query);
 
-        let response: Vec<ProwlarrSearchResult> = serde_json::from_str(&body)
-            .map_err(|e| {
-                tracing::error!("Prowlarr: erreur deserialization pour '{}': {} - debut reponse: {}", query, e, &body[..body.len().min(500)]);
-                e
-            })?;
+        let response: Vec<ProwlarrSearchResult> = serde_json::from_str(&body).map_err(|e| {
+            tracing::error!(
+                "Prowlarr: erreur deserialization pour '{}': {} - debut reponse: {}",
+                query,
+                e,
+                &body[..body.len().min(500)]
+            );
+            e
+        })?;
 
         let results = response
             .into_iter()
@@ -138,7 +151,11 @@ impl SearchProvider for ProwlarrProvider {
         Ok(results)
     }
 
-    async fn search_by_tmdb_id(&self, tmdb_id: i32, media_type: &str) -> anyhow::Result<Vec<TorrentResult>> {
+    async fn search_by_tmdb_id(
+        &self,
+        tmdb_id: i32,
+        media_type: &str,
+    ) -> anyhow::Result<Vec<TorrentResult>> {
         let url = format!("{}/api/v1/search", self.base_url);
         let categories = match media_type {
             "movie" => "2000",
@@ -159,12 +176,21 @@ impl SearchProvider for ProwlarrProvider {
             .await;
 
         let response = match resp_result {
-            Ok(r) => r.error_for_status()?.json::<Vec<ProwlarrSearchResult>>().await?,
+            Ok(r) => {
+                r.error_for_status()?
+                    .json::<Vec<ProwlarrSearchResult>>()
+                    .await?
+            }
             Err(e) => {
                 tracing::warn!("Prowlarr direct request failed for TMDB ID {}: {}. Attempting with FlareSolverr if configured.", tmdb_id, e);
                 if let Some(flaresolverr) = &self.flaresolverr_client {
-                    tracing::info!("Attempting Prowlarr search by TMDB ID {} with FlareSolverr.", tmdb_id);
-                    let flaresolverr_url = self.client.get(&url)
+                    tracing::info!(
+                        "Attempting Prowlarr search by TMDB ID {} with FlareSolverr.",
+                        tmdb_id
+                    );
+                    let flaresolverr_url = self
+                        .client
+                        .get(&url)
                         .query(&[
                             ("apikey", self.api_key.as_str()),
                             ("query", &format!("{{TmdbId:{}}}", tmdb_id)),

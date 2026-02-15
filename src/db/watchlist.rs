@@ -1,7 +1,7 @@
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 use sqlx::{PgPool, Row};
 use uuid::Uuid;
-use serde::{Serialize, Deserialize};
-use chrono::{DateTime, Utc};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct WatchlistItem {
@@ -39,10 +39,7 @@ pub async fn add_to_watchlist(
     })
 }
 
-pub async fn remove_from_watchlist(
-    pool: &PgPool,
-    media_id: Uuid,
-) -> Result<u64, sqlx::Error> {
+pub async fn remove_from_watchlist(pool: &PgPool, media_id: Uuid) -> Result<u64, sqlx::Error> {
     sqlx::query("DELETE FROM watchlist WHERE media_id = $1")
         .bind(media_id)
         .execute(pool)
@@ -68,31 +65,27 @@ pub async fn list_watchlist(
     .fetch_all(pool)
     .await?;
 
-    Ok(rows.into_iter().map(|row| WatchlistItem {
-        id: row.get("id"),
-        media_id: row.get("media_id"),
-        added_at: row.get("added_at"),
-    }).collect())
+    Ok(rows
+        .into_iter()
+        .map(|row| WatchlistItem {
+            id: row.get("id"),
+            media_id: row.get("media_id"),
+            added_at: row.get("added_at"),
+        })
+        .collect())
 }
 
-pub async fn is_in_watchlist(
-    pool: &PgPool,
-    media_id: Uuid,
-) -> Result<bool, sqlx::Error> {
-    let row = sqlx::query(
-        "SELECT COUNT(*) as count FROM watchlist WHERE media_id = $1"
-    )
-    .bind(media_id)
-    .fetch_one(pool)
-    .await?;
+pub async fn is_in_watchlist(pool: &PgPool, media_id: Uuid) -> Result<bool, sqlx::Error> {
+    let row = sqlx::query("SELECT COUNT(*) as count FROM watchlist WHERE media_id = $1")
+        .bind(media_id)
+        .fetch_one(pool)
+        .await?;
 
     let count: i64 = row.get("count");
     Ok(count > 0)
 }
 
-pub async fn count_watchlist(
-    pool: &PgPool,
-) -> Result<i64, sqlx::Error> {
+pub async fn count_watchlist(pool: &PgPool) -> Result<i64, sqlx::Error> {
     let row = sqlx::query("SELECT COUNT(*) as count FROM watchlist")
         .fetch_one(pool)
         .await?;

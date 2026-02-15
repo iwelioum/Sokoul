@@ -39,16 +39,11 @@ pub async fn get_files_by_media_id(
     Ok(files)
 }
 
-pub async fn get_file_by_id(
-    pool: &PgPool,
-    file_id: Uuid,
-) -> Result<MediaFile, sqlx::Error> {
-    let file = sqlx::query_as::<_, MediaFile>(
-        "SELECT * FROM media_files WHERE id = $1",
-    )
-    .bind(file_id)
-    .fetch_one(pool)
-    .await?;
+pub async fn get_file_by_id(pool: &PgPool, file_id: Uuid) -> Result<MediaFile, sqlx::Error> {
+    let file = sqlx::query_as::<_, MediaFile>("SELECT * FROM media_files WHERE id = $1")
+        .bind(file_id)
+        .fetch_one(pool)
+        .await?;
 
     Ok(file)
 }
