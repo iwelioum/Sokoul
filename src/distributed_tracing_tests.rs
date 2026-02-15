@@ -21,15 +21,15 @@ pub mod distributed_tracing_tests {
     fn test_request_id_propagated_to_nats() {
         // When API sends message to NATS, should include request ID
         struct NatsMessage {
-            job_id: String,
+            _job_id: String,
             request_id: String, // Propagated
-            timestamp: i64,
+            _timestamp: i64,
         }
 
         let message = NatsMessage {
-            job_id: "job-123".to_string(),
+            _job_id: "job-123".to_string(),
             request_id: "req-456".to_string(),
-            timestamp: 1739640000,
+            _timestamp: 1739640000,
         };
 
         assert!(!message.request_id.is_empty(), "Should propagate request ID");
@@ -49,13 +49,13 @@ pub mod distributed_tracing_tests {
         struct ApiResponse {
             status_code: u16,
             request_id: String,
-            body: String,
+            _body: String,
         }
 
         let response = ApiResponse {
             status_code: 200,
             request_id: "req-789".to_string(),
-            body: "OK".to_string(),
+            _body: "OK".to_string(),
         };
 
         assert!(response.status_code == 200, "Response should have status");
@@ -70,15 +70,15 @@ pub mod distributed_tracing_tests {
         struct TraceContext {
             trace_id: String,
             span_id: String,
-            parent_span_id: Option<String>,
-            trace_flags: u8,
+            _parent_span_id: Option<String>,
+            _trace_flags: u8,
         }
 
         let trace = TraceContext {
             trace_id: "4bf92f3577b34da6a3ce929d0e0e4736".to_string(),
             span_id: "00f067aa0ba902b7".to_string(),
-            parent_span_id: None,
-            trace_flags: 1, // Sampled
+            _parent_span_id: None,
+            _trace_flags: 1, // Sampled
         };
 
         assert!(!trace.trace_id.is_empty(), "Should have trace ID");
@@ -98,7 +98,7 @@ pub mod distributed_tracing_tests {
     #[test]
     fn test_child_spans_created() {
         // Each operation creates child span (NATS send, DB query, etc)
-        let root_span = "POST /search";
+        let _root_span = "POST /search";
         let child_spans = vec![
             "database:query",
             "nats:publish",
@@ -128,12 +128,12 @@ pub mod distributed_tracing_tests {
         // HTTP headers should carry trace context
         struct HttpHeaders {
             traceparent: String,
-            tracestate: String,
+            _tracestate: String,
         }
 
         let headers = HttpHeaders {
             traceparent: "00-abc123-def456-01".to_string(),
-            tracestate: "vendor1=value1".to_string(),
+            _tracestate: "vendor1=value1".to_string(),
         };
 
         assert!(!headers.traceparent.is_empty(), "Should have traceparent");
@@ -148,7 +148,7 @@ pub mod distributed_tracing_tests {
             name: String,
             duration_ms: f64,
             status: String,
-            attributes: HashMap<String, String>,
+            _attributes: HashMap<String, String>,
         }
 
         let mut attrs = HashMap::new();
@@ -160,7 +160,7 @@ pub mod distributed_tracing_tests {
             name: "search_request".to_string(),
             duration_ms: 125.5,
             status: "success".to_string(),
-            attributes: attrs,
+            _attributes: attrs,
         };
 
         assert!(!span.name.is_empty(), "Should have span name");
@@ -174,15 +174,15 @@ pub mod distributed_tracing_tests {
         struct ErrorSpan {
             error: bool,
             error_type: String,
-            error_message: String,
-            stack_trace: Option<String>,
+            _error_message: String,
+            _stack_trace: Option<String>,
         }
 
         let error_span = ErrorSpan {
             error: true,
             error_type: "DatabaseError".to_string(),
-            error_message: "Connection timeout".to_string(),
-            stack_trace: Some("db.rs:42".to_string()),
+            _error_message: "Connection timeout".to_string(),
+            _stack_trace: Some("db.rs:42".to_string()),
         };
 
         assert!(error_span.error, "Should mark as error");
@@ -244,15 +244,15 @@ pub mod distributed_tracing_tests {
     fn test_nats_message_carries_trace_context() {
         // NATS message should carry trace context to worker
         struct NatsJobMessage {
-            job_id: String,
+            _job_id: String,
             trace_id: String,
-            span_id: String,
+            _span_id: String,
         }
 
         let message = NatsJobMessage {
-            job_id: "job-123".to_string(),
+            _job_id: "job-123".to_string(),
             trace_id: "trace-456".to_string(),
-            span_id: "span-789".to_string(),
+            _span_id: "span-789".to_string(),
         };
 
         assert!(!message.trace_id.is_empty(), "NATS message should have trace ID");
@@ -264,13 +264,13 @@ pub mod distributed_tracing_tests {
         struct DatabaseSpan {
             query: String,
             duration_ms: f64,
-            result_count: usize,
+            _result_count: usize,
         }
 
         let span = DatabaseSpan {
             query: "SELECT * FROM media WHERE id = $1".to_string(),
             duration_ms: 5.5,
-            result_count: 1,
+            _result_count: 1,
         };
 
         assert!(!span.query.is_empty(), "Should record query");
@@ -282,15 +282,15 @@ pub mod distributed_tracing_tests {
         // Cache lookups should create spans
         struct CacheSpan {
             operation: String,
-            key: String,
-            hit: bool,
+            _key: String,
+            _hit: bool,
             duration_ms: f64,
         }
 
         let span = CacheSpan {
             operation: "get".to_string(),
-            key: "search:inception".to_string(),
-            hit: true,
+            _key: "search:inception".to_string(),
+            _hit: true,
             duration_ms: 1.2,
         };
 
@@ -306,13 +306,13 @@ pub mod distributed_tracing_tests {
         struct TraceExportConfig {
             exporter_type: String,
             endpoint: String,
-            batch_size: usize,
+            _batch_size: usize,
         }
 
         let config = TraceExportConfig {
             exporter_type: "jaeger".to_string(),
             endpoint: "http://localhost:14268/api/traces".to_string(),
-            batch_size: 512,
+            _batch_size: 512,
         };
 
         assert!(!config.exporter_type.is_empty(), "Should have exporter");
@@ -343,7 +343,7 @@ pub mod distributed_tracing_tests {
     #[test]
     fn test_traces_queryable_by_error() {
         // Should be able to query: find_traces(error = true)
-        let error_filter = true;
+        let _error_filter = true;
         let can_query = true;
 
         assert!(can_query, "Should be able to query by error status");
@@ -397,7 +397,7 @@ pub mod distributed_tracing_tests {
         // Same trace ID should appear in all related events
         let trace_id = "trace-123";
 
-        let log_entry = format!("Processing [{}]", trace_id);
+        let _log_entry = format!("Processing [{}]", trace_id);
         let metric_label = trace_id;
 
         assert_eq!(trace_id, metric_label, "Trace ID should be consistent");
