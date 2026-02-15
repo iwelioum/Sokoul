@@ -106,7 +106,7 @@ sokoul_api_requests_total{endpoint="/downloads",method="POST"} 567
         ];
 
         for m in metrics {
-            assert!(m.count >= 0, "Error count should be non-negative");
+            assert!(m.count >= 0_u32, "Error count should be non-negative");
         }
     }
 

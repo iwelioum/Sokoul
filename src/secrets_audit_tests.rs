@@ -5,11 +5,13 @@ pub mod secrets_audit_tests {
     // ============ SECRETS DETECTION PATTERNS ============
 
     #[derive(Debug)]
+    #[allow(dead_code)]
     struct SecretPattern {
         name: &'static str,
         pattern: &'static str,
     }
 
+    #[allow(dead_code)]
     const SECRET_PATTERNS: &[SecretPattern] = &[
         SecretPattern {
             name: "AWS_ACCESS_KEY",
@@ -209,13 +211,13 @@ TELEGRAM_BOT_TOKEN=your_bot_token_here
         struct UserData {
             id: String,
             email: String,
-            password_hash: String, // Should be filtered
+            _password_hash: String, // Should be filtered
         }
 
         let user = UserData {
             id: "user-123".to_string(),
             email: "user@example.com".to_string(),
-            password_hash: "$2b$12$...bcrypt...".to_string(),
+            _password_hash: "$2b$12$...bcrypt...".to_string(),
         };
 
         // In logs: should not include password_hash
@@ -283,18 +285,18 @@ TELEGRAM_BOT_TOKEN=your_bot_token_here
         #[derive(Debug)]
         struct AuditLog {
             action: String,
-            user_id: String,
-            timestamp: i64,
-            ip_address: String,
-            result: String, // "success" or "failure"
+            _user_id: String,
+            _timestamp: i64,
+            _ip_address: String,
+            _result: String, // "success" or "failure"
         }
 
         let audit = AuditLog {
             action: "password_change".to_string(),
-            user_id: "user-123".to_string(),
-            timestamp: 1739640000,
-            ip_address: "203.0.113.1".to_string(),
-            result: "success".to_string(),
+            _user_id: "user-123".to_string(),
+            _timestamp: 1739640000,
+            _ip_address: "203.0.113.1".to_string(),
+            _result: "success".to_string(),
         };
 
         assert_eq!(audit.action, "password_change");
@@ -306,20 +308,20 @@ TELEGRAM_BOT_TOKEN=your_bot_token_here
         // Struct with Debug impl should not expose secrets
         #[derive(Debug)]
         struct Config {
-            database_url: String,
-            api_key: String,
+            _database_url: String,
+            _api_key: String,
         }
 
         let config = Config {
-            database_url: "postgres://localhost".to_string(),
-            api_key: "sk_live_secret".to_string(),
+            _database_url: "postgres://localhost".to_string(),
+            _api_key: "sk_live_secret".to_string(),
         };
 
-        let debug_str = format!("{:?}", config);
+        let _debug_str = format!("{:?}", config);
 
         // Debug output will show values - this test confirms it
         // In production, use custom Debug impl to mask sensitive fields
-        assert!(debug_str.contains("sk_live_secret"), "Default Debug exposes secrets");
+        assert!(format!("{:?}", config).contains("sk_live_secret"), "Default Debug exposes secrets");
     }
 
     // ============ DEPENDENCY AUDIT ============
