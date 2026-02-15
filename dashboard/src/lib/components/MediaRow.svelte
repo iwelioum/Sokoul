@@ -58,7 +58,7 @@
 	.row-title {
 		font-size: 22px;
 		font-weight: 700;
-		color: #3E2723;
+		color: var(--text-primary);
 		letter-spacing: -0.5px;
 		font-family: 'Playfair Display', serif;
 	}
@@ -96,7 +96,7 @@
 		font-size: 14px;
 		padding: 48px 16px;
 		text-align: center;
-		background: linear-gradient(135deg, rgba(239, 235, 233, 0.3) 0%, rgba(224, 215, 211, 0.2) 100%);
+		background: linear-gradient(135deg, rgba(30, 41, 59, 0.5) 0%, rgba(45, 63, 86, 0.4) 100%);
 		border-radius: var(--radius);
 		border: 1px dashed var(--border);
 	}

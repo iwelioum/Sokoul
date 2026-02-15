@@ -107,13 +107,15 @@
 		aspect-ratio: 2 / 3;
 		border-radius: var(--radius);
 		overflow: hidden;
-		background: var(--bg-card);
-		box-shadow: var(--shadow-warm);
-		transition: box-shadow var(--transition-smooth);
+		background: var(--bg-surface);
+		box-shadow: var(--shadow-dark);
+		transition: all var(--transition-smooth);
 	}
 
 	.media-card:hover .poster-wrap {
-		box-shadow: var(--shadow-warm-md);
+		box-shadow: var(--shadow-dark-md);
+		transform: scale(1.05);
+		border: 1px solid rgba(255, 255, 255, 0.2);
 	}
 
 	.poster-wrap img {

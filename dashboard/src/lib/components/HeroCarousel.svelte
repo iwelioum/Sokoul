@@ -18,12 +18,14 @@
 	let autoPlayTimer: ReturnType<typeof setTimeout> | null = $state(null);
 	let textColorMode = $state<'light' | 'dark'>('light');
 	let overlayOpacity = $state(0.3);
+	let clearLogos = $state<Map<number, string>>(new Map());
 
 	// Derived
 	const currentSlide = $derived(items[currentIndex] ?? null);
 	const heroBackdrop = $derived(
 		currentSlide?.backdrop_path ? tmdbImageUrl(currentSlide.backdrop_path, 'original') : null
 	);
+	const heroClearLogo = $derived(currentSlide?.id ? clearLogos.get(currentSlide.id) : null);
 	const heroTitle = $derived(currentSlide?.title || currentSlide?.name || 'Titre indisponible');
 	const heroOverview = $derived(currentSlide?.overview || '');
 	const heroRating = $derived(currentSlide?.vote_average ?? null);
@@ -243,6 +245,16 @@
 		height: 100%;
 		object-fit: cover;
 		display: block;
+		transition: transform var(--transition-slow);
+	}
+
+	.hero-carousel-slide.active .hero-carousel-image {
+		animation: kenBurns 8s ease-in-out forwards;
+	}
+
+	@keyframes kenBurns {
+		from { transform: scale(1); }
+		to { transform: scale(1.05); }
 	}
 
 	.hero-carousel-overlay {
@@ -328,6 +340,14 @@
 		font-weight: 700;
 		line-height: 1.1;
 		margin-bottom: 12px;
+	}
+
+	.hero-carousel-logo {
+		max-width: 400px;
+		max-height: 150px;
+		object-fit: contain;
+		margin-bottom: 16px;
+		filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.4));
 	}
 
 	.hero-carousel-overview {

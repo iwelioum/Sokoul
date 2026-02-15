@@ -6,37 +6,36 @@
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600;700&display=swap');
 
 :root {
-	/* ── Core palette "Premium Light" ── */
-	--bg-primary:    #F9F7F2;   /* Crème Lin */
-	--bg-secondary:  #FFFFFF;   /* Blanc Pur */
-	--bg-card:       #FFFFFF;   /* Surfaces */
-	--bg-hover:      #F0EEEA;   /* Crème Clair */
-	--text-primary:  #1A1A1A;   /* Anthracite Foncé */
-	--text-secondary:#6B6B6B;   /* Gris Moyen */
-	--text-muted:    #999999;   /* Gris Léger */
-	--accent:        #C04A35;   /* Terracotta Chaud */
-	--accent-hover:  #A83D2A;   /* Terracotta Foncé */
-	--accent-earth:  #8B7355;   /* Taupe Terreux */
-	--accent-sage:   #A19A8F;   /* Sage Neutre */
-	--success:       #4CAF7D;
-	--warning:       #F4A460;   /* Sandy Brown */
-	--danger:        #E05252;
-	--info:          #5BA4CF;
-	--border:        #ECECEC;   /* Bordure Légère */
-	--placeholder:   #EFEBE9;   /* Placeholder Beige */
+	/* ── SOKOUL v2: "Nuits d'Orient" - Dark Night Mode ── */
+	/* Palette: Bleu Abysse, Bleu Indigo, Or Berbère, Blanc Lunaire */
+	
+	--bg-primary:    #0F172A;   /* Bleu Abysse (fond principal) */
+	--bg-surface:    #1E293B;   /* Bleu Indigo (cartes, modales) */
+	--bg-hover:      #2D3F56;   /* Bleu Foncé (hover surfaces) */
+	--text-primary:  #F8FAFC;   /* Blanc Lunaire (titres, texte principal) */
+	--text-secondary:#94A3B8;   /* Gris Cendré (métadonnées, secondaire) */
+	--text-muted:    #64748B;   /* Gris Bleu (muted, disabled) */
+	--accent:        #D97706;   /* Or Berbère (CTA, actions) */
+	--accent-hover:  #B45309;   /* Or Foncé (hover states) */
+	--accent-light:  #FCD34D;   /* Or Clair (secondary actions) */
+	--success:       #10B981;   /* Émeraude (success states) */
+	--warning:       #F59E0B;   /* Ambre (warnings) */
+	--danger:        #EF4444;   /* Rouge (danger) */
+	--info:          #3B82F6;   /* Bleu Sky (info) */
+	--border:        #334155;   /* Bordure (bleu sombre) */
 	--radius:        12px;
 	--radius-sm:     8px;
 
-	/* ── Design tokens ── */
-	--gradient-accent:   linear-gradient(135deg, #C04A35, #8B7355);
-	--gradient-hero-mask: linear-gradient(to bottom, transparent 0%, rgba(249, 247, 242, 0.4) 40%, #F9F7F2 100%);
-	--gradient-overlay:   linear-gradient(to right, rgba(0,0,0,0.3) 0%, transparent 100%);
+	/* ── Design tokens (Dark Mode Palette) ── */
+	--gradient-accent:   linear-gradient(135deg, #D97706, #B45309);
+	--gradient-hero-mask: linear-gradient(to bottom, transparent 0%, rgba(15, 23, 42, 0.6) 40%, #0F172A 100%);
+	--gradient-overlay:   linear-gradient(to right, rgba(0, 0, 0, 0.4) 0%, transparent 100%);
 	
-	--shadow-subtle:      0 4px 12px rgba(0,0,0,0.08);
-	--shadow-medium:      0 8px 24px rgba(0,0,0,0.12);
-	--shadow-elevated:    0 12px 48px rgba(0,0,0,0.15);
-	--shadow-warm:        0 10px 20px -5px rgba(60, 40, 30, 0.15);
-	--shadow-warm-md:     0 16px 32px -8px rgba(60, 40, 30, 0.18);
+	--shadow-subtle:      0 4px 12px rgba(0, 0, 0, 0.3);
+	--shadow-medium:      0 8px 24px rgba(0, 0, 0, 0.4);
+	--shadow-elevated:    0 12px 48px rgba(0, 0, 0, 0.5);
+	--shadow-dark:        0 10px 15px -3px rgba(0, 0, 0, 0.5);
+	--shadow-dark-md:     0 16px 32px -8px rgba(0, 0, 0, 0.6);
 	
 	--transition-fast:    0.15s ease;
 	--transition-smooth:  0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -370,10 +369,10 @@ input::placeholder, textarea::placeholder { color: var(--text-muted); }
 }
 
 .navbar.scrolled {
-	background: rgba(249, 247, 242, 0.85);
+	background: rgba(15, 23, 42, 0.85);
 	backdrop-filter: blur(12px);
 	-webkit-backdrop-filter: blur(12px);
-	box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+	box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
 }
 
 .navbar.scrolled .nav-link {
@@ -381,7 +380,7 @@ input::placeholder, textarea::placeholder { color: var(--text-muted); }
 }
 
 .navbar.scrolled .icon-btn {
-	background: rgba(0,0,0,0.05);
+	background: rgba(255, 255, 255, 0.08);
 }
 
 /* ══════════════════════════════════════════════════════════
