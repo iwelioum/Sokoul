@@ -259,7 +259,7 @@ pub mod release_automation_tests {
     #[test]
     fn test_version_bump_patch() {
         // Patch: 0.2.0 → 0.2.1
-        let version = "0.2.0";
+        let _version = "0.2.0";
         let next_patch = "0.2.1";
 
         assert!(!next_patch.is_empty(), "Should bump patch");
@@ -268,7 +268,7 @@ pub mod release_automation_tests {
     #[test]
     fn test_version_bump_minor() {
         // Minor: 0.2.0 → 0.3.0
-        let version = "0.2.0";
+        let _version = "0.2.0";
         let next_minor = "0.3.0";
 
         assert!(!next_minor.is_empty(), "Should bump minor");
@@ -277,7 +277,7 @@ pub mod release_automation_tests {
     #[test]
     fn test_version_bump_major() {
         // Major: 0.2.0 → 1.0.0
-        let version = "0.2.0";
+        let _version = "0.2.0";
         let next_major = "1.0.0";
 
         assert!(!next_major.is_empty(), "Should bump major");

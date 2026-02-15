@@ -50,13 +50,13 @@ pub mod nats_jetstream_tests {
         // Verify consumer group concepts without actual NATS
         struct ConsumerGroup {
             name: String,
-            durable_name: String,
+            _durable_name: String,
             stream_name: String,
         }
 
         let consumer = ConsumerGroup {
             name: "scout-workers".to_string(),
-            durable_name: "scout-durable-001".to_string(),
+            _durable_name: "scout-durable-001".to_string(),
             stream_name: "JOBS".to_string(),
         };
 
@@ -87,7 +87,9 @@ pub mod nats_jetstream_tests {
         // Verify ACK/NACK concepts
         enum MessageAckStatus {
             Acked,
+            #[allow(dead_code)]
             Nacked,
+            #[allow(dead_code)]
             NotProcessed,
         }
 

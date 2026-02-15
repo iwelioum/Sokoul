@@ -9,7 +9,7 @@ pub mod load_testing_tests {
     struct ConnectionMetrics {
         total_connections: usize,
         peak_connections: usize,
-        failed_connections: usize,
+        _failed_connections: usize,
         avg_response_time_ms: f64,
     }
 
@@ -61,7 +61,7 @@ pub mod load_testing_tests {
         let metrics = Arc::new(Mutex::new(ConnectionMetrics {
             total_connections: 0,
             peak_connections: 0,
-            failed_connections: 0,
+            _failed_connections: 0,
             avg_response_time_ms: 0.0,
         }));
 

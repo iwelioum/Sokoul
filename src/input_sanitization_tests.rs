@@ -1,6 +1,5 @@
 #[cfg(test)]
 pub mod input_sanitization_tests {
-    use regex::Regex;
 
     // ============ XSS PREVENTION TESTS ============
 

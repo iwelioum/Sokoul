@@ -7,7 +7,7 @@ pub mod prometheus_metrics_tests {
     #[test]
     fn test_prometheus_endpoint_available() {
         // GET /metrics should return 200 OK
-        let endpoint = "/metrics";
+        let _endpoint = "/metrics";
         let response_code = 200;
 
         assert_eq!(response_code, 200, "Metrics endpoint should be available");
@@ -86,21 +86,21 @@ sokoul_api_requests_total{endpoint="/downloads",method="POST"} 567
     fn test_errors_total_counter() {
         // sokoul_errors_total: error counter by type
         struct ErrorMetric {
-            error_type: String,
+            _error_type: String,
             count: u32,
         }
 
         let metrics = vec![
             ErrorMetric {
-                error_type: "database_connection".to_string(),
+                _error_type: "database_connection".to_string(),
                 count: 2,
             },
             ErrorMetric {
-                error_type: "api_timeout".to_string(),
+                _error_type: "api_timeout".to_string(),
                 count: 5,
             },
             ErrorMetric {
-                error_type: "validation".to_string(),
+                _error_type: "validation".to_string(),
                 count: 12,
             },
         ];
@@ -185,7 +185,7 @@ sokoul_api_requests_total{endpoint="/downloads",method="POST"} 567
     #[test]
     fn test_worker_job_duration_histogram() {
         // sokoul_worker_job_duration_seconds: job processing time
-        let job_durations_sec = vec![2, 5, 3, 4, 6, 2, 4];
+        let _job_durations_sec = vec![2, 5, 3, 4, 6, 2, 4];
         let p50 = 4; // Median
         let p95 = 6; // 95th percentile
 

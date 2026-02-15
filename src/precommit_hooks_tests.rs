@@ -1,6 +1,5 @@
 #[cfg(test)]
 pub mod precommit_hooks_tests {
-    use std::collections::HashMap;
 
     // ============ FORMAT VALIDATION ============
 
@@ -157,7 +156,7 @@ pub mod precommit_hooks_tests {
     #[test]
     fn test_new_code_has_tests() {
         // New code should have accompanying tests
-        let code_files = vec!["new_feature.rs"];
+        let _code_files = vec!["new_feature.rs"];
         let test_files = vec!["new_feature_tests.rs"];
 
         assert!(
