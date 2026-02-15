@@ -313,7 +313,7 @@ input::placeholder, textarea::placeholder { color: var(--text-muted); }
    ══════════════════════════════════════════════════════════ */
 
 .navbar-inner {
-	height: 70px !important;
+	height: 140px !important;
 }
 
 .navbar-logo {
@@ -323,6 +323,6 @@ input::placeholder, textarea::placeholder { color: var(--text-muted); }
 }
 
 .logo-img {
-	height: 55px !important;
+	height: 300px !important;
 	width: auto !important;
 }

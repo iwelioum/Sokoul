@@ -341,9 +341,10 @@
 	.navbar-inner {
 		display: flex;
 		align-items: center;
-		gap: 28px;
-		padding: 0 32px;
-		height: 62px;
+		gap: 40px;
+		padding: 0 48px;
+		height: auto;
+		min-height: 80px;
 		max-width: 1600px;
 		margin: 0 auto;
 		width: 100%;
@@ -359,8 +360,10 @@
 	}
 
 	.logo-img {
-		height: 300px;
+		width: 120px;
+		height: auto;
 		transition: filter 0.2s ease;
+		max-height: none;
 	}
 
 	.navbar-logo:hover .logo-img {
@@ -377,7 +380,7 @@
 
 	.nav-link {
 		position: relative;
-		padding: 6px 14px;
+		padding: 8px 18px;
 		border-radius: 6px;
 		font-size: 14px;
 		font-weight: 500;
@@ -417,7 +420,7 @@
 		display: flex;
 		align-items: center;
 		gap: 8px;
-		padding: 7px 14px;
+		padding: 10px 18px;
 		background: rgba(255,255,255,0.05);
 		border: 1px solid rgba(255,255,255,0.09);
 		border-radius: 8px;
@@ -452,8 +455,8 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		width: 36px;
-		height: 36px;
+		width: 42px;
+		height: 42px;
 		border: none;
 		background: rgba(255,255,255,0.04);
 		border-radius: 8px;
