@@ -80,16 +80,16 @@ pub mod health_checks_tests {
             database: String,
             redis: String,
             nats: String,
-            disk: String,
-            memory: String,
+            _disk: String,
+            _memory: String,
         }
 
         let health = DeepHealthStatus {
             database: "healthy".to_string(),
             redis: "healthy".to_string(),
             nats: "healthy".to_string(),
-            disk: "healthy".to_string(),
-            memory: "healthy".to_string(),
+            _disk: "healthy".to_string(),
+            _memory: "healthy".to_string(),
         };
 
         assert_eq!(health.database, "healthy");
@@ -192,20 +192,20 @@ pub mod health_checks_tests {
     fn test_health_includes_response_times() {
         // Health response should include component response times
         struct ComponentHealth {
-            name: String,
-            status: String,
+            _name: String,
+            _status: String,
             response_time_ms: f64,
         }
 
         let components = vec![
             ComponentHealth {
-                name: "database".to_string(),
-                status: "healthy".to_string(),
+                _name: "database".to_string(),
+                _status: "healthy".to_string(),
                 response_time_ms: 2.5,
             },
             ComponentHealth {
-                name: "cache".to_string(),
-                status: "healthy".to_string(),
+                _name: "cache".to_string(),
+                _status: "healthy".to_string(),
                 response_time_ms: 1.2,
             },
         ];
@@ -219,12 +219,12 @@ pub mod health_checks_tests {
     fn test_health_includes_version_info() {
         // Health response should include app version
         struct HealthResponse {
-            status: String,
+            _status: String,
             version: String,
         }
 
         let response = HealthResponse {
-            status: "healthy".to_string(),
+            _status: "healthy".to_string(),
             version: "0.2.0".to_string(),
         };
 
@@ -245,7 +245,7 @@ pub mod health_checks_tests {
     #[test]
     fn test_health_not_affected_by_worker_backlog() {
         // Health should not wait for worker queue to empty
-        let queue_depth = 5000;
+        let _queue_depth = 5000;
         let health_response_ms = 50;
 
         assert!(health_response_ms < 1000, "Health independent of queue");
@@ -257,14 +257,14 @@ pub mod health_checks_tests {
     fn test_health_check_failures_logged() {
         // Health check failures should be logged
         struct HealthCheckLog {
-            component: String,
-            status: String,
+            _component: String,
+            _status: String,
             error_message: Option<String>,
         }
 
         let log = HealthCheckLog {
-            component: "database".to_string(),
-            status: "unhealthy".to_string(),
+            _component: "database".to_string(),
+            _status: "unhealthy".to_string(),
             error_message: Some("Connection refused".to_string()),
         };
 
