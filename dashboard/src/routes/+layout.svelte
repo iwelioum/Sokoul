@@ -92,7 +92,7 @@
 		/* Scroll → glassmorphism + bottom bar hide/show */
 		function handleScroll() {
 			const y = window.scrollY;
-			scrolled = y > 10;
+			scrolled = y > 50;
 			bottomBarVisible = y < lastScrollY || y < 60;
 			lastScrollY = y;
 		}

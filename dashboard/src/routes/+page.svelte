@@ -7,6 +7,7 @@
 	import type { TmdbSearchItem, WatchHistoryEntry, StreamLinks } from '$lib/api/client';
 	import MediaRow from '$lib/components/MediaRow.svelte';
 	import VideoPlayer from '$lib/components/VideoPlayer.svelte';
+	import HeroCarousel from '$lib/components/HeroCarousel.svelte';
 	import { goto } from '$app/navigation';
 
 	// ── State ──
@@ -20,14 +21,6 @@
 
 	let loadingTrending = $state(true);
 	let loadingPlatforms = $state(true);
-
-	// Hero
-	const heroItem = $derived(trendingAll[0] ?? null);
-	const heroBackdrop = $derived(heroItem ? tmdbImageUrl(heroItem.backdrop_path, 'original') : null);
-	const heroTitle = $derived(heroItem ? getItemTitle(heroItem) : '');
-	const heroYear = $derived(heroItem ? getItemYear(heroItem) : '');
-	const heroOverview = $derived(heroItem?.overview ?? '');
-	const heroRating = $derived(heroItem?.vote_average ?? null);
 
 	// Player
 	let showPlayer = $state(false);
@@ -74,13 +67,12 @@
 		} catch { /* ignore */ }
 	}
 
-	async function handleHeroPlay() {
-		if (!heroItem) return;
+	async function handleHeroPlay(item: TmdbSearchItem) {
 		loadingPlayer = true;
 		try {
-			const type = heroItem.media_type || 'movie';
-			playerLinks = await getDirectStreamLinks(type, heroItem.id);
-			playerTitle = heroTitle;
+			const type = item.media_type || 'movie';
+			playerLinks = await getDirectStreamLinks(type, item.id);
+			playerTitle = item.title || item.name || '';
 			showPlayer = true;
 		} catch (e) {
 			console.error(e);
@@ -88,9 +80,8 @@
 		loadingPlayer = false;
 	}
 
-	function handleHeroDetail() {
-		if (!heroItem) return;
-		goto(`/${heroItem.media_type || 'movie'}/${heroItem.id}`);
+	function handleHeroDetail(item: TmdbSearchItem) {
+		goto(`/${item.media_type || 'movie'}/${item.id}`);
 	}
 
 	function progressPercent(entry: WatchHistoryEntry): number {
@@ -102,41 +93,13 @@
 	<title>SOKOUL — Accueil</title>
 </svelte:head>
 
-<!-- Hero Banner -->
-{#if heroItem}
-	<div class="hero" style={heroBackdrop ? `--backdrop:url(${heroBackdrop})` : ''}>
-		<div class="hero-bg" class:has-backdrop={!!heroBackdrop}></div>
-		<div class="hero-content">
-			<div class="hero-meta">
-				<span class="hero-type">{heroItem.media_type === 'tv' ? 'SÉRIE' : 'FILM'}</span>
-				{#if heroRating}
-					<span class="hero-rating">★ {heroRating.toFixed(1)}</span>
-				{/if}
-				{#if heroYear}<span class="hero-year">{heroYear}</span>{/if}
-			</div>
-			<h1 class="hero-title">{heroTitle}</h1>
-			{#if heroOverview}
-				<p class="hero-overview">{heroOverview}</p>
-			{/if}
-			<div class="hero-actions">
-				<button class="btn-play" onclick={handleHeroPlay} disabled={loadingPlayer}>
-					{#if loadingPlayer}
-						<span class="spinner-sm"></span>
-					{:else}
-						<svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M8 5v14l11-7z"/></svg>
-					{/if}
-					Regarder
-				</button>
-				<button class="btn-info" onclick={handleHeroDetail}>
-					<svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
-					Plus d'infos
-				</button>
-			</div>
-		</div>
-	</div>
-{:else if loadingTrending}
-	<div class="hero-skeleton"></div>
-{/if}
+<!-- Hero Carousel -->
+<HeroCarousel
+	items={trendingAll.slice(0, 5)}
+	onPlay={handleHeroPlay}
+	onDetails={handleHeroDetail}
+	loading={loadingTrending}
+/>
 
 <!-- Catalog -->
 <div class="catalog">
