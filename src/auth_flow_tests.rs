@@ -197,8 +197,8 @@ pub mod auth_flow_tests {
         }
 
         let _request = LoginRequest {
-            email: "user@example.com".to_string(),
-            password: "password123".to_string(),
+            _email: "user@example.com".to_string(),
+            _password: "password123".to_string(),
         };
 
         let response = LoginResponse {
@@ -348,15 +348,15 @@ pub mod auth_flow_tests {
         let session1 = Session {
             session_id: uuid::Uuid::new_v4().to_string(),
             user_id: "user-123".to_string(),
-            device: "mobile".to_string(),
-            created_at: Utc::now().timestamp(),
+            _device: "mobile".to_string(),
+            _created_at: Utc::now().timestamp(),
         };
 
         let session2 = Session {
             session_id: uuid::Uuid::new_v4().to_string(),
             user_id: "user-123".to_string(),
-            device: "web".to_string(),
-            created_at: Utc::now().timestamp(),
+            _device: "web".to_string(),
+            _created_at: Utc::now().timestamp(),
         };
 
         assert_ne!(session1.session_id, session2.session_id, "Different sessions");
