@@ -24,9 +24,9 @@ struct FlareSolverrResponse {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct FlareSolverrSolution {
-    url: String,
+    _url: String,
     status: u16,
-    headers: Option<serde_json::Value>,
+    _headers: Option<serde_json::Value>,
     response: Option<String>,
     // Add other fields as needed, e.g., "cookies"
 }
