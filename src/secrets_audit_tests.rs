@@ -208,16 +208,17 @@ TELEGRAM_BOT_TOKEN=your_bot_token_here
     #[test]
     fn test_sensitive_field_filtering() {
         // Logging framework should filter sensitive fields
+        #[allow(dead_code)]
         struct UserData {
             id: String,
             email: String,
-            _password_hash: String, // Should be filtered
+            password_hash: String, // Should be filtered
         }
 
         let user = UserData {
             id: "user-123".to_string(),
             email: "user@example.com".to_string(),
-            _password_hash: "$2b$12$...bcrypt...".to_string(),
+            password_hash: "$2b$12$...bcrypt...".to_string(),
         };
 
         // In logs: should not include password_hash
@@ -283,20 +284,21 @@ TELEGRAM_BOT_TOKEN=your_bot_token_here
     fn test_sensitive_action_logging() {
         // Actions like password changes should be logged with audit trail
         #[derive(Debug)]
+        #[allow(dead_code)]
         struct AuditLog {
             action: String,
-            _user_id: String,
-            _timestamp: i64,
-            _ip_address: String,
-            _result: String, // "success" or "failure"
+            user_id: String,
+            timestamp: i64,
+            ip_address: String,
+            result: String, // "success" or "failure"
         }
 
         let audit = AuditLog {
             action: "password_change".to_string(),
-            _user_id: "user-123".to_string(),
-            _timestamp: 1739640000,
-            _ip_address: "203.0.113.1".to_string(),
-            _result: "success".to_string(),
+            user_id: "user-123".to_string(),
+            timestamp: 1739640000,
+            ip_address: "203.0.113.1".to_string(),
+            result: "success".to_string(),
         };
 
         assert_eq!(audit.action, "password_change");
@@ -307,14 +309,15 @@ TELEGRAM_BOT_TOKEN=your_bot_token_here
     fn test_secrets_not_in_debug_impl() {
         // Struct with Debug impl should not expose secrets
         #[derive(Debug)]
+        #[allow(dead_code)]
         struct Config {
-            _database_url: String,
-            _api_key: String,
+            database_url: String,
+            api_key: String,
         }
 
         let config = Config {
-            _database_url: "postgres://localhost".to_string(),
-            _api_key: "sk_live_secret".to_string(),
+            database_url: "postgres://localhost".to_string(),
+            api_key: "sk_live_secret".to_string(),
         };
 
         let _debug_str = format!("{:?}", config);
