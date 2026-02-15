@@ -359,14 +359,24 @@ impl TmdbClient {
         }
         query.push(("page", params.page.unwrap_or(1).to_string()));
 
-        self.client
+        let mut response = self
+            .client
             .get(&url)
             .query(&query)
             .send()
             .await?
             .error_for_status()?
             .json::<TmdbPaginatedResponse>()
-            .await
+            .await?;
+
+        // Ensure all results have media_type set (TMDB discover endpoint doesn't include it)
+        for result in response.results.iter_mut() {
+            if result.media_type.is_empty() {
+                result.media_type = media_type.to_string();
+            }
+        }
+
+        Ok(response)
     }
 
     // ── Movie Details ──
