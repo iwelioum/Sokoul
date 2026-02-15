@@ -326,16 +326,18 @@
 		position: sticky;
 		top: 0;
 		z-index: 50;
+		width: 100%;
+		box-sizing: border-box;
 		background: transparent;
 		border-bottom: 1px solid transparent;
 		transition: background 0.3s ease, border-color 0.3s ease, backdrop-filter 0.3s ease;
 	}
 
 	.navbar.scrolled {
-		background: rgba(26, 23, 22, 0.88);
-		backdrop-filter: blur(16px);
-		-webkit-backdrop-filter: blur(16px);
-		border-bottom-color: rgba(58, 51, 48, 0.6);
+		background: rgba(15, 23, 42, 0.85);
+		backdrop-filter: blur(12px);
+		-webkit-backdrop-filter: blur(12px);
+		border-bottom-color: rgba(51, 65, 85, 0.4);
 	}
 
 	.navbar-inner {
@@ -345,9 +347,9 @@
 		padding: 0 48px;
 		height: auto;
 		min-height: 80px;
-		max-width: 1600px;
-		margin: 0 auto;
 		width: 100%;
+		box-sizing: border-box;
+		margin: 0;
 	}
 
 	/* ── Logo ── */

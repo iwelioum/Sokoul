@@ -1,4 +1,9 @@
-use crate::{api::error::ApiError, db, models::{AddFavoritePayload, LibraryStatus, PaginatedFavorites}, AppState};
+use crate::{
+    api::error::ApiError,
+    db,
+    models::{AddFavoritePayload, LibraryStatus, PaginatedFavorites},
+    AppState,
+};
 use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
