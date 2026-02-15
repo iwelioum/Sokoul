@@ -337,6 +337,8 @@ impl TmdbClient {
 
         if let Some(ref wp) = params.with_watch_providers {
             query.push(("with_watch_providers", wp.clone()));
+            // When filtering by watch providers, must specify monetization type
+            query.push(("with_watch_monetization_types", "flatrate".to_string()));
         }
         if let Some(ref wr) = params.watch_region {
             query.push(("watch_region", wr.clone()));
