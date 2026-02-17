@@ -14,6 +14,7 @@ mod db;
 #[cfg(test)]
 mod distributed_tracing_tests;
 mod events;
+mod extractors;
 #[cfg(test)]
 mod github_actions_tests;
 #[cfg(test)]
@@ -26,7 +27,13 @@ mod integration_tests_level1;
 mod load_testing_tests;
 #[cfg(test)]
 mod message_contract_tests;
+mod metrics;
+#[cfg(test)]
+mod metrics_tests;
+mod middleware;
 mod models;
+mod notifications;
+use notifications::EmailService;
 #[cfg(test)]
 mod nats_integration_tests;
 #[cfg(test)]
@@ -43,6 +50,7 @@ mod release_automation_tests;
 mod scheduler;
 #[cfg(test)]
 mod secrets_audit_tests;
+mod security;
 #[cfg(test)]
 mod security_robustness_tests;
 mod telegram;
@@ -54,7 +62,7 @@ mod workers;
 mod workers_idempotence_tests;
 
 use axum::{
-    middleware,
+    middleware as axum_middleware,
     routing::{delete, get, post},
     Router,
 };
@@ -79,6 +87,256 @@ pub struct AppState {
     pub browser: Option<Arc<playwright::api::Browser>>,
     pub tmdb_client: clients::tmdb::TmdbClient,
     pub flaresolverr_client: Option<clients::flaresolverr::FlareSolverrClient>,
+    pub fanart_client: Option<clients::fanart::FanartClient>,
+    pub omdb_client: Option<clients::omdb::OmdbClient>,
+    pub thetvdb_client: Option<clients::thetvdb::ThetvdbClient>,
+    pub tvmaze_client: clients::tvmaze::TvMazeClient,
+    pub jikan_client: clients::jikan::JikanClient,
+    pub trakt_client: Option<clients::trakt::TraktClient>,
+    pub tastedive_client: Option<clients::tastedive::TasteDiveClient>,
+    pub watchmode_client: Option<clients::watchmode::WatchmodeClient>,
+    pub imdbbot_client: clients::imdbbot::ImdbBotClient,
+    pub simkl_client: Option<clients::simkl::SimklClient>,
+    pub unogs_client: Option<clients::unogs::UnogsClient>,
+    pub stream_client: clients::stream::StreamClient,
+    pub virustotal_client: Option<clients::virustotal::VirusTotalClient>,
+    pub email_service: EmailService,
+}
+
+async fn ensure_critical_schema(pool: &sqlx::PgPool) -> anyhow::Result<()> {
+    sqlx::query(r#"CREATE EXTENSION IF NOT EXISTS "pgcrypto""#)
+        .execute(pool)
+        .await?;
+
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS users (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            username TEXT NOT NULL UNIQUE,
+            email TEXT NOT NULL UNIQUE,
+            password_hash TEXT NOT NULL,
+            role TEXT NOT NULL DEFAULT 'user',
+            avatar_url TEXT,
+            is_active BOOLEAN NOT NULL DEFAULT TRUE,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    // System user for API key fallback (no JWT).
+    sqlx::query(
+        r#"
+        INSERT INTO users (id, username, email, password_hash, role, is_active)
+        VALUES (
+            '00000000-0000-0000-0000-000000000001',
+            'system-api',
+            'system-api@sokoul.local',
+            'api-key-fallback-user',
+            'user',
+            TRUE
+        )
+        ON CONFLICT DO NOTHING
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS media (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            media_type TEXT NOT NULL,
+            title TEXT NOT NULL,
+            original_title TEXT,
+            year INTEGER,
+            tmdb_id INTEGER,
+            imdb_id TEXT,
+            overview TEXT,
+            poster_url TEXT,
+            backdrop_url TEXT,
+            genres TEXT[],
+            rating DECIMAL(3,1),
+            runtime_minutes INTEGER,
+            status TEXT DEFAULT 'unknown',
+            parent_id UUID REFERENCES media(id) ON DELETE CASCADE,
+            season_number INTEGER,
+            episode_number INTEGER,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            UNIQUE (tmdb_id, media_type)
+        )
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS watch_history (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            media_id UUID NOT NULL REFERENCES media(id) ON DELETE CASCADE,
+            user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            watched_at TIMESTAMPTZ DEFAULT NOW(),
+            progress_seconds INTEGER DEFAULT 0,
+            total_seconds INTEGER DEFAULT 0,
+            completed BOOLEAN DEFAULT FALSE,
+            UNIQUE (media_id, user_id)
+        )
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS favorites (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            media_id UUID NOT NULL REFERENCES media(id) ON DELETE CASCADE,
+            added_at TIMESTAMPTZ DEFAULT NOW(),
+            UNIQUE (user_id, media_id)
+        )
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS watchlist (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            media_id UUID NOT NULL REFERENCES media(id) ON DELETE CASCADE,
+            auto_download BOOLEAN DEFAULT FALSE,
+            quality_min TEXT DEFAULT '1080p',
+            added_at TIMESTAMPTZ DEFAULT NOW(),
+            UNIQUE (user_id, media_id)
+        )
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    // TV channels table
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS tv_channels (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            name TEXT NOT NULL,
+            code TEXT NOT NULL UNIQUE,
+            country TEXT,
+            logo_url TEXT,
+            category TEXT,
+            is_free BOOLEAN DEFAULT TRUE,
+            is_active BOOLEAN DEFAULT TRUE,
+            stream_url TEXT,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    // TV programs table (EPG)
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS tv_programs (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            channel_id UUID NOT NULL REFERENCES tv_channels(id) ON DELETE CASCADE,
+            title TEXT NOT NULL,
+            description TEXT,
+            start_time TIMESTAMPTZ NOT NULL,
+            end_time TIMESTAMPTZ NOT NULL,
+            genre TEXT,
+            image_url TEXT,
+            rating DECIMAL(3,1),
+            external_id TEXT,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    // Collections table
+
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS collections (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            name TEXT NOT NULL,
+            description TEXT,
+            is_public BOOLEAN DEFAULT FALSE,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    // Collection items
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS collection_items (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            collection_id UUID NOT NULL REFERENCES collections(id) ON DELETE CASCADE,
+            media_id UUID NOT NULL REFERENCES media(id) ON DELETE CASCADE,
+            added_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            UNIQUE (collection_id, media_id)
+        )
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    sqlx::query("CREATE INDEX IF NOT EXISTS idx_watch_history_user ON watch_history(user_id)")
+        .execute(pool)
+        .await?;
+    sqlx::query("CREATE INDEX IF NOT EXISTS idx_watch_history_media ON watch_history(media_id)")
+        .execute(pool)
+        .await?;
+    sqlx::query("CREATE INDEX IF NOT EXISTS idx_favorites_user ON favorites(user_id)")
+        .execute(pool)
+        .await?;
+    sqlx::query("CREATE INDEX IF NOT EXISTS idx_watchlist_user ON watchlist(user_id)")
+        .execute(pool)
+        .await?;
+    sqlx::query("CREATE INDEX IF NOT EXISTS idx_tv_channels_country ON tv_channels(country)")
+        .execute(pool)
+        .await?;
+    sqlx::query("CREATE INDEX IF NOT EXISTS idx_tv_channels_code ON tv_channels(code)")
+        .execute(pool)
+        .await?;
+    sqlx::query("CREATE INDEX IF NOT EXISTS idx_tv_programs_channel ON tv_programs(channel_id)")
+        .execute(pool)
+        .await?;
+    sqlx::query("CREATE INDEX IF NOT EXISTS idx_tv_programs_start_time ON tv_programs(start_time)")
+        .execute(pool)
+        .await?;
+    sqlx::query("CREATE INDEX IF NOT EXISTS idx_collection_items_collection ON collection_items(collection_id)")
+        .execute(pool)
+        .await?;
+
+    // Fail-fast verification: ensure expected columns exist.
+    sqlx::query(
+        "SELECT media_id, user_id, progress_seconds, completed, watched_at FROM watch_history LIMIT 1",
+    )
+    .fetch_optional(pool)
+    .await?;
+    sqlx::query("SELECT media_id, user_id, added_at FROM favorites LIMIT 1")
+        .fetch_optional(pool)
+        .await?;
+    sqlx::query("SELECT media_id, user_id, added_at FROM watchlist LIMIT 1")
+        .fetch_optional(pool)
+        .await?;
+
+    tracing::info!("✅ Critical schema verified (library/watchlist/watch_history)");
+    Ok(())
 }
 
 async fn shutdown_signal() {
@@ -104,7 +362,7 @@ async fn shutdown_signal() {
         _ = terminate => {},
     }
 
-    tracing::info!("Signal de fermeture recu, demarrage de l'arret progressif.");
+    tracing::info!("Shutdown signal received, starting graceful shutdown");
 }
 
 #[tokio::main]
@@ -117,11 +375,11 @@ async fn main() -> anyhow::Result<()> {
         .with(tracing_subscriber::fmt::layer())
         .init();
 
-    tracing::info!("Demarrage de SOKOUL v3...");
+    tracing::info!("Starting SOKOUL v3...");
 
     config::init();
 
-    // Connexion Base de donnees avec retry
+    metrics::init();
     let db_pool = {
         let mut retries = 10;
         let mut last_error = None;
@@ -135,7 +393,7 @@ async fn main() -> anyhow::Result<()> {
                 .await
             {
                 Ok(p) => {
-                    tracing::info!("✅ Connexion a la base de donnees reussie");
+                    tracing::info!("✅ Database connection established");
                     pool = Some(p);
                 }
                 Err(e) => {
@@ -143,7 +401,7 @@ async fn main() -> anyhow::Result<()> {
                     retries -= 1;
                     if retries > 0 {
                         tracing::warn!(
-                            "❌ Connexion DB echouee, nouvelle tentative ({} restantes)...",
+                            "❌ DB connection failed, retrying ({} remaining)...",
                             retries
                         );
                         tokio::time::sleep(Duration::from_secs(2)).await;
@@ -154,7 +412,7 @@ async fn main() -> anyhow::Result<()> {
 
         pool.unwrap_or_else(|| {
             panic!(
-                "Impossible de se connecter a la base de donnees apres 3 tentatives: {:?}",
+                "Failed to connect to database after 10 attempts: {:?}",
                 last_error
             )
         })
@@ -164,56 +422,171 @@ async fn main() -> anyhow::Result<()> {
     let run_migrations =
         std::env::var("RUN_MIGRATIONS").unwrap_or_else(|_| "false".to_string()) == "true";
     if run_migrations {
-        tracing::info!("Execution des migrations SQL...");
+        tracing::info!("Running SQL migrations...");
         match sqlx::migrate!("./migrations").run(&db_pool).await {
             Ok(_) => {
-                tracing::info!("✅ Migrations SQL terminees avec succes");
+                tracing::info!("✅ SQL migrations completed successfully");
             }
             Err(e) => {
-                tracing::warn!("⚠️ Migrations SQL echouees (non-bloquant): {}", e);
-                tracing::warn!(
-                    "Le serveur demarrera quand meme, mais les tables peuvent ne pas exister"
-                );
+                tracing::warn!("⚠️ SQL migrations failed (non-blocking): {}", e);
+                tracing::warn!("Server will start anyway, but tables may not exist");
             }
         }
     } else {
         tracing::info!("RUN_MIGRATIONS not set to 'true' => skipping SQL migrations to avoid known mismatches.");
     }
 
-    // Connexion Redis
-    let redis_client = redis::Client::open(CONFIG.redis_url.as_str()).expect("URL Redis invalide");
+    ensure_critical_schema(&db_pool).await?;
 
-    // Connexion NATS
+    let redis_client = redis::Client::open(CONFIG.redis_url.as_str()).expect("Invalid Redis URL");
+
     let nats_client = async_nats::connect(&CONFIG.nats_url)
         .await
-        .expect("Impossible de se connecter a NATS");
+        .expect("Failed to connect to NATS");
     let jetstream_context = async_nats::jetstream::new(nats_client);
 
-    // Canal de broadcast pour WebSocket
+    // Broadcast channel for WebSocket events
     let (event_tx, _rx) = broadcast::channel(100);
 
-    // Client TMDB
+    // TMDB client
     let tmdb_client = clients::tmdb::TmdbClient::new(CONFIG.tmdb_api_key.clone());
 
-    // Client FlareSolverr
+    // FlareSolverr client (optional)
     let flaresolverr_client = if !CONFIG.flaresolverr_url.is_empty() {
         tracing::info!(
-            "Initialisation du client FlareSolverr a l'URL: {}",
+            "Initializing FlareSolverr client at: {}",
             CONFIG.flaresolverr_url
         );
         Some(clients::flaresolverr::FlareSolverrClient::new(
             CONFIG.flaresolverr_url.clone(),
         ))
     } else {
-        tracing::warn!("FlareSolverr non configure. Les requetes de scraping protegees par Cloudflare peuvent echouer.");
+        tracing::warn!(
+            "FlareSolverr not configured. Cloudflare-protected scraping requests may fail."
+        );
         None
     };
 
-    // Initialisation de Playwright (si active)
+    // Fanart.tv client (optional)
+    let fanart_client = if !CONFIG.fanart_api_key.is_empty() {
+        tracing::info!("✅ Fanart.tv client initialized");
+        let ck = if CONFIG.fanart_client_key.is_empty() {
+            None
+        } else {
+            Some(CONFIG.fanart_client_key.clone())
+        };
+        Some(clients::fanart::FanartClient::new(
+            CONFIG.fanart_api_key.clone(),
+            ck,
+        ))
+    } else {
+        tracing::warn!("Fanart.tv not configured (FANART_API_KEY missing).");
+        None
+    };
+
+    // OMDb client (optional)
+    let omdb_client = if !CONFIG.omdb_api_key.is_empty() {
+        tracing::info!("✅ OMDb client initialized");
+        Some(clients::omdb::OmdbClient::new(CONFIG.omdb_api_key.clone()))
+    } else {
+        tracing::warn!("OMDb not configured (OMDB_API_KEY missing).");
+        None
+    };
+
+    // TheTVDB client (optional)
+    let thetvdb_client = if !CONFIG.thetvdb_api_key.is_empty() {
+        tracing::info!("✅ TheTVDB client initialized");
+        Some(clients::thetvdb::ThetvdbClient::new(
+            CONFIG.thetvdb_api_key.clone(),
+            CONFIG.thetvdb_pin.clone(),
+        ))
+    } else {
+        tracing::warn!("TheTVDB not configured (THETVDB_API_KEY missing).");
+        None
+    };
+
+    // TVMaze client (free, no auth)
+    let tvmaze_client = clients::tvmaze::TvMazeClient::new();
+    tracing::info!("✅ TVMaze client initialized");
+
+    // Jikan/MyAnimeList client (free, no auth)
+    let jikan_client = clients::jikan::JikanClient::new();
+    tracing::info!("✅ Jikan/MAL client initialized");
+
+    // Trakt client (optional)
+    let trakt_client = if !CONFIG.trakt_client_id.is_empty() {
+        tracing::info!("✅ Trakt client initialized");
+        Some(clients::trakt::TraktClient::new(
+            CONFIG.trakt_client_id.clone(),
+        ))
+    } else {
+        tracing::warn!("Trakt not configured (TRAKT_CLIENT_ID missing).");
+        None
+    };
+
+    // TasteDive client (optional)
+    let tastedive_client = if !CONFIG.tastedive_api_key.is_empty() {
+        tracing::info!("✅ TasteDive client initialized");
+        Some(clients::tastedive::TasteDiveClient::new(
+            CONFIG.tastedive_api_key.clone(),
+        ))
+    } else {
+        tracing::warn!("TasteDive not configured (TASTEDIVE_API_KEY missing).");
+        None
+    };
+
+    // Watchmode client (optional)
+    let watchmode_client = if !CONFIG.watchmode_api_key.is_empty() {
+        tracing::info!("✅ Watchmode client initialized");
+        Some(clients::watchmode::WatchmodeClient::new(
+            CONFIG.watchmode_api_key.clone(),
+        ))
+    } else {
+        tracing::warn!("Watchmode not configured (WATCHMODE_API_KEY missing).");
+        None
+    };
+
+    // IMDbOT client (free, no auth)
+    let imdbbot_client = clients::imdbbot::ImdbBotClient::new(CONFIG.imdbbot_base_url.clone());
+    tracing::info!("✅ IMDbOT client initialized");
+
+    // Simkl client (optional)
+    let simkl_client = if !CONFIG.simkl_api_key.is_empty() {
+        tracing::info!("✅ Simkl client initialized");
+        Some(clients::simkl::SimklClient::new(
+            CONFIG.simkl_api_key.clone(),
+        ))
+    } else {
+        tracing::warn!("Simkl not configured (SIMKL_API_KEY missing).");
+        None
+    };
+
+    // uNoGS client (optional, Netflix)
+    let unogs_client = if !CONFIG.unogs_api_key.is_empty() {
+        tracing::info!("✅ uNoGS client initialized");
+        Some(clients::unogs::UnogsClient::new(
+            CONFIG.unogs_api_key.clone(),
+        ))
+    } else {
+        tracing::warn!("uNoGS not configured (UNOGS_API_KEY missing).");
+        None
+    };
+
+    // Stream client (free, no auth)
+    let stream_client = clients::stream::StreamClient::new(CONFIG.stream_base_url.clone());
+    tracing::info!("✅ Stream client initialized");
+
+    // Playwright browser (optional, for scraping)
     let browser = if CONFIG.streaming_enabled {
-        tracing::info!("Initialisation de Playwright pour le scraping...");
+        tracing::info!("Initializing Playwright for scraping...");
         match Playwright::initialize().await {
             Ok(playwright) => {
+                if let Err(e) = playwright.install_chromium() {
+                    tracing::warn!(
+                        "Playwright install_chromium: {} (may already be installed)",
+                        e
+                    );
+                }
                 let chromium = playwright.chromium();
                 match chromium
                     .launcher()
@@ -223,14 +596,14 @@ async fn main() -> anyhow::Result<()> {
                 {
                     Ok(browser) => Some(Arc::new(browser)),
                     Err(e) => {
-                        tracing::error!("Echec lancement Chromium: {}. Streaming desactive.", e);
+                        tracing::error!("Failed to launch Chromium: {}. Streaming disabled.", e);
                         None
                     }
                 }
             }
             Err(e) => {
                 tracing::error!(
-                    "Echec initialisation Playwright: {}. Streaming desactive.",
+                    "Failed to initialize Playwright: {}. Streaming disabled.",
                     e
                 );
                 None
@@ -240,6 +613,24 @@ async fn main() -> anyhow::Result<()> {
         None
     };
 
+    // VirusTotal client (optional, for malware detection)
+    let virustotal_client = if !CONFIG.virustotal_api_key.is_empty() {
+        tracing::info!("✅ VirusTotal client initialized");
+        Some(clients::virustotal::VirusTotalClient::new(
+            CONFIG.virustotal_api_key.clone(),
+        ))
+    } else {
+        tracing::warn!("VirusTotal not configured (VIRUSTOTAL_API_KEY missing). URL security checks will be limited.");
+        None
+    };
+
+    let email_service = EmailService::from_env();
+    if email_service.enabled {
+        tracing::info!("✅ Email service initialized");
+    } else {
+        tracing::warn!("Email service disabled (SMTP_ENABLED missing or false)");
+    }
+
     let state = Arc::new(AppState {
         db_pool,
         redis_client,
@@ -248,15 +639,29 @@ async fn main() -> anyhow::Result<()> {
         browser,
         tmdb_client,
         flaresolverr_client,
+        fanart_client,
+        omdb_client,
+        thetvdb_client,
+        tvmaze_client,
+        jikan_client,
+        trakt_client,
+        tastedive_client,
+        watchmode_client,
+        imdbbot_client,
+        simkl_client,
+        unogs_client,
+        stream_client,
+        virustotal_client,
+        email_service,
     });
 
-    // Demarrage des Workers
+    // Start workers
     let worker_state = state.clone();
     tokio::spawn(async move {
         workers::run_workers(worker_state).await;
     });
 
-    // Demarrage du Bot Telegram
+    // Start Telegram bot (optional)
     if CONFIG.telegram_enabled {
         let bot_state = state.clone();
         tokio::spawn(async move {
@@ -264,13 +669,13 @@ async fn main() -> anyhow::Result<()> {
         });
     }
 
-    // Demarrage du Scheduler
+    // Start scheduler
     let scheduler_state = state.clone();
     tokio::spawn(async move {
         scheduler::run_scheduler(scheduler_state).await;
     });
 
-    // Metriques Prometheus
+    // Prometheus metrics layer
     let prometheus_layer = PrometheusMetricLayer::new();
 
     // CORS configuration
@@ -320,6 +725,7 @@ async fn main() -> anyhow::Result<()> {
         )
         // Search & Downloads
         .route("/search", post(api::search::trigger_search_handler))
+        .route("/search/direct", post(api::search::direct_search_handler))
         .route(
             "/search/:media_id",
             get(api::search::get_search_results_handler),
@@ -343,12 +749,6 @@ async fn main() -> anyhow::Result<()> {
             get(api::files::stream_file_handler),
         )
         .route("/files/:file_id/info", get(api::files::file_info_handler))
-        .merge(api::tmdb::tmdb_routes())
-        // Direct streaming (no DB needed)
-        .route(
-            "/streaming/direct/:media_type/:tmdb_id",
-            get(api::streaming::direct_stream_handler),
-        )
         // Library (favorites)
         .route(
             "/library",
@@ -357,6 +757,10 @@ async fn main() -> anyhow::Result<()> {
         .route(
             "/library/:media_id",
             delete(api::library::remove_from_library_handler),
+        )
+        .route(
+            "/library/:tmdb_id/:media_type",
+            delete(api::library::remove_from_library_by_tmdb_handler),
         )
         .route(
             "/library/status/:tmdb_id/:media_type",
@@ -372,6 +776,10 @@ async fn main() -> anyhow::Result<()> {
             "/watchlist/:media_id",
             delete(api::watchlist::remove_from_watchlist_handler),
         )
+        .route(
+            "/watchlist/:tmdb_id/:media_type",
+            delete(api::watchlist::remove_from_watchlist_by_tmdb_handler),
+        )
         // Watch History
         .route(
             "/watch-history",
@@ -381,29 +789,76 @@ async fn main() -> anyhow::Result<()> {
             "/watch-history/continue",
             get(api::watch_history::continue_watching_handler),
         )
-        .layer(middleware::from_fn(api::auth::api_key_middleware));
+        .layer(axum_middleware::from_fn(api::auth::api_key_middleware));
+
+    // Public metadata routes (no auth required)
+    let public_metadata_routes = Router::new()
+        .merge(api::tmdb::tmdb_routes())
+        .merge(api::enrichment::enrichment_routes())
+        .route(
+            "/streaming/direct/:media_type/:tmdb_id",
+            get(api::streaming::direct_stream_handler),
+        )
+        .route(
+            "/streaming/extract/:media_type/:tmdb_id",
+            get(api::streaming::extract_streams_handler),
+        )
+        .route(
+            "/streaming/proxy",
+            get(api::streaming::stream_proxy_handler),
+        )
+        .route(
+            "/streaming/subtitles/:media_type/:tmdb_id",
+            get(api::streaming::get_subtitles_handler),
+        )
+        .route(
+            "/streaming/subtitles/vtt",
+            get(api::streaming::serve_subtitle_vtt_handler),
+        );
+
+    // Collections routes (nested under /api/collections)
+    let collections_routes = Router::new()
+        .nest("/", api::collections::collections_routes())
+        .layer(axum_middleware::from_fn(api::auth::api_key_middleware));
+
+    // TV routes (nested under /api/tv)
+    let tv_routes = Router::new()
+        .nest("/", api::tv::tv_routes())
+        .layer(axum_middleware::from_fn(api::auth::api_key_middleware));
+
+    // Security routes (nested under /api/security)
+    let security_routes = Router::new()
+        .nest("/", api::security::security_routes())
+        .layer(axum_middleware::from_fn(api::auth::api_key_middleware));
 
     // Public routes (no auth needed)
     let public_routes = Router::new()
         .route("/health", get(api::health::health_check_handler))
-        .route("/ws", get(api::ws::ws_handler));
+        .route("/metrics", get(api::metrics::metrics_handler))
+        .route("/ws", get(api::ws::ws_handler))
+        .merge(api::auth::auth_routes());
 
     let app = Router::new()
         .merge(public_routes)
+        .merge(public_metadata_routes)
+        .nest("/api/collections", collections_routes)
+        .nest("/api/tv", tv_routes)
+        .nest("/api/security", security_routes)
         .merge(protected_routes)
+        .layer(axum_middleware::from_fn(middleware::track_metrics))
         .layer(cors)
         .layer(ConcurrencyLimitLayer::new(CONFIG.rate_limit_rps as usize))
         .layer(prometheus_layer)
         .with_state(state);
 
-    // Demarrage du serveur HTTP (axum 0.7 API)
+    // Start HTTP server
     let addr: SocketAddr = CONFIG.server_address.parse()?;
-    tracing::info!("Serveur API ecoute sur {}", addr);
+    tracing::info!("API server listening on {}", addr);
 
     if !CONFIG.api_key.is_empty() {
-        tracing::info!("Authentification API Key activee.");
+        tracing::info!("API key authentication enabled.");
     } else {
-        tracing::warn!("ATTENTION: Pas de SOKOUL_API_KEY configuree. L'API est ouverte.");
+        tracing::warn!("WARNING: No SOKOUL_API_KEY configured. API is open.");
     }
 
     let listener = TcpListener::bind(addr).await?;

@@ -1,44 +1,53 @@
 /* ══════════════════════════════════════════════════════════
-   SOKOUL Dashboard — Premium Light Theme
-   Palette crème · Minimaliste · Élégant
+   SOKOUL Dashboard — Nuits d'Orient × Disney+ Template
+   Bleu Nuit · Or Berbère · Streaming
    ══════════════════════════════════════════════════════════ */
 
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 :root {
-	/* ── SOKOUL v2: "Nuits d'Orient" - Dark Night Mode ── */
-	/* Palette: Bleu Abysse, Bleu Indigo, Or Berbère, Blanc Lunaire */
-	
-	--bg-primary:    #0F172A;   /* Bleu Abysse (fond principal) */
-	--bg-surface:    #1E293B;   /* Bleu Indigo (cartes, modales) */
-	--bg-hover:      #2D3F56;   /* Bleu Foncé (hover surfaces) */
-	--text-primary:  #F8FAFC;   /* Blanc Lunaire (titres, texte principal) */
-	--text-secondary:#94A3B8;   /* Gris Cendré (métadonnées, secondaire) */
-	--text-muted:    #64748B;   /* Gris Bleu (muted, disabled) */
-	--accent:        #D97706;   /* Or Berbère (CTA, actions) */
-	--accent-hover:  #B45309;   /* Or Foncé (hover states) */
-	--accent-light:  #FCD34D;   /* Or Clair (secondary actions) */
-	--success:       #10B981;   /* Émeraude (success states) */
-	--warning:       #F59E0B;   /* Ambre (warnings) */
-	--danger:        #EF4444;   /* Rouge (danger) */
-	--info:          #3B82F6;   /* Bleu Sky (info) */
-	--border:        #334155;   /* Bordure (bleu sombre) */
-	--radius:        12px;
-	--radius-sm:     8px;
+	/* ── Disney+ Dark Blue palette, teinté bleu nuit ── */
+	--bg-primary:    #1A1D29;   /* Disney+ Dark Blue (fond principal) */
+	--bg-surface:    #252833;   /* Tuiles / cartes (bas du dégradé) */
+	--bg-surface-top:#30343E;   /* Tuiles / cartes (haut du dégradé) */
+	--bg-hover:      #2D3F56;   /* Hover surfaces */
+	--bg-card:       #252833;
+	--bg-secondary:  #252833;
+	--text-primary:  #F9F9F9;   /* Blanc cassé Disney+ */
+	--text-secondary:#CACACA;   /* Gris clair secondaire */
+	--text-muted:    #64748B;   /* Gris Bleu muted */
+	--accent:        #0072D2;   /* Bleu primaire Disney+ */
+	--accent-hover:  #005baa;   /* Bleu foncé hover */
+	--accent-light:  #3B9AEF;
+	--gold:          #D97706;   /* Or Berbère pour éléments spéciaux */
+	--gold-hover:    #B45309;
+	--success:       #10B981;
+	--warning:       #F59E0B;
+	--danger:        #EF4444;
+	--info:          #3B82F6;
+	--border:        rgba(249, 249, 249, 0.1);  /* Bordure subtile Disney+ */
+	--border-hover:  #F9F9F9;                    /* Bordure hover blanche */
+	--radius:        10px;      /* Brand tiles */
+	--radius-sm:     4px;       /* Film cards */
+	--nav-height:    70px;
 
-	/* ── Design tokens (Dark Mode Palette) ── */
-	--gradient-accent:   linear-gradient(135deg, #D97706, #B45309);
-	--gradient-hero-mask: linear-gradient(to bottom, transparent 0%, rgba(15, 23, 42, 0.6) 40%, #0F172A 100%);
+	/* ── Design tokens ── */
+	--gradient-accent:   linear-gradient(135deg, #0072D2, #005baa);
+	--gradient-card:     linear-gradient(180deg, #30343E 0%, #252833 100%);
+	--gradient-hero-mask: linear-gradient(to bottom, transparent 0%, rgba(26, 29, 41, 0.6) 40%, #1A1D29 100%);
 	--gradient-overlay:   linear-gradient(to right, rgba(0, 0, 0, 0.4) 0%, transparent 100%);
-	
-	--shadow-subtle:      0 4px 12px rgba(0, 0, 0, 0.3);
-	--shadow-medium:      0 8px 24px rgba(0, 0, 0, 0.4);
+
+	/* Disney+ deep shadows (valeurs exactes) */
+	--shadow-card:        rgb(0 0 0 / 69%) 0px 26px 30px -10px, rgb(0 0 0 / 73%) 0px 16px 10px -10px;
+	--shadow-card-hover:  rgb(0 0 0 / 72%) 0px 40px 58px -16px, rgb(0 0 0 / 72%) 0px 30px 22px -10px;
+	--shadow-subtle:      rgb(0 0 0 / 69%) 0px 26px 30px -10px, rgb(0 0 0 / 73%) 0px 16px 10px -10px;
+	--shadow-medium:      rgb(0 0 0 / 80%) 0px 40px 58px -16px, rgb(0 0 0 / 72%) 0px 30px 22px -10px;
 	--shadow-elevated:    0 12px 48px rgba(0, 0, 0, 0.5);
-	--shadow-dark:        0 10px 15px -3px rgba(0, 0, 0, 0.5);
-	--shadow-dark-md:     0 16px 32px -8px rgba(0, 0, 0, 0.6);
-	
+
+	/* Disney+ transition standard: 250ms cubic-bezier */
+	--transition-disney:  250ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
 	--transition-fast:    0.15s ease;
-	--transition-smooth:  0.3s cubic-bezier(0.4, 0, 0.2, 1);
+	--transition-smooth:  250ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
 	--transition-slow:    0.8s ease-in-out;
 }
 
@@ -49,15 +58,18 @@
 	box-sizing: border-box;
 }
 
-/* ── Grain texture (subtile pour premium feel) ── */
+html, body {
+    overflow-x: hidden; /* Prevent horizontal scrolling */
+}
+
+/* ── Dark background ── */
 body::before {
 	content: '';
 	position: fixed;
 	inset: 0;
 	z-index: -1;
 	pointer-events: none;
-	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
-	opacity: 0.03;
+	background: #1A1D29;
 }
 
 /* ── Scrollbar (webkit) ── */
@@ -81,11 +93,11 @@ body {
 
 /* ── Links ── */
 a {
-	color: var(--accent);
+	color: var(--text-primary);
 	text-decoration: none;
 	transition: color var(--transition-fast);
 }
-a:hover { color: var(--accent-hover); }
+a:hover { color: rgba(249, 249, 249, 0.8); }
 
 /* ── Buttons ── */
 button {
@@ -94,54 +106,55 @@ button {
 	background: var(--accent);
 	color: white;
 	padding: 10px 20px;
-	border-radius: 50px;
+	border-radius: var(--radius-sm);
 	font-size: 14px;
-	font-weight: 500;
-	transition: all var(--transition-smooth);
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 1.2px;
+	transition: all var(--transition-disney);
 	font-family: inherit;
-	box-shadow: var(--shadow-subtle);
 }
 button:hover {
 	background: var(--accent-hover);
-	box-shadow: var(--shadow-medium);
 	transform: translateY(-1px);
 }
-button:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
 button:active:not(:disabled) { transform: scale(0.97); }
 
 /* Button variants */
 .btn-primary {
-	background: var(--gradient-accent);
-	color: white;
-	font-weight: 600;
+	background: var(--accent);
+	color: #fff;
+	font-weight: 700;
 	padding: 12px 28px;
 	border: none;
-	border-radius: 50px;
+	border-radius: var(--radius-sm);
 	cursor: pointer;
-	transition: all var(--transition-smooth);
-	box-shadow: var(--shadow-subtle);
+	transition: all var(--transition-disney);
+	text-transform: uppercase;
+	letter-spacing: 1.5px;
 }
 .btn-primary:hover {
-	box-shadow: var(--shadow-medium);
-	transform: translateY(-2px);
+	background: var(--accent-hover);
+	transform: scale(1.05);
 }
 .btn-primary:active { transform: translateY(0) scale(0.97); }
 
 .btn-secondary {
-	background: transparent;
+	background: rgba(0, 0, 0, 0.3);
 	color: var(--text-primary);
 	border: 1px solid var(--border);
 	padding: 10px 20px;
-	border-radius: 50px;
-	font-weight: 500;
+	border-radius: var(--radius-sm);
+	font-weight: 600;
 	cursor: pointer;
-	transition: all var(--transition-smooth);
+	transition: all var(--transition-disney);
+	text-transform: uppercase;
+	letter-spacing: 1.2px;
 }
 .btn-secondary:hover {
-	background: var(--bg-hover);
-	border-color: var(--accent);
-	color: var(--accent);
-	box-shadow: var(--shadow-subtle);
+	background: rgba(249, 249, 249, 0.1);
+	border-color: var(--border-hover);
 }
 
 .btn-ghost {
@@ -173,7 +186,7 @@ input, textarea, select {
 }
 input:focus, textarea:focus, select:focus {
 	border-color: var(--accent);
-	box-shadow: 0 0 0 3px rgba(192, 74, 53, 0.1);
+	box-shadow: 0 0 0 3px rgba(0, 114, 210, 0.15);
 }
 input::placeholder, textarea::placeholder { color: var(--text-muted); }
 
@@ -193,17 +206,17 @@ input::placeholder, textarea::placeholder { color: var(--text-muted); }
 
 /* Glass card */
 .glass {
-	background: rgba(255,255,255,0.7);
+	background: rgba(37, 40, 51, 0.7);
 	backdrop-filter: blur(12px);
 	-webkit-backdrop-filter: blur(12px);
-	border: 1px solid rgba(236,236,236,0.8);
+	border: 1px solid var(--border);
 	border-radius: var(--radius);
 	padding: 20px;
-	transition: all var(--transition-smooth);
+	transition: all var(--transition-disney);
 }
 .glass:hover {
-	background: rgba(255,255,255,0.85);
-	border-color: var(--accent);
+	background: rgba(37, 40, 51, 0.85);
+	border-color: var(--border-hover);
 	box-shadow: var(--shadow-subtle);
 }
 
@@ -252,9 +265,9 @@ input::placeholder, textarea::placeholder { color: var(--text-muted); }
 .skeleton {
 	background: linear-gradient(
 		90deg,
-		#F0EEEA 25%,
-		#E8E5DF 50%,
-		#F0EEEA 75%
+		#252833 25%,
+		#30343E 50%,
+		#252833 75%
 	);
 	background-size: 200% 100%;
 	animation: shimmer 1.6s ease-in-out infinite;
@@ -332,7 +345,7 @@ input::placeholder, textarea::placeholder { color: var(--text-muted); }
 
 /* ── Selection ── */
 ::selection {
-	background: rgba(192, 74, 53, 0.3);
+	background: rgba(0, 114, 210, 0.4);
 	color: var(--text-primary);
 }
 
@@ -341,38 +354,9 @@ input::placeholder, textarea::placeholder { color: var(--text-muted); }
    HEADER & LOGO OVERRIDE
    ══════════════════════════════════════════════════════════ */
 
-.navbar-inner {
-	height: 140px !important;
-}
-
-.navbar-logo {
-	height: 100% !important;
-	display: flex;
-	align-items: center;
-}
-
-.logo-img {
-	height: 300px !important;
-	width: auto !important;
-}
-
-/* ══════════════════════════════════════════════════════════
-   HEADER SCROLL ADAPTIVE BEHAVIOR
-   ══════════════════════════════════════════════════════════ */
-
-.navbar {
-	position: sticky;
-	top: 0;
-	z-index: 100;
-	background: transparent;
-	transition: background var(--transition-smooth), box-shadow var(--transition-smooth);
-}
-
 .navbar.scrolled {
-	background: rgba(15, 23, 42, 0.85);
-	backdrop-filter: blur(12px);
-	-webkit-backdrop-filter: blur(12px);
-	box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+	background: #1A1D29;
+	box-shadow: none;
 }
 
 .navbar.scrolled .nav-link {
@@ -389,16 +373,14 @@ input::placeholder, textarea::placeholder { color: var(--text-muted); }
 
 .hero-carousel {
 	position: relative;
-	width: 100vw;
+	width: 100%; /* Changed from 100vw */
+	max-width: none; /* Added */
 	height: 600px;
 	overflow: hidden;
 	border-radius: 0;
 	margin: 0;
 	padding: 0;
-	left: 50%;
-	right: 50%;
-	margin-left: -50vw;
-	margin-right: -50vw;
+	left: 0; /* Changed from 50% */
 }
 
 .hero-carousel-slide {
@@ -420,29 +402,20 @@ input::placeholder, textarea::placeholder { color: var(--text-muted); }
 	object-fit: cover;
 }
 
-/* Gradient mask - smooth fade to cream */
+/* Gradient mask - dark fade */
 .hero-carousel-mask {
 	position: absolute;
-	bottom: 0;
-	left: 0;
-	right: 0;
-	height: 30%;
-	background: var(--gradient-hero-mask);
+	inset: 0;
+	height: 100%;
+	background:
+		linear-gradient(to top, #1A1D29 10%, transparent 50%),
+		linear-gradient(to right, rgba(26, 29, 41, 0.8) 0%, transparent 30%),
+		linear-gradient(to left, rgba(26, 29, 41, 0.8) 0%, transparent 30%);
 	pointer-events: none;
 	z-index: 2;
 }
 
-/* Lateral overlay for text protection */
-.hero-carousel-overlay {
-	position: absolute;
-	left: 0;
-	top: 0;
-	width: 40%;
-	height: 100%;
-	background: var(--gradient-overlay);
-	pointer-events: none;
-	z-index: 2;
-}
+
 
 .hero-carousel-content {
 	position: absolute;
@@ -455,9 +428,9 @@ input::placeholder, textarea::placeholder { color: var(--text-muted); }
 }
 
 .hero-carousel-title {
-	font-family: 'Playfair Display', serif;
+	font-family: 'Inter', sans-serif;
 	font-size: 56px;
-	font-weight: 700;
+	font-weight: 800;
 	line-height: 1.1;
 	margin-bottom: 12px;
 }

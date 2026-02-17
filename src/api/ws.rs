@@ -20,8 +20,26 @@ pub async fn ws_handler(
 async fn handle_socket(mut socket: WebSocket, state: Arc<AppState>) {
     let mut rx = state.event_tx.subscribe();
 
+    // Send a welcome message to confirm connection
+    if socket
+        .send(Message::Text(r#"{"type":"connected"}"#.to_string()))
+        .await
+        .is_err()
+    {
+        return;
+    }
+
+    // Heartbeat interval (send ping every 30 seconds)
+    let mut heartbeat = tokio::time::interval(std::time::Duration::from_secs(30));
+
     loop {
         tokio::select! {
+            _ = heartbeat.tick() => {
+                // Send ping to keep connection alive
+                if socket.send(Message::Ping(vec![])).await.is_err() {
+                    break;
+                }
+            }
             msg = rx.recv() => {
                 match msg {
                     Ok(event) => {
@@ -43,11 +61,14 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<AppState>) {
                             break;
                         }
                     }
+                    Some(Ok(Message::Pong(_))) => {
+                        // Client responded to our ping, connection is alive
+                    }
                     _ => {}
                 }
             }
         }
     }
 
-    tracing::info!("Client WebSocket déconnecté.");
+    tracing::info!("WebSocket client disconnected.");
 }

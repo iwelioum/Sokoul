@@ -16,7 +16,7 @@ pub async fn create_task_handler(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<CreateTaskPayload>,
 ) -> Result<(StatusCode, Json<Task>), ApiError> {
-    tracing::info!("Creation d'une tache de type: {}", payload.task_type);
+    tracing::info!("Creating task of type: {}", payload.task_type);
     let task = db::tasks::create_task(&state.db_pool, &payload).await?;
     Ok((StatusCode::CREATED, Json(task)))
 }

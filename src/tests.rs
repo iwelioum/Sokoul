@@ -1,8 +1,9 @@
 #[cfg(test)]
+#[allow(dead_code)]
 pub mod fixtures {
     use uuid::Uuid;
 
-    /// Builder pour configurations de test
+    /// Builder for test configurations
     #[derive(Clone, Debug)]
     pub struct TestConfig {
         pub tmdb_api_key: String,
@@ -43,7 +44,7 @@ pub mod fixtures {
         }
     }
 
-    /// Builder pour TorrentResult de test
+    /// Builder for test TorrentResult
     #[derive(Clone, Debug)]
     pub struct TestTorrentBuilder {
         title: String,

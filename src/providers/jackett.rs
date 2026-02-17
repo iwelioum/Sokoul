@@ -77,7 +77,7 @@ impl JackettProvider {
                     let body = flaresolverr.get(&flaresolverr_url).await?;
                     serde_json::from_str(&body).map_err(|e| {
                         tracing::error!(
-                            "Jackett: erreur deserialization pour '{}': {} - debut reponse: {}",
+                            "Jackett: deserialization error for '{}': {} - response start: {}",
                             query,
                             e,
                             &body[..body.len().min(500)]

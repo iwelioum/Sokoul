@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
 	import { tmdbImageUrl } from '$lib/api/client';
 	import type { TmdbSearchItem, WatchHistoryEntry } from '$lib/api/client';
 
@@ -7,42 +6,49 @@
 		item,
 		history = null as WatchHistoryEntry | null,
 		size = 'md' as 'sm' | 'md' | 'lg',
-		inLibrary = false as boolean
+		inLibrary = false as boolean,
+		playOnClick = false as boolean
 	}: {
 		item: TmdbSearchItem;
 		history?: WatchHistoryEntry | null;
 		size?: 'sm' | 'md' | 'lg';
 		inLibrary?: boolean;
+		playOnClick?: boolean;
 	} = $props();
 
 	const title = $derived(item.title ?? item.name ?? '');
 	const year = $derived((item.release_date ?? item.first_air_date ?? '').substring(0, 4));
+	const backdrop = $derived(tmdbImageUrl(item.backdrop_path, 'w780'));
 	const poster = $derived(tmdbImageUrl(item.poster_path, 'w342'));
-	const mediaType = $derived(item.media_type ?? 'movie');
+	const cardImage = $derived(backdrop || poster);
+	const mediaType = $derived(
+		item.media_type === 'tv' || item.media_type === 'movie' || item.media_type === 'person'
+			? item.media_type
+			: (item.first_air_date && !item.release_date ? 'tv' : 'movie')
+	);
+	const isPlayableMedia = $derived(mediaType === 'tv' || mediaType === 'movie');
+	const detailHref = $derived(`/${mediaType}/${item.id}`);
+	const watchHref = $derived(
+		mediaType === 'tv'
+			? `/watch/tv/${item.id}?season=1&episode=1`
+			: mediaType === 'movie'
+				? `/watch/movie/${item.id}`
+				: detailHref
+	);
+	const cardHref = $derived(playOnClick && isPlayableMedia ? watchHref : detailHref);
+	const mediaLabel = $derived(mediaType === 'tv' ? 'Série' : mediaType === 'movie' ? 'Film' : 'Personne');
 	const rating = $derived(item.vote_average);
 	const progressPercent = $derived(history ? Math.min(Math.round((history.progress ?? 0) * 100), 100) : 0);
-
-	function handleClick() {
-		goto(`/${mediaType}/${item.id}`);
-	}
-
-	function handleKeydown(e: KeyboardEvent) {
-		if (e.key === 'Enter' || e.key === ' ') {
-			e.preventDefault();
-			handleClick();
-		}
-	}
 </script>
 
 <a
-	href={`/${mediaType}/${item.id}`}
+	href={cardHref}
 	class="media-card size-{size}"
-	role="button"
 	aria-label={title}
 >
 	<div class="poster-wrap">
-		{#if poster}
-			<img src={poster} alt={title} loading="lazy" />
+		{#if cardImage}
+			<img src={cardImage} alt={title} loading="lazy" />
 		{:else}
 			<div class="no-poster">
 				<svg viewBox="0 0 24 24" fill="currentColor" width="32" height="32">
@@ -50,17 +56,6 @@
 				</svg>
 			</div>
 		{/if}
-
-		{#if rating}
-			<div class="rating-badge">
-				<svg viewBox="0 0 24 24" fill="currentColor" width="10" height="10">
-					<path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
-				</svg>
-				{rating.toFixed(1)}
-			</div>
-		{/if}
-
-		<div class="type-badge">{mediaType === 'tv' ? 'Série' : 'Film'}</div>
 
 		{#if inLibrary}
 			<div class="lib-badge" title="Dans ma bibliothèque">♥</div>
@@ -89,33 +84,36 @@
 
 <style>
 	.media-card {
+		display: block;
 		cursor: pointer;
 		flex-shrink: 0;
-		transition: transform var(--transition-smooth), opacity var(--transition-fast);
+		text-decoration: none;
+		color: inherit;
+		transition: transform 250ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
 		outline: none;
 	}
 
 	.media-card:hover { transform: scale(1.05); z-index: 2; }
-	.media-card:focus-visible { outline: 2px solid var(--accent); border-radius: var(--radius); }
+	.media-card:focus-visible { outline: 2px solid rgba(249, 249, 249, 0.8); border-radius: 4px; }
 
-	.size-sm { width: 120px; }
-	.size-md { width: 160px; }
-	.size-lg { width: 200px; }
+	.size-sm { width: 100%; }
+	.size-md { width: 100%; }
+	.size-lg { width: 100%; }
 
 	.poster-wrap {
 		position: relative;
-		aspect-ratio: 2 / 3;
-		border-radius: var(--radius);
+		aspect-ratio: 16 / 9;
+		border-radius: 4px;
 		overflow: hidden;
 		background: var(--bg-surface);
-		box-shadow: var(--shadow-dark);
-		transition: all var(--transition-smooth);
+		box-shadow: rgb(0 0 0 / 69%) 0px 26px 30px -10px, rgb(0 0 0 / 73%) 0px 16px 10px -10px;
+		transition: all 250ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+		border: 3px solid transparent;
 	}
 
 	.media-card:hover .poster-wrap {
-		box-shadow: var(--shadow-dark-md);
-		transform: scale(1.05);
-		border: 1px solid rgba(255, 255, 255, 0.2);
+		box-shadow: 0 40px 58px -16px rgba(0,0,0,0.72);
+		border-color: #F9F9F9;
 	}
 
 	.poster-wrap img {
@@ -123,10 +121,10 @@
 		height: 100%;
 		object-fit: cover;
 		display: block;
-		transition: transform var(--transition-smooth);
+		transition: transform 250ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
 	}
 
-	.media-card:hover .poster-wrap img { transform: scale(1.08); }
+	.media-card:hover .poster-wrap img { transform: scale(1.05); }
 
 	.no-poster {
 		width: 100%;
@@ -135,51 +133,22 @@
 		align-items: center;
 		justify-content: center;
 		color: var(--text-muted);
-		background: var(--bg-secondary);
-	}
-
-	.rating-badge {
-		position: absolute;
-		top: 6px;
-		left: 6px;
-		background: rgba(0,0,0,0.75);
-		backdrop-filter: blur(4px);
-		color: var(--warning);
-		font-size: 11px;
-		font-weight: 600;
-		padding: 3px 6px;
-		border-radius: 6px;
-		display: flex;
-		align-items: center;
-		gap: 3px;
-	}
-
-	.type-badge {
-		position: absolute;
-		top: 6px;
-		right: 6px;
-		background: rgba(108,92,231,0.85);
-		color: #fff;
-		font-size: 10px;
-		font-weight: 600;
-		padding: 2px 6px;
-		border-radius: 4px;
+		background: #252833;
 	}
 
 	.lib-badge {
 		position: absolute;
-		bottom: 30px;
-		right: 6px;
-		background: rgba(192, 74, 53, 0.85);
+		bottom: 10px;
+		right: 8px;
+		background: rgba(0, 114, 210, 0.9);
 		color: #fff;
 		font-size: 11px;
-		width: 22px;
-		height: 22px;
+		width: 24px;
+		height: 24px;
 		border-radius: 50%;
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		backdrop-filter: blur(4px);
 	}
 
 	.progress-bar-wrap {
@@ -200,13 +169,14 @@
 	.overlay {
 		position: absolute;
 		inset: 0;
-		background: rgba(0,0,0,0.5);
+		background: rgba(0,0,0,0.45);
 		display: flex;
 		align-items: center;
 		justify-content: center;
 		color: #fff;
 		opacity: 0;
-		transition: opacity var(--transition-smooth);
+		pointer-events: none;
+		transition: opacity 250ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
 	}
 
 	.media-card:hover .overlay { opacity: 1; }
@@ -218,8 +188,8 @@
 
 	.card-title {
 		font-size: 13px;
-		font-weight: 500;
-		color: var(--text-primary);
+		font-weight: 600;
+		color: #f9f9f9;
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
@@ -228,6 +198,6 @@
 
 	.card-year {
 		font-size: 11px;
-		color: var(--text-muted);
+		color: rgba(249, 249, 249, 0.5);
 	}
 </style>

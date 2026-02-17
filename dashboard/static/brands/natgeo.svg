@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 80">
+  <rect x="60" y="12" width="80" height="56" rx="2" fill="none" stroke="#FFCC00" stroke-width="4"/>
+  <text x="100" y="38" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" font-weight="bold" fill="#F9F9F9" letter-spacing="1">NATIONAL</text>
+  <text x="100" y="52" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" font-weight="bold" fill="#F9F9F9" letter-spacing="1">GEOGRAPHIC</text>
+</svg>

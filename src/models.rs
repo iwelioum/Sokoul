@@ -106,6 +106,7 @@ pub struct CreateTaskPayload {
 
 // ── Favorites ──
 
+#[allow(dead_code)]
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Favorite {
     pub id: Uuid,
@@ -115,11 +116,21 @@ pub struct Favorite {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct AddFavoritePayload {
-    pub media_id: Uuid,
+    pub media_id: Option<Uuid>,
+    pub tmdb_id: Option<i32>,
+    pub media_type: Option<String>,
+    pub title: Option<String>,
+    pub poster_url: Option<String>,
+    pub backdrop_url: Option<String>,
+    pub vote_average: Option<f64>,
+    pub release_date: Option<String>,
+    pub overview: Option<String>,
+    pub year: Option<i32>,
 }
 
 // ── Watch History ──
 
+#[allow(dead_code)]
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct WatchHistoryEntry {
     pub id: Uuid,
@@ -131,13 +142,20 @@ pub struct WatchHistoryEntry {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct UpdateWatchProgressPayload {
-    pub media_id: Uuid,
-    pub progress_seconds: i32,
+    pub media_id: Option<Uuid>,
+    pub tmdb_id: Option<i32>,
+    pub media_type: Option<String>,
+    pub title: Option<String>,
+    pub poster_url: Option<String>,
+    pub progress_seconds: Option<i32>,
+    pub progress: Option<f64>,
+    #[serde(default)]
     pub completed: bool,
 }
 
 // ── Watchlist ──
 
+#[allow(dead_code)]
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct WatchlistEntry {
     pub id: Uuid,
@@ -147,7 +165,16 @@ pub struct WatchlistEntry {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct AddWatchlistPayload {
-    pub media_id: Uuid,
+    pub media_id: Option<Uuid>,
+    pub tmdb_id: Option<i32>,
+    pub media_type: Option<String>,
+    pub title: Option<String>,
+    pub poster_url: Option<String>,
+    pub backdrop_url: Option<String>,
+    pub vote_average: Option<f64>,
+    pub release_date: Option<String>,
+    pub overview: Option<String>,
+    pub year: Option<i32>,
     #[serde(default)]
     pub auto_download: bool,
     #[serde(default = "default_quality")]
@@ -186,6 +213,7 @@ pub struct MediaFile {
 }
 
 // ── Pagination ──
+#[allow(dead_code)]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PaginatedFavorites {
     pub items: Vec<Favorite>,
@@ -195,6 +223,7 @@ pub struct PaginatedFavorites {
     pub total_pages: i64,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PaginatedWatchlist {
     pub items: Vec<WatchlistEntry>,

@@ -15,7 +15,7 @@ use futures::stream::StreamExt;
 use std::sync::Arc;
 
 pub async fn scout_worker(state: Arc<AppState>) -> anyhow::Result<()> {
-    tracing::info!("Le worker Scout demarre...");
+    tracing::info!("Scout worker starting...");
 
     let tmdb_client = TmdbClient::new(CONFIG.tmdb_api_key.clone());
 
@@ -46,7 +46,7 @@ pub async fn scout_worker(state: Arc<AppState>) -> anyhow::Result<()> {
     let registry = Arc::new(registry);
 
     tracing::info!(
-        "Scout: provider(s) actif(s): {:?}",
+        "Scout: active provider(s): {:?}",
         registry.list_enabled_names()
     );
 
@@ -70,10 +70,10 @@ pub async fn scout_worker(state: Arc<AppState>) -> anyhow::Result<()> {
 
     let mut messages = consumer.messages().await?;
     while let Some(Ok(message)) = messages.next().await {
-        tracing::info!("Scout a recu un nouveau message.");
+        tracing::info!("Scout received a new message.");
         let payload: SearchRequestedPayload = serde_json::from_slice(&message.payload)?;
 
-        tracing::info!("Debut de la recherche TMDB pour: '{}'", payload.query);
+        tracing::info!("Starting TMDB search for: '{}'", payload.query);
 
         // Emit search started event
         let _ = state.event_tx.send(
@@ -87,16 +87,21 @@ pub async fn scout_worker(state: Arc<AppState>) -> anyhow::Result<()> {
             Ok(results) => results,
             Err(e) => {
                 tracing::error!(
-                    "Echec recherche TMDB pour '{}': {}. Le message sera re-traite.",
+                    "TMDB search failed for '{}': {}. Message will be reprocessed.",
                     payload.query,
                     e
                 );
+                // Ack to prevent infinite reprocessing on persistent TMDB failures.
+                message
+                    .ack()
+                    .await
+                    .map_err(|e| anyhow::anyhow!("Failed to ack message: {}", e))?;
                 continue;
             }
         };
 
         tracing::info!(
-            "TMDB a trouve {} resultat(s) pour '{}'. Traitement en parallele.",
+            "TMDB found {} result(s) for '{}'. Processing in parallel.",
             tmdb_results.len(),
             payload.query
         );
@@ -124,30 +129,29 @@ pub async fn scout_worker(state: Arc<AppState>) -> anyhow::Result<()> {
 
                     match db::media::create_media(&db_pool_clone, &media_payload).await {
                         Ok(media) => {
-                            tracing::info!("Media '{}' (ID: {}) ajoute/mis a jour dans la base.", media.title, media.id);
+                            tracing::info!("Media '{}' (ID: {}) saved to database.", media.title, media.id);
 
                             let sources = registry_clone
                                 .search_all(&media.title, &media.media_type, media.tmdb_id)
                                 .await;
 
                             if sources.is_empty() {
-                                tracing::info!("Aucune source trouvee pour '{}'", media.title);
+                                tracing::info!("No sources found for '{}'", media.title);
                                 return;
                             }
 
-                            // Auto-score each source before saving
                             let scored_sources: Vec<_> = sources.iter().map(|s| {
                                 let score = scoring::compute_score(s);
-                                tracing::debug!("Score auto pour '{}': {}", s.title, score);
+                                tracing::debug!("Auto-score for '{}': {}", s.title, score);
                                 (s, score)
                             }).collect();
 
-                            tracing::info!("{} source(s) trouvee(s) pour '{}' (tous providers)", sources.len(), media.title);
+                            tracing::info!("{} source(s) found for '{}' (all providers)", sources.len(), media.title);
 
                             match db::search_results::create_batch(&db_pool_clone, media.id, &sources).await {
                                 Ok(inserted_count) => {
                                     if inserted_count > 0 {
-                                        tracing::info!("{} nouvelle(s) source(s) sauvegardee(s) pour '{}'.", inserted_count, media.title);
+                                        tracing::info!("{} new source(s) saved for '{}'.", inserted_count, media.title);
 
                                         // Apply auto-scores to inserted results
                                         if let Ok(saved_results) = db::search_results::get_results_by_media_id(&db_pool_clone, media.id).await {
@@ -175,18 +179,18 @@ pub async fn scout_worker(state: Arc<AppState>) -> anyhow::Result<()> {
                                         let event = SearchResultsFoundPayload { media_id: media.id };
                                         if let Ok(payload) = serde_json::to_vec(&event) {
                                             if let Err(e) = jetstream_clone.publish(events::SEARCH_RESULTS_FOUND_SUBJECT, payload.into()).await {
-                                                tracing::error!("Erreur publication event search_results_found: {}", e);
+                                                tracing::error!("Failed to publish search_results_found event: {}", e);
                                             }
                                         }
                                     }
                                 }
                                 Err(e) => {
-                                    tracing::error!("Echec sauvegarde sources pour '{}': {}", media.title, e);
+                                    tracing::error!("Failed to save sources for '{}': {}", media.title, e);
                                 }
                             }
                         }
                         Err(e) => {
-                            tracing::error!("Echec enregistrement media TMDB ID {}: {}", result.id, e);
+                            tracing::error!("Failed to save media TMDB ID {}: {}", result.id, e);
                         }
                     }
                 }

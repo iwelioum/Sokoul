@@ -11,22 +11,22 @@ use teloxide::{
 };
 
 #[derive(BotCommands, Clone)]
-#[command(rename_rule = "lowercase", description = "Commandes disponibles :")]
+#[command(rename_rule = "lowercase", description = "Available commands:")]
 pub enum Command {
-    #[command(description = "Afficher l'aide")]
+    #[command(description = "Show help")]
     Help,
-    #[command(description = "Rechercher un film/série — /search Inception")]
+    #[command(description = "Search for a movie/series — /search Inception")]
     Search(String),
-    #[command(description = "Voir les téléchargements en cours")]
+    #[command(description = "View current downloads")]
     Downloads,
-    #[command(description = "Voir la bibliothèque de médias")]
+    #[command(description = "View media library")]
     Library,
-    #[command(description = "Statut du système")]
+    #[command(description = "System status")]
     Status,
 }
 
 pub async fn run_bot(state: Arc<AppState>) {
-    tracing::info!("Bot Telegram Sokoul démarre...");
+    tracing::info!("Sokoul Telegram bot starting...");
 
     let bot = Bot::from_env();
 
@@ -80,16 +80,13 @@ async fn handle_search(
     state: Arc<AppState>,
 ) -> ResponseResult<()> {
     if query.is_empty() {
-        bot.send_message(msg.chat.id, "Usage: /search <titre du film ou série>")
+        bot.send_message(msg.chat.id, "Usage: /search <movie or series title>")
             .await?;
         return Ok(());
     }
 
-    bot.send_message(
-        msg.chat.id,
-        format!("🔍 Recherche en cours pour \"{}\"...", query),
-    )
-    .await?;
+    bot.send_message(msg.chat.id, format!("🔍 Searching for \"{}\"...", query))
+        .await?;
 
     // Publish search event to NATS
     let payload = SearchRequestedPayload {
@@ -102,7 +99,7 @@ async fn handle_search(
         .publish(events::SEARCH_REQUESTED_SUBJECT, event_data.into())
         .await
     {
-        bot.send_message(msg.chat.id, format!("❌ Erreur: {}", e))
+        bot.send_message(msg.chat.id, format!("❌ Error: {}", e))
             .await?;
         return Ok(());
     }
@@ -115,12 +112,11 @@ async fn handle_search(
         .unwrap_or_default();
 
     if media_list.is_empty() {
-        bot.send_message(msg.chat.id, "Aucun résultat trouvé.")
-            .await?;
+        bot.send_message(msg.chat.id, "No results found.").await?;
         return Ok(());
     }
 
-    let mut text = format!("📋 *Résultats pour \"{}\":*\n\n", escape_md(&query));
+    let mut text = format!("📋 *Results for \"{}\":*\n\n", escape_md(&query));
     let mut buttons: Vec<Vec<InlineKeyboardButton>> = Vec::new();
 
     for (i, media) in media_list.iter().take(8).enumerate() {
@@ -169,12 +165,12 @@ async fn handle_downloads(bot: Bot, msg: Message, state: Arc<AppState>) -> Respo
     .unwrap_or_default();
 
     if tasks.is_empty() {
-        bot.send_message(msg.chat.id, "📭 Aucun téléchargement en cours.")
+        bot.send_message(msg.chat.id, "📭 No downloads in progress.")
             .await?;
         return Ok(());
     }
 
-    let mut text = "📥 *Téléchargements :*\n\n".to_string();
+    let mut text = "📥 *Downloads:*\n\n".to_string();
     for task in &tasks {
         let status_emoji = match task.status.as_str() {
             "running" => "⏳",
@@ -188,7 +184,7 @@ async fn handle_downloads(bot: Bot, msg: Message, state: Arc<AppState>) -> Respo
             .as_ref()
             .and_then(|p| p.get("title"))
             .and_then(|t| t.as_str())
-            .unwrap_or("Inconnu");
+            .unwrap_or("Unknown");
 
         text.push_str(&format!(
             "{} *{}* — {}\n",
@@ -211,12 +207,12 @@ async fn handle_library(bot: Bot, msg: Message, state: Arc<AppState>) -> Respons
         .unwrap_or_default();
 
     if media_list.is_empty() {
-        bot.send_message(msg.chat.id, "📚 Bibliothèque vide.")
+        bot.send_message(msg.chat.id, "📚 Library is empty.")
             .await?;
         return Ok(());
     }
 
-    let mut text = format!("📚 *Bibliothèque \\({} médias\\):*\n\n", media_list.len());
+    let mut text = format!("📚 *Library \\({} media\\):*\n\n", media_list.len());
     for media in media_list.iter().take(15) {
         let year_str = media.year.map(|y| format!(" ({})", y)).unwrap_or_default();
         let type_emoji = match media.media_type.as_str() {
@@ -259,12 +255,12 @@ async fn handle_status(bot: Bot, msg: Message, state: Arc<AppState>) -> Response
     .unwrap_or(0);
 
     let text = format!(
-        "🖥️ *Statut SOKOUL :*\n\n\
-         {} Base de données\n\
+        "🖥️ *SOKOUL Status:*\n\n\
+         {} Database\n\
          {} Redis\n\
          ✅ NATS\n\n\
-         📊 {} médias en base\n\
-         📥 {} téléchargements actifs",
+         📊 {} media in database\n\
+         📥 {} active downloads",
         if db_ok { "✅" } else { "❌" },
         if redis_ok { "✅" } else { "❌" },
         media_count,
@@ -296,7 +292,7 @@ async fn handle_callback(bot: Bot, q: CallbackQuery, state: Arc<AppState>) -> Re
         let media_id: uuid::Uuid = match media_id_str.parse() {
             Ok(id) => id,
             Err(_) => {
-                bot.send_message(chat_id, "❌ ID invalide").await?;
+                bot.send_message(chat_id, "❌ Invalid ID").await?;
                 return Ok(());
             }
         };
@@ -306,13 +302,13 @@ async fn handle_callback(bot: Bot, q: CallbackQuery, state: Arc<AppState>) -> Re
             .unwrap_or_default();
 
         if results.is_empty() {
-            bot.send_message(chat_id, "Aucune source torrent trouvée pour ce média\\.")
+            bot.send_message(chat_id, "No torrent sources found for this media\\.")
                 .parse_mode(ParseMode::MarkdownV2)
                 .await?;
             return Ok(());
         }
 
-        let mut text = "🔗 *Sources disponibles :*\n\n".to_string();
+        let mut text = "🔗 *Available sources:*\n\n".to_string();
         let mut buttons: Vec<Vec<InlineKeyboardButton>> = Vec::new();
 
         for (i, result) in results.iter().take(6).enumerate() {
@@ -367,7 +363,7 @@ async fn handle_callback(bot: Bot, q: CallbackQuery, state: Arc<AppState>) -> Re
         let result = match results.iter().find(|r| r.id == search_result_id) {
             Some(r) => r,
             None => {
-                bot.send_message(chat_id, "❌ Source non trouvée").await?;
+                bot.send_message(chat_id, "❌ Source not found").await?;
                 return Ok(());
             }
         };
@@ -375,7 +371,7 @@ async fn handle_callback(bot: Bot, q: CallbackQuery, state: Arc<AppState>) -> Re
         let magnet_or_url = match result.magnet_link.clone().or_else(|| result.url.clone()) {
             Some(u) => u,
             None => {
-                bot.send_message(chat_id, "❌ Pas de lien de téléchargement")
+                bot.send_message(chat_id, "❌ No download link available")
                     .await?;
                 return Ok(());
             }
@@ -396,14 +392,11 @@ async fn handle_callback(bot: Bot, q: CallbackQuery, state: Arc<AppState>) -> Re
             .await
         {
             Ok(_) => {
-                bot.send_message(
-                    chat_id,
-                    format!("✅ Téléchargement lancé : {}", result.title),
-                )
-                .await?;
+                bot.send_message(chat_id, format!("✅ Download started: {}", result.title))
+                    .await?;
             }
             Err(e) => {
-                bot.send_message(chat_id, format!("❌ Erreur: {}", e))
+                bot.send_message(chat_id, format!("❌ Error: {}", e))
                     .await?;
             }
         }

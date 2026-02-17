@@ -1,13 +1,13 @@
 use strsim::jaro_winkler;
 
-/// Nettoie un titre de torrent en retirant les specs techniques, l'année, les groupes de release.
+/// Clean a torrent title by removing technical specs, year, and release groups.
 pub fn normalize_torrent_title(title: &str) -> String {
     let mut result = title.to_lowercase();
 
-    // Remplacer les séparateurs courants par des espaces
+    // Replace common separators with spaces
     result = result.replace('.', " ").replace('_', " ").replace('-', " ");
 
-    // Retirer les indicateurs de qualité
+    // Remove quality indicators
     let quality_patterns = [
         "bluray",
         "blu ray",
@@ -51,7 +51,7 @@ pub fn normalize_torrent_title(title: &str) -> String {
         result = result.replace(pattern, " ");
     }
 
-    // Retirer les groupes de release courants
+    // Remove common release groups
     let groups = [
         "yify", "yts", "rarbg", "eztv", "ettv", "sparks", "geckos", "fgt", "mkvcage", "evo",
         "tigole", "qxr",
@@ -60,7 +60,7 @@ pub fn normalize_torrent_title(title: &str) -> String {
         result = result.replace(group, " ");
     }
 
-    // Retirer les années (1900-2099)
+    // Remove years (1900-2099)
     let mut chars: Vec<char> = result.chars().collect();
     let result_str: String = chars.iter().collect();
     let year_positions: Vec<(usize, usize)> = result_str
@@ -90,7 +90,7 @@ pub fn normalize_torrent_title(title: &str) -> String {
     }
     result = chars.into_iter().collect();
 
-    // Compresser les espaces multiples
+    // Compress multiple spaces
     result
         .split_whitespace()
         .collect::<Vec<&str>>()
@@ -99,23 +99,23 @@ pub fn normalize_torrent_title(title: &str) -> String {
         .to_string()
 }
 
-/// Compare un titre de torrent au titre du média attendu.
-/// Retourne un score entre 0.0 et 1.0.
+/// Compare a torrent title to the expected media title.
+/// Returns a score between 0.0 and 1.0.
 pub fn title_similarity(torrent_title: &str, media_title: &str) -> f64 {
     let torrent_clean = normalize_torrent_title(torrent_title);
     let media_clean = media_title.to_lowercase().trim().to_string();
 
-    // Vérification exacte
+    // Exact match
     if torrent_clean == media_clean {
         return 1.0;
     }
 
-    // Vérifier si le titre du média apparaît en entier dans le titre torrent
+    // Check if the media title appears entirely in the torrent title
     if torrent_clean.contains(&media_clean) {
         return 0.95;
     }
 
-    // Vérifier la correspondance mot-à-mot consécutive
+    // Check consecutive word-by-word match
     let media_words: Vec<&str> = media_clean.split_whitespace().collect();
     let torrent_words: Vec<&str> = torrent_clean.split_whitespace().collect();
 
@@ -127,11 +127,11 @@ pub fn title_similarity(torrent_title: &str, media_title: &str) -> f64 {
         }
     }
 
-    // Fallback: Jaro-Winkler sur les titres nettoyés
+    // Fallback: Jaro-Winkler on cleaned titles
     jaro_winkler(&torrent_clean, &media_clean)
 }
 
-/// Vérifie si un titre de torrent correspond au média avec un seuil donné.
+/// Check if a torrent title matches the media with a given threshold.
 pub fn is_title_match(torrent_title: &str, media_title: &str, threshold: f64) -> bool {
     title_similarity(torrent_title, media_title) >= threshold
 }

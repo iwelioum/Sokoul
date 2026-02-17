@@ -7,9 +7,9 @@ pub mod oracle;
 pub mod scout;
 pub mod sentinel;
 
-/// Point d'entree pour lancer tous les workers en parallele.
+/// Entry point to launch all workers in parallel.
 pub async fn run_workers(state: Arc<AppState>) {
-    tracing::info!("Lancement de l'ensemble des workers...");
+    tracing::info!("Starting all workers...");
     let workers = vec![
         tokio::spawn(scout::scout_worker(state.clone())),
         tokio::spawn(hunter::hunter_worker(state.clone())),
@@ -19,7 +19,7 @@ pub async fn run_workers(state: Arc<AppState>) {
 
     for worker in workers {
         if let Err(e) = worker.await {
-            tracing::error!("Un worker a panique: {:?}", e);
+            tracing::error!("A worker panicked: {:?}", e);
         }
     }
 }

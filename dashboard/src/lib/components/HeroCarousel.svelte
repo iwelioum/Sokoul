@@ -15,7 +15,7 @@
 	// State
 	let currentIndex = $state(0);
 	let isAutoPlaying = $state(true);
-	let autoPlayTimer: ReturnType<typeof setTimeout> | null = $state(null);
+	let autoPlayTimer: ReturnType<typeof setTimeout> | null = null;
 	let textColorMode = $state<'light' | 'dark'>('light');
 	let overlayOpacity = $state(0.3);
 	let clearLogos = $state<Map<number, string>>(new Map());
@@ -99,6 +99,29 @@
 			onDetails(currentSlide);
 		}
 	}
+
+	// ── Touch / drag swipe ──
+	let touchStartX = 0;
+	let touchStartY = 0;
+	let isDragging = false;
+
+	function handlePointerDown(e: PointerEvent) {
+		touchStartX = e.clientX;
+		touchStartY = e.clientY;
+		isDragging = true;
+	}
+
+	function handlePointerUp(e: PointerEvent) {
+		if (!isDragging) return;
+		isDragging = false;
+		const dx = e.clientX - touchStartX;
+		const dy = Math.abs(e.clientY - touchStartY);
+		// Only swipe if horizontal movement > 50px and greater than vertical
+		if (Math.abs(dx) > 50 && Math.abs(dx) > dy) {
+			if (dx < 0) nextSlide();
+			else prevSlide();
+		}
+	}
 </script>
 
 <div
@@ -108,11 +131,13 @@
 	style={heroBackdrop ? `--backdrop-image: url('${heroBackdrop}'); --overlay-opacity: ${overlayOpacity}` : ''}
 	onmouseenter={handleMouseEnter}
 	onmouseleave={handleMouseLeave}
+	onpointerdown={handlePointerDown}
+	onpointerup={handlePointerUp}
 	role="region"
 	aria-label="Hero carousel"
 >
 	<!-- Slides -->
-	{#each items as item, idx (item.id)}
+	{#each items as item, idx (`${item.media_type}-${item.id}`)}
 		<div class="hero-carousel-slide" class:active={idx === currentIndex}>
 			{#if item.backdrop_path}
 				<img
@@ -125,7 +150,6 @@
 	{/each}
 
 	<!-- Gradient masks -->
-	<div class="hero-carousel-overlay"></div>
 	<div class="hero-carousel-mask"></div>
 
 	<!-- Content -->
@@ -193,7 +217,7 @@
 	<!-- Progress indicators -->
 	{#if items.length > 1}
 		<div class="hero-carousel-indicators">
-			{#each items as item, idx (item.id)}
+			{#each items as item, idx (`${item.media_type}-${item.id}`)}
 				<div
 					class="hero-carousel-indicator"
 					class:active={idx === currentIndex}
@@ -220,11 +244,12 @@
 <style>
 	.hero-carousel {
 		position: relative;
-		width: 100%;
-		height: 600px;
+		width: 100vw;
+		height: 85vh;
+		min-height: 520px;
 		overflow: hidden;
 		border-radius: 0;
-		background: var(--bg-primary);
+		background: #1A1D29;
 	}
 
 	.hero-carousel-slide {
@@ -244,6 +269,7 @@
 		width: 100%;
 		height: 100%;
 		object-fit: cover;
+		object-position: center top;
 		display: block;
 		transition: transform var(--transition-slow);
 	}
@@ -257,35 +283,22 @@
 		to { transform: scale(1.05); }
 	}
 
-	.hero-carousel-overlay {
-		position: absolute;
-		left: 0;
-		top: 0;
-		width: 40%;
-		height: 100%;
-		background: var(--gradient-overlay);
-		opacity: var(--overlay-opacity, 0.3);
-		pointer-events: none;
-		z-index: 2;
-		transition: opacity var(--transition-smooth);
-	}
-
 	.hero-carousel-mask {
 		position: absolute;
-		bottom: 0;
-		left: 0;
-		right: 0;
-		height: 30%;
-		background: var(--gradient-hero-mask);
+		inset: 0;
+		background:
+			linear-gradient(to top, #1A1D29 8%, transparent 60%),
+			linear-gradient(to right, rgba(26, 29, 41, 0.7) 0%, transparent 30%);
 		pointer-events: none;
 		z-index: 2;
 	}
 
 	.hero-carousel-content {
 		position: absolute;
-		bottom: 60px;
-		left: 60px;
-		right: 60px;
+		bottom: 20%;
+		left: 4%;
+		right: 4%;
+		max-width: 600px;
 		z-index: 3;
 		color: white;
 		text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
@@ -335,9 +348,9 @@
 	}
 
 	.hero-carousel-title {
-		font-family: 'Playfair Display', serif;
+		font-family: 'Inter', sans-serif;
 		font-size: 56px;
-		font-weight: 700;
+		font-weight: 800;
 		line-height: 1.1;
 		margin-bottom: 12px;
 	}
@@ -366,24 +379,31 @@
 
 	.hero-carousel-actions :global(button) {
 		padding: 12px 28px;
-		font-size: 16px;
-		border-radius: 50px;
+		font-size: 15px;
+		border-radius: 4px;
 		display: flex;
 		gap: 8px;
 		align-items: center;
+		text-transform: uppercase;
+		letter-spacing: 1.5px;
+	}
+
+	.hero-carousel {
+		touch-action: pan-y;
+		user-select: none;
 	}
 
 	.hero-carousel-nav {
 		position: absolute;
 		top: 50%;
 		transform: translateY(-50%);
-		background: rgba(0, 0, 0, 0.2);
+		background: rgba(0, 0, 0, 0.3);
 		color: white;
 		border: none;
 		padding: 16px 20px;
 		border-radius: 8px;
 		cursor: pointer;
-		opacity: 0;
+		opacity: 0.6;
 		transition: opacity var(--transition-smooth), background var(--transition-smooth);
 		z-index: 3;
 		font-size: 20px;
@@ -393,7 +413,7 @@
 	}
 
 	.hero-carousel:hover .hero-carousel-nav {
-		opacity: 0.8;
+		opacity: 0.9;
 	}
 
 	.hero-carousel-nav:hover:not(:disabled) {
@@ -460,13 +480,14 @@
 	/* Responsive */
 	@media (max-width: 1024px) {
 		.hero-carousel {
-			height: 450px;
+			height: 70vh;
+			min-height: 420px;
 		}
 
 		.hero-carousel-content {
-			bottom: 40px;
-			left: 40px;
-			right: 40px;
+			bottom: 14%;
+			left: 4%;
+			right: 4%;
 		}
 
 		.hero-carousel-title {
@@ -479,7 +500,7 @@
 		}
 
 		.hero-carousel-indicators {
-			right: 40px;
+			right: 4%;
 		}
 
 		.hero-carousel-nav.prev {
@@ -493,13 +514,14 @@
 
 	@media (max-width: 768px) {
 		.hero-carousel {
-			height: 350px;
+			height: 55vh;
+			min-height: 320px;
 		}
 
 		.hero-carousel-content {
-			bottom: 30px;
-			left: 20px;
-			right: 20px;
+			bottom: 12%;
+			left: 4%;
+			right: 4%;
 		}
 
 		.hero-carousel-title {
@@ -511,7 +533,8 @@
 		}
 
 		.hero-carousel-indicators {
-			display: none;
+			right: 4%;
+			bottom: 12px;
 		}
 
 		.hero-carousel-actions :global(button) {

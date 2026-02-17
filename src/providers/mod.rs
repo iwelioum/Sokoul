@@ -25,13 +25,13 @@ pub struct TorrentResult {
 
 #[async_trait]
 pub trait SearchProvider: Send + Sync {
-    /// Nom unique du provider (ex: "Prowlarr", "StreamingScraper")
+    /// Unique provider name (e.g., "Prowlarr", "StreamingScraper")
     fn name(&self) -> &str;
 
-    /// Recherche textuelle libre
+    /// Free-text search
     async fn search(&self, query: &str) -> anyhow::Result<Vec<TorrentResult>>;
 
-    /// Recherche structurée par ID TMDB
+    /// Structured search by TMDB ID
     #[allow(dead_code)]
     async fn search_by_tmdb_id(
         &self,
@@ -50,7 +50,7 @@ impl ProviderRegistry {
     }
 
     pub fn register(&mut self, provider: Box<dyn SearchProvider>) {
-        tracing::info!("Provider '{}' enregistré.", provider.name());
+        tracing::info!("Provider '{}' registered.", provider.name());
         self.providers.push(provider);
     }
 
@@ -60,19 +60,30 @@ impl ProviderRegistry {
         _media_type: &str,
         _tmdb_id: Option<i32>,
     ) -> Vec<TorrentResult> {
+        use anyhow::anyhow;
         use futures::future::join_all;
+        use std::time::Duration;
+        use tokio::time::timeout;
+
+        const SEARCH_TIMEOUT: Duration = Duration::from_secs(20);
 
         // Always use text search - public indexers don't support TMDB ID search
         let futures = self.providers.iter().map(|provider| {
             let title = title.to_string();
+            let name = provider.name().to_string();
             async move {
-                tracing::info!(
-                    "Provider '{}': recherche textuelle pour '{}'",
-                    provider.name(),
-                    title
-                );
-                let result = provider.search(&title).await;
-                (provider.name(), result)
+                tracing::info!("Provider '{}': text search for '{}'", name, title);
+
+                let result = match timeout(SEARCH_TIMEOUT, provider.search(&title)).await {
+                    Ok(res) => res,
+                    Err(_) => Err(anyhow!(
+                        "timeout provider '{}' after {:?}",
+                        name,
+                        SEARCH_TIMEOUT
+                    )),
+                };
+
+                (name, result)
             }
         });
 
@@ -81,11 +92,11 @@ impl ProviderRegistry {
             .into_iter()
             .flat_map(|(name, result)| match result {
                 Ok(res) => {
-                    tracing::info!("Provider '{}': {} source(s) trouvee(s)", name, res.len());
+                    tracing::info!("Provider '{}': {} source(s) found", name, res.len());
                     res
                 }
                 Err(e) => {
-                    tracing::error!("Erreur du provider '{}': {}", name, e);
+                    tracing::error!("Provider '{}' error: {}", name, e);
                     vec![]
                 }
             })

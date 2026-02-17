@@ -11,6 +11,8 @@
 *.db
 *.log
 downloads/
+!dashboard/src/routes/downloads/
+!dashboard/src/routes/downloads/+page.svelte
 
 # Node / SvelteKit dashboard
 dashboard/node_modules/
@@ -30,3 +32,4 @@ Thumbs.db
 # Docker volumes
 pgdata/
 redis-data/
+data/

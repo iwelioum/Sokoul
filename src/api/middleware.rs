@@ -2,8 +2,8 @@ use axum::{extract::Request, middleware::Next, response::Response};
 use std::time::Instant;
 use tokio::time::{timeout, Duration};
 
-/// Middleware pour ajouter des timeouts global sur les requêtes
-/// Timeout: 30s par défaut (configurable)
+/// Middleware to add global request timeouts
+/// Timeout: 30s by default (configurable)
 #[allow(dead_code)]
 pub async fn timeout_middleware(
     req: Request,
@@ -20,7 +20,7 @@ pub async fn timeout_middleware(
     }
 }
 
-/// Middleware pour logger les requêtes avec timing
+/// Middleware to log requests with timing
 #[allow(dead_code)]
 pub async fn request_logging_middleware(req: Request, next: Next) -> Response {
     let method = req.method().clone();

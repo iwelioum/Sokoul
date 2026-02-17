@@ -47,32 +47,30 @@ const MAX_TITLE_LEN: usize = 500;
 fn validate_create_payload(payload: &CreateMediaPayload) -> Result<(), ApiError> {
     let title = payload.title.trim();
     if title.is_empty() {
-        return Err(ApiError::InvalidInput(
-            "Le titre ne peut pas etre vide.".into(),
-        ));
+        return Err(ApiError::InvalidInput("Title cannot be empty.".into()));
     }
     if title.len() > MAX_TITLE_LEN {
         return Err(ApiError::InvalidInput(format!(
-            "Le titre ne peut pas depasser {} caracteres.",
+            "Title cannot exceed {} characters.",
             MAX_TITLE_LEN
         )));
     }
     if !VALID_MEDIA_TYPES.contains(&payload.media_type.as_str()) {
         return Err(ApiError::InvalidInput(format!(
-            "Type de media invalide '{}'. Valeurs acceptees: {}",
+            "Invalid media type '{}'. Accepted values: {}",
             payload.media_type,
             VALID_MEDIA_TYPES.join(", ")
         )));
     }
     if let Some(year) = payload.year {
         if year < 1888 || year > 2100 {
-            return Err(ApiError::InvalidInput("Annee invalide.".into()));
+            return Err(ApiError::InvalidInput("Invalid year.".into()));
         }
     }
     if let Some(rating) = payload.rating {
         if !(0.0..=10.0).contains(&rating) {
             return Err(ApiError::InvalidInput(
-                "La note doit etre entre 0 et 10.".into(),
+                "Rating must be between 0 and 10.".into(),
             ));
         }
     }
@@ -84,11 +82,11 @@ pub async fn create_media_handler(
     Json(payload): Json<CreateMediaPayload>,
 ) -> Result<(StatusCode, Json<Media>), ApiError> {
     validate_create_payload(&payload)?;
-    tracing::info!("Creation de media: {:?}", payload);
+    tracing::info!("Creating media: {:?}", payload);
 
     let created_media = db::media::create_media(&state.db_pool, &payload).await?;
 
-    tracing::info!("Media cree avec succes: {}", created_media.id);
+    tracing::info!("Media created successfully: {}", created_media.id);
 
     Ok((StatusCode::CREATED, Json(created_media)))
 }
@@ -105,14 +103,14 @@ pub async fn get_media_handler(
         }
         Ok(None) => {}
         Err(e) => {
-            tracing::warn!("Erreur du cache Redis (lecture): {}", e);
+            tracing::warn!("Redis cache error (read): {}", e);
         }
     }
 
     let media = db::media::get_media_by_id(&state.db_pool, id).await?;
 
     if let Err(e) = cache::set_to_cache(&state.redis_client, &cache_key, &media).await {
-        tracing::warn!("Erreur du cache Redis (ecriture): {}", e);
+        tracing::warn!("Redis cache error (write): {}", e);
     }
 
     Ok(Json(media))
@@ -166,7 +164,7 @@ pub async fn update_media_handler(
 
     let cache_key = format!("media:{}", id);
     if let Err(e) = cache::delete_from_cache(&state.redis_client, &cache_key).await {
-        tracing::warn!("Echec de l'invalidation du cache pour {}: {}", id, e);
+        tracing::warn!("Failed to invalidate cache for {}: {}", id, e);
     }
 
     Ok(Json(updated_media))
@@ -180,14 +178,14 @@ pub async fn delete_media_handler(
 
     if rows_affected == 0 {
         return Err(ApiError::NotFound(format!(
-            "Le media avec l'ID {} n'a pas ete trouve pour la suppression.",
+            "Media with ID {} not found for deletion.",
             id
         )));
     }
 
     let cache_key = format!("media:{}", id);
     if let Err(e) = cache::delete_from_cache(&state.redis_client, &cache_key).await {
-        tracing::warn!("Echec de l'invalidation du cache pour {}: {}", id, e);
+        tracing::warn!("Failed to invalidate cache for {}: {}", id, e);
     }
 
     Ok(StatusCode::NO_CONTENT)

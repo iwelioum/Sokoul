@@ -1,20 +1,19 @@
 <script lang="ts">
 	import '../app.css';
 	import { page } from '$app/stores';
-	import { getHealth, connectWebSocket, listDownloads } from '$lib/api/client';
-	import type { WsEvent, Task } from '$lib/api/client';
-	import SearchModal from '$lib/components/SearchModal.svelte';
+	import { getHealth, connectWebSocket, listDownloads, getMe, isLoggedIn, clearAuth } from '$lib/api/client';
+	import type { WsEvent, Task, UserPublic } from '$lib/api/client';
+	import SearchOverlay from '$lib/components/SearchOverlay.svelte';
 
 	let { children } = $props();
 
 	/* ── Nav items ── */
 	const navItems = [
-		{ href: '/', label: 'Accueil' },
+		{ href: '/', label: 'Home' },
 		{ href: '/films', label: 'Films' },
-		{ href: '/series', label: 'Séries' },
-		{ href: '/library', label: 'Bibliothèque' }, // Changed from 'Ma Liste' to 'Bibliothèque'
-		{ href: '/downloads', label: 'Téléchargements' }, // Added Downloads
-		{ href: '/tasks', label: 'Système' } // Added Système
+		{ href: '/series', label: 'Series' },
+		{ href: '/tv', label: 'TV' },
+		{ href: '/collections', label: 'Collections' }
 	];
 
 	/* ── State ── */
@@ -28,6 +27,8 @@
 	let scrolled       = $state(false);
 	let bottomBarVisible = $state(true);
 	let lastScrollY    = $state(0);
+	let currentUser    = $state<UserPublic | null>(null);
+	let showUserMenu   = $state(false);
 
 	interface Toast { id: number; type: string; message: string; leaving: boolean; }
 	let toasts: Toast[]  = $state([]);
@@ -47,6 +48,10 @@
 	async function toggleDownloads() {
 		showDownloads = !showDownloads;
 		if (showDownloads) {
+			if (!isLoggedIn()) {
+				downloads = [];
+				return;
+			}
 			try { downloads = await listDownloads(); } catch { downloads = []; }
 		}
 	}
@@ -87,16 +92,23 @@
 	$effect(() => {
 		checkHealth();
 		const healthInterval = setInterval(checkHealth, 15000);
-		const ws = connectWebSocket(handleWsEvent);
+		
+		// Only connect WebSocket if logged in
+		let ws: WebSocket | null = null;
+		if (isLoggedIn()) {
+			ws = connectWebSocket(handleWsEvent);
+			getMe().then(u => currentUser = u).catch(() => { clearAuth(); currentUser = null; });
+		}
 
 		/* Scroll → glassmorphism + bottom bar hide/show */
 		function handleScroll() {
-			const y = window.scrollY;
-			scrolled = y > 50;
+			const y = window.scrollY || document.documentElement.scrollTop || 0;
+			scrolled = y > 10;
 			bottomBarVisible = y < lastScrollY || y < 60;
 			lastScrollY = y;
 		}
 		window.addEventListener('scroll', handleScroll, { passive: true });
+		handleScroll();
 
 		/* Global shortcuts */
 		function handleGlobalKey(e: KeyboardEvent) {
@@ -113,7 +125,7 @@
 
 		return () => {
 			clearInterval(healthInterval);
-			ws.close();
+			if (ws && ws.readyState === WebSocket.OPEN) ws.close();
 			window.removeEventListener('scroll', handleScroll);
 			window.removeEventListener('keydown', handleGlobalKey);
 		};
@@ -124,6 +136,12 @@
 		if (href === '/') return path === '/';
 		return path.startsWith(href);
 	}
+
+	function handleLogout() {
+		clearAuth();
+		currentUser = null;
+		showUserMenu = false;
+	}
 </script>
 
 <div class="app-layout">
@@ -131,82 +149,101 @@
 	<!-- ══════════════════════════════════════════
 	     TOP NAVBAR
 	     ══════════════════════════════════════════ -->
-	<header class="navbar" class:scrolled>
-		<div class="navbar-inner">
+	<header class="navbar" class:scrolled={scrolled}>
+		<div class="navbar-container">
+			<!-- LEFT: Logo + Navigation -->
+			<div class="navbar-left">
+				<!-- Logo -->
+				<a href="/" class="navbar-logo" aria-label="SOKOUL">
+					<img src="/Sokoul_Logo.svg" alt="Sokoul" class="logo-img" />
+				</a>
 
-			<!-- Logo -->
-			<a href="/" class="navbar-logo" aria-label="SOKOUL — Accueil">
-				<img src="/Sokoul_Logo.svg" alt="Sokoul Logo" class="logo-img" />
-			</a>
+				<!-- Desktop nav -->
+				<nav class="navbar-nav" aria-label="Navigation principale">
+					{#each navItems as item}
+						<a
+							href={item.href}
+							class="nav-link"
+							class:active={isActive(item.href)}
+						>
+							<span>{item.label}</span>
+						</a>
+					{/each}
+				</nav>
+			</div>
 
-			<!-- Desktop nav -->
-			<nav class="navbar-nav" aria-label="Navigation principale">
-				{#each navItems as item}
-					<a
-						href={item.href}
-						class="nav-link"
-						class:active={isActive(item.href)}
-					>{item.label}</a>
-				{/each}
-			</nav>
-
-			<!-- Right controls -->
+			<!-- RIGHT: Search + Notifications + User -->
 			<div class="navbar-right">
-				<!-- Ctrl+K search -->
-				<button class="search-trigger" onclick={() => searchOpen = true} aria-label="Rechercher (Ctrl+K)">
-					<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+				<!-- Search icon only -->
+				<button class="icon-btn" onclick={() => searchOpen = true} aria-label="Rechercher" title="Rechercher (Ctrl+K)">
+					<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
 						<path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
 					</svg>
-					<span class="search-label">Rechercher…</span>
-					<kbd>Ctrl+K</kbd>
 				</button>
 
-				<!-- Downloads dropdown -->
-				<div class="dropdown-wrap">
-					<button class="icon-btn" onclick={toggleDownloads} aria-label="Téléchargements" title="Téléchargements">
-						<svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor">
-							<path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
-						</svg>
-					</button>
-
-					{#if showDownloads}
-						<!-- svelte-ignore a11y_no_static_element_interactions -->
-						<div class="dropdown-overlay" onclick={() => showDownloads = false} onkeydown={() => {}}></div>
-						<div class="download-dropdown">
-							<p class="dropdown-title">Téléchargements</p>
-							{#if downloads.length === 0}
-								<p class="dropdown-empty">Aucun téléchargement en cours</p>
-							{:else}
-								{#each downloads.slice(0, 8) as dl (dl.id)}
-									<div class="download-item">
-										<span class="dl-title">{String(dl.payload?.title ?? dl.task_type ?? dl.id)}</span>
-										<span class="dl-status badge badge-{dl.status === 'completed' ? 'success' : dl.status === 'failed' ? 'danger' : 'warning'}">{dl.status}</span>
-									</div>
-								{/each}
-							{/if}
-							<a href="/downloads" class="dropdown-link" onclick={() => showDownloads = false}>Voir tous →</a>
-						</div>
-					{/if}
-				</div>
-
-				<!-- Notifications -->
-				<button class="icon-btn" onclick={toggleNotifPanel} aria-label="Notifications">
-					<svg width="17" height="17" viewBox="0 0 16 16" fill="currentColor">
-						<path d="M8 1.5A3.5 3.5 0 0 0 4.5 5v2.947c0 .249-.09.489-.254.667L2.692 10.4a.75.75 0 0 0 .558 1.25h9.5a.75.75 0 0 0 .558-1.25l-1.554-1.786A1.04 1.04 0 0 1 11.5 7.947V5A3.5 3.5 0 0 0 8 1.5zM6.5 13a1.5 1.5 0 0 0 3 0h-3z"/>
+				<!-- Notifications (bell icon) -->
+				<button class="icon-btn" onclick={toggleNotifPanel} aria-label="Notifications" title="Notifications">
+					<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+						<path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z"/>
 					</svg>
 					{#if notifCount > 0}
-						<span class="notif-dot">{notifCount > 9 ? '9+' : notifCount}</span>
+						<span class="notif-badge">{notifCount > 9 ? '9+' : notifCount}</span>
 					{/if}
 				</button>
 
-				<!-- Backend status -->
-				<div class="status-indicator" title={backendOnline ? 'Backend connecté' : 'Backend hors ligne'}>
-					<span class="status-dot" class:offline={!backendOnline}></span>
-				</div>
+				<!-- User menu -->
+				{#if currentUser}
+					<div class="dropdown-wrap">
+						<button class="user-btn" onclick={() => showUserMenu = !showUserMenu} aria-label="Menu utilisateur" title={currentUser.username}>
+							<span class="user-avatar">{currentUser.username.charAt(0).toUpperCase()}</span>
+						</button>
+						{#if showUserMenu}
+							<!-- svelte-ignore a11y_no_static_element_interactions -->
+							<div class="dropdown-overlay" onclick={() => showUserMenu = false} onkeydown={() => {}}></div>
+							<div class="user-dropdown">
+								<div class="user-dropdown-header">
+									<span class="user-avatar-lg">{currentUser.username.charAt(0).toUpperCase()}</span>
+									<div>
+										<p class="user-dropdown-name">{currentUser.username}</p>
+										<p class="user-dropdown-email">{currentUser.email}</p>
+									</div>
+								</div>
+								<div class="user-dropdown-divider"></div>
+								<a href="/settings" class="user-menu-item" onclick={() => showUserMenu = false}>
+									<svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+										<path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
+									</svg>
+									Gérer le profil
+								</a>
+								<a href="/downloads" class="user-menu-item" onclick={() => showUserMenu = false}>
+									<svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+										<path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+									</svg>
+									Téléchargements
+								</a>
+								<a href="/library" class="user-menu-item" onclick={() => showUserMenu = false}>
+									<svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+										<path d="M17 3H7c-1.1 0-1.99.9-1.99 2L5 21l7-3 7 3V5c0-1.1-.9-2-2-2z"/>
+									</svg>
+									Watchlist
+								</a>
+								<div class="user-dropdown-divider"></div>
+								<button class="user-menu-item logout-item" onclick={handleLogout}>
+									<svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+										<path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
+									</svg>
+									Déconnexion
+								</button>
+							</div>
+						{/if}
+					</div>
+				{:else}
+					<a href="/login" class="login-btn">Sign In</a>
+				{/if}
 
-				<!-- Hamburger (mobile) -->
+				<!-- Hamburger (mobile only) -->
 				<button class="hamburger icon-btn" onclick={() => mobileMenuOpen = !mobileMenuOpen} aria-label="Menu">
-					<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+					<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
 						{#if mobileMenuOpen}
 							<path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
 						{:else}
@@ -261,11 +298,11 @@
 			</svg>
 			<span>Ma Liste</span>
 		</a>
-		<a href="/library" class="bottom-item">
+		<a href={currentUser ? "/library" : "/login"} class="bottom-item">
 			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22">
 				<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
 			</svg>
-			<span>Profil</span>
+			<span>{currentUser ? 'Profil' : 'Connexion'}</span>
 		</a>
 	</nav>
 </div>
@@ -297,7 +334,7 @@
 	</aside>
 {/if}
 
-<SearchModal bind:open={searchOpen} onClose={() => searchOpen = false} />
+<SearchOverlay bind:open={searchOpen} onClose={() => searchOpen = false} />
 
 <!-- Toast container -->
 <div class="toast-container">
@@ -323,132 +360,106 @@
 
 	/* ═══ Navbar ═══ */
 	.navbar {
-		position: sticky;
+		position: fixed;
 		top: 0;
-		z-index: 50;
+		left: 0;
+		right: 0;
+		z-index: 1000;
 		width: 100%;
-		box-sizing: border-box;
-		background: transparent;
-		border-bottom: 1px solid transparent;
-		transition: background 0.3s ease, border-color 0.3s ease, backdrop-filter 0.3s ease;
+		height: var(--nav-height, 70px);
+		background: linear-gradient(to bottom, rgba(26, 29, 41, 0.9) 0%, transparent 100%);
+		backdrop-filter: none;
+		border-bottom: none;
+		transition: background 0.4s ease;
 	}
 
 	.navbar.scrolled {
-		background: rgba(15, 23, 42, 0.85);
-		backdrop-filter: blur(12px);
-		-webkit-backdrop-filter: blur(12px);
-		border-bottom-color: rgba(51, 65, 85, 0.4);
+		background: #1A1D29;
+		border-bottom: none;
 	}
 
-	.navbar-inner {
+	.navbar-container {
 		display: flex;
 		align-items: center;
-		gap: 40px;
-		padding: 0 48px;
-		height: auto;
-		min-height: 80px;
-		width: 100%;
-		box-sizing: border-box;
-		margin: 0;
+		justify-content: space-between;
+		height: 100%;
+		padding: 0 36px;
+		gap: 20px;
 	}
 
-	/* ── Logo ── */
+	/* ── Left side: Logo + Nav links ── */
+	.navbar-left {
+		display: flex;
+		align-items: center;
+		gap: 28px;
+		flex: 0 1 auto;
+	}
+
 	.navbar-logo {
 		text-decoration: none;
 		flex-shrink: 0;
 		display: flex;
 		align-items: center;
-		padding: 5px 0; /* Add some padding to vertically center it better if needed */
 	}
 
 	.logo-img {
-		width: 120px;
-		height: auto;
+		height: 200px;
+		width: auto;
 		transition: filter 0.2s ease;
-		max-height: none;
+		max-height: 250px;
+		object-fit: contain;
 	}
 
 	.navbar-logo:hover .logo-img {
-		filter: drop-shadow(0 1px 5px rgba(192, 74, 53, 0.6)) drop-shadow(0 0 15px rgba(192, 74, 53, 0.3));
+		filter: brightness(1.1);
 	}
 
-	/* ── Desktop nav ── */
 	.navbar-nav {
 		display: flex;
 		align-items: center;
-		gap: 2px;
-		flex: 1;
+		gap: 8px;
 	}
 
 	.nav-link {
 		position: relative;
-		padding: 8px 18px;
-		border-radius: 6px;
-		font-size: 14px;
+		display: flex;
+		align-items: center;
+		padding: 8px 16px;
+		font-size: 15px;
 		font-weight: 500;
-		color: var(--text-secondary);
+		color: rgba(249, 249, 249, 0.7);
 		text-decoration: none;
+		text-transform: uppercase;
+		letter-spacing: 1.5px;
 		white-space: nowrap;
-		transition: color 0.15s ease;
+		transition: color 250ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
 	}
 
 	.nav-link::after {
 		content: '';
 		position: absolute;
 		bottom: -2px;
-		left: 50%;
-		transform: translateX(-50%) scaleX(0);
-		width: 60%;
+		left: 0;
+		right: 0;
 		height: 2px;
-		background: var(--brand-gold);
-		border-radius: 1px;
-		transition: transform 0.2s ease;
+		background: #F9F9F9;
+		border-radius: 0 0 4px 4px;
+		transform: scaleX(0);
+		transform-origin: left center;
+		transition: transform 250ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
 	}
 
-	.nav-link:hover { color: var(--text-primary); }
-	.nav-link.active { color: var(--text-primary); }
-	.nav-link.active::after { transform: translateX(-50%) scaleX(1); }
+	.nav-link:hover { color: #f9f9f9; }
+	.nav-link:hover::after { transform: scaleX(1); }
+	.nav-link.active { color: #f9f9f9; }
+	.nav-link.active::after { transform: scaleX(1); }
 
-	/* ── Right zone ── */
+	/* ── Right side: Search + Notifications + User ── */
 	.navbar-right {
 		display: flex;
 		align-items: center;
-		gap: 6px;
+		gap: 12px;
 		flex-shrink: 0;
-	}
-
-	/* ── Search trigger ── */
-	.search-trigger {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-		padding: 10px 18px;
-		background: rgba(255,255,255,0.05);
-		border: 1px solid rgba(255,255,255,0.09);
-		border-radius: 8px;
-		color: var(--text-secondary);
-		cursor: pointer;
-		font-size: 13px;
-		transition: all 0.15s ease;
-	}
-
-	.search-trigger:hover {
-		border-color: rgba(192,74,53,0.45);
-		color: var(--text-primary);
-		background: rgba(192,74,53,0.07);
-		box-shadow: none;
-	}
-
-	.search-label { min-width: 110px; text-align: left; }
-
-	.search-trigger kbd {
-		font-size: 11px;
-		background: rgba(255,255,255,0.07);
-		border: 1px solid rgba(255,255,255,0.1);
-		border-radius: 4px;
-		padding: 1px 5px;
-		color: var(--text-muted);
-		font-family: inherit;
 	}
 
 	/* ── Icon buttons ── */
@@ -457,148 +468,243 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		width: 42px;
-		height: 42px;
+		min-width: 42px;
+		min-height: 42px;
 		border: none;
 		background: rgba(255,255,255,0.04);
-		border-radius: 8px;
-		color: var(--text-secondary);
+		border-radius: 50%;
+		color: rgba(249, 249, 249, 0.7);
 		cursor: pointer;
-		transition: all 0.15s ease;
+		transition: all 250ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
 		padding: 0;
 	}
-	.icon-btn:hover { background: rgba(255,255,255,0.09); color: var(--text-primary); box-shadow: none; }
-
-	/* ── Status ── */
-	.status-indicator { display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; }
-	.status-dot {
-		width: 8px; height: 8px; border-radius: 50%;
-		background: var(--success);
-		box-shadow: 0 0 6px rgba(76,175,125,0.5);
-		transition: all 0.3s;
+	.icon-btn:hover { 
+		background: rgba(255,255,255,0.1); 
+		color: #f9f9f9; 
+		transform: scale(1.05);
 	}
-	.status-dot.offline { background: var(--danger); box-shadow: 0 0 6px rgba(224,82,82,0.5); }
 
 	/* ── Notification badge ── */
-	.notif-dot {
+	.notif-badge {
 		position: absolute;
-		top: 3px; right: 3px;
-		min-width: 16px; height: 16px;
+		top: 4px; 
+		right: 4px;
+		min-width: 16px; 
+		height: 16px;
 		border-radius: 8px;
-		background: var(--danger);
+		background: #E05252;
 		color: #fff;
-		font-size: 10px; font-weight: 700;
-		display: flex; align-items: center; justify-content: center;
-		padding: 0 3px;
+		font-size: 10px; 
+		font-weight: 700;
+		display: flex; 
+		align-items: center; 
+		justify-content: center;
+		padding: 0 4px;
 		animation: pulse 2s ease-in-out infinite;
 	}
 
-	/* ── Download dropdown ── */
-	.dropdown-wrap { position: relative; }
+	/* ── User button & avatar ── */
+	.user-btn {
+		min-width: 38px;
+		min-height: 38px;
+		padding: 0;
+		background: transparent;
+		border: 2px solid rgba(249, 249, 249, 0.2);
+		transition: all 250ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+	}
+
+	.user-btn:hover {
+		border-color: #F9F9F9;
+		transform: scale(1.05);
+	}
+
+	.user-avatar {
+		width: 34px;
+		height: 34px;
+		border-radius: 50%;
+		background: linear-gradient(135deg, #0072D2, #3b82f6);
+		color: white;
+		font-size: 14px;
+		font-weight: 700;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		text-transform: uppercase;
+	}
+
+	.user-avatar-lg {
+		width: 44px;
+		height: 44px;
+		font-size: 18px;
+		border-radius: 50%;
+		background: linear-gradient(135deg, #0072D2, #3b82f6);
+		color: white;
+		font-weight: 700;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		text-transform: uppercase;
+		flex-shrink: 0;
+	}
+
+	/* ── Login button ── */
+	.login-btn {
+		padding: 8px 20px;
+		font-size: 14px;
+		font-weight: 600;
+		color: white;
+		background: rgba(0, 114, 210, 0.9);
+		border: none;
+		border-radius: 4px;
+		cursor: pointer;
+		text-decoration: none;
+		transition: background 250ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+		text-transform: uppercase;
+		letter-spacing: 1px;
+	}
+	.login-btn:hover { 
+		background: #0072D2; 
+		transform: scale(1.05);
+	}
+
+	/* ── Dropdown system ── */
+	.dropdown-wrap { 
+		position: relative; 
+	}
 
 	.dropdown-overlay {
 		position: fixed;
 		inset: 0;
-		z-index: 40;
+		z-index: 1001;
+		background: transparent;
 	}
 
-	.download-dropdown {
+	/* ── User dropdown (expanded menu) ── */
+	.user-dropdown {
 		position: absolute;
-		top: calc(100% + 10px);
+		top: calc(100% + 12px);
 		right: 0;
-		width: 300px;
-		background: var(--bg-card);
-		border: 1px solid var(--border);
-		border-radius: var(--radius);
-		box-shadow: 0 16px 40px rgba(0,0,0,0.4);
-		z-index: 60;
-		animation: scaleIn 0.15s ease both;
+		min-width: 260px;
+		background: rgba(37, 40, 51, 0.98);
+		backdrop-filter: blur(20px);
+		border: 1px solid rgba(249, 249, 249, 0.1);
+		border-radius: 10px;
+		box-shadow: rgb(0 0 0 / 69%) 0px 26px 30px -10px, rgb(0 0 0 / 73%) 0px 16px 10px -10px;
+		z-index: 1002;
+		animation: slideDown 250ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
 		transform-origin: top right;
 		overflow: hidden;
 	}
 
-	.dropdown-title {
-		font-size: 12px;
-		font-weight: 700;
-		text-transform: uppercase;
-		letter-spacing: 0.5px;
-		color: var(--text-muted);
-		padding: 12px 16px 8px;
+	@keyframes slideDown {
+		from {
+			opacity: 0;
+			transform: translateY(-10px);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
 	}
 
-	.dropdown-empty {
-		font-size: 13px;
-		color: var(--text-muted);
-		padding: 8px 16px 12px;
-		text-align: center;
-	}
-
-	.download-item {
+	.user-dropdown-header {
 		display: flex;
 		align-items: center;
-		justify-content: space-between;
-		gap: 8px;
-		padding: 8px 16px;
-		border-top: 1px solid var(--border);
+		gap: 12px;
+		padding: 16px;
+		background: linear-gradient(180deg, #30343E 0%, #252833 100%);
 	}
 
-	.dl-title {
-		font-size: 13px;
-		color: var(--text-primary);
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-		flex: 1;
+	.user-dropdown-name {
+		font-size: 15px;
+		font-weight: 700;
+		color: #F9F9F9;
+		margin: 0;
 	}
 
-	.dl-status {
-		font-size: 10px;
-		flex-shrink: 0;
+	.user-dropdown-email {
+		font-size: 12px;
+		color: #CACACA;
+		margin: 2px 0 0 0;
 	}
 
-	.dropdown-link {
-		display: block;
-		text-align: center;
-		padding: 10px;
-		font-size: 13px;
-		font-weight: 600;
-		color: var(--accent);
-		border-top: 1px solid var(--border);
+	.user-dropdown-divider {
+		height: 1px;
+		background: rgba(249, 249, 249, 0.1);
+		margin: 0;
+	}
+
+	.user-menu-item {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		width: 100%;
+		text-align: left;
+		padding: 12px 16px;
+		font-size: 14px;
+		font-weight: 500;
+		color: rgba(249, 249, 249, 0.8);
+		background: none;
+		border: none;
+		cursor: pointer;
 		text-decoration: none;
-		transition: background 0.15s;
+		transition: all 250ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
 	}
-	.dropdown-link:hover { background: var(--bg-hover); color: var(--accent); }
+
+	.user-menu-item svg {
+		flex-shrink: 0;
+		opacity: 0.7;
+	}
+
+	.user-menu-item:hover { 
+		background: rgba(255, 255, 255, 0.08); 
+		color: #F9F9F9;
+	}
+
+	.user-menu-item:hover svg {
+		opacity: 1;
+	}
+
+	.logout-item {
+		color: #E05252;
+	}
+
+	.logout-item:hover {
+		background: rgba(224, 82, 82, 0.1);
+	}
 
 	/* ── Hamburger ── */
-	.hamburger { display: none; }
+	.hamburger { 
+		display: none; 
+	}
 
 	/* ── Mobile top dropdown ── */
 	.mobile-menu {
 		display: none;
 		flex-direction: column;
 		padding: 8px 16px 14px;
-		border-top: 1px solid rgba(255,255,255,0.05);
-		background: rgba(26,23,22,0.97);
+		border-top: 1px solid var(--border);
+		background: rgba(26, 29, 41, 0.97);
 	}
 	.mobile-nav-link {
 		padding: 12px 16px;
 		font-size: 15px;
 		font-weight: 500;
-		color: var(--text-secondary);
+		color: rgba(249, 249, 249, 0.6);
 		text-decoration: none;
 		border-radius: 8px;
 		transition: all 0.15s;
 	}
-	.mobile-nav-link:hover { background: rgba(255,255,255,0.05); color: var(--text-primary); }
-	.mobile-nav-link.active { color: var(--accent); background: rgba(192, 74, 53, 0.08); }
+	.mobile-nav-link:hover { background: rgba(255,255,255,0.05); color: #f9f9f9; }
+	.mobile-nav-link.active { color: #F9F9F9; background: rgba(0, 114, 210, 0.15); }
 
 	/* ═══ Content ═══ */
 	.content {
 		flex: 1;
-		padding: 32px;
-		max-width: 1400px;
+		padding: 0;
+		max-width: 100%;
 		width: 100%;
-		margin: 0 auto;
+		margin: 0;
 		animation: fadeIn 0.3s ease both;
 	}
 
@@ -610,10 +716,10 @@
 		left: 0;
 		right: 0;
 		height: 56px;
-		background: rgba(26,23,22,0.95);
+		background: rgba(26, 29, 41, 0.95);
 		backdrop-filter: blur(16px);
 		-webkit-backdrop-filter: blur(16px);
-		border-top: 1px solid var(--border);
+		border-top: 1px solid rgba(249, 249, 249, 0.08);
 		z-index: 50;
 		flex-direction: row;
 		align-items: stretch;
@@ -640,7 +746,7 @@
 		transition: color 0.15s;
 	}
 
-	.bottom-item:hover, .bottom-item.active { color: var(--accent); box-shadow: none; }
+	.bottom-item:hover, .bottom-item.active { color: #f9f9f9; box-shadow: none; }
 
 	/* ═══ Notif panel ═══ */
 	.notif-overlay {
@@ -729,6 +835,9 @@
 		width: auto; height: auto; padding: 4px;
 	}
 
+	/* ═══ User menu ═══ */
+	/* Styles moved above with navbar styles */
+
 	/* ═══ Responsive ═══ */
 	@media (max-width: 900px) {
 		.navbar-nav   { display: none; }
@@ -743,7 +852,7 @@
 
 	@media (max-width: 600px) {
 		.navbar-inner { padding: 0 16px; gap: 10px; }
-		.content { padding: 16px; padding-bottom: 76px; }
+		.content { padding-bottom: 76px; }
 		.notif-panel { width: 100vw; max-width: 100vw; }
 		.toast-container { left: 12px; right: 12px; bottom: 72px; max-width: none; }
 		.logo-text { font-size: 22px; letter-spacing: 2px; }

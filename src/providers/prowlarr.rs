@@ -53,7 +53,7 @@ impl SearchProvider for ProwlarrProvider {
     async fn search(&self, query: &str) -> anyhow::Result<Vec<TorrentResult>> {
         let url = format!("{}/api/v1/search", self.base_url);
 
-        tracing::info!("Prowlarr: recherche '{}' sur {}", query, url);
+        tracing::info!("Prowlarr: searching '{}' on {}", query, url);
 
         let resp_result = self
             .client
@@ -88,9 +88,14 @@ impl SearchProvider for ProwlarrProvider {
                         .to_string();
 
                     let body = flaresolverr.get(&flaresolverr_url).await?;
-                    let response: Vec<ProwlarrSearchResult> = serde_json::from_str(&body)
-                        .map_err(|e| {
-                            tracing::error!("Prowlarr: erreur deserialization pour '{}': {} - debut reponse: {}", query, e, &body[..body.len().min(500)]);
+                    let response: Vec<ProwlarrSearchResult> =
+                        serde_json::from_str(&body).map_err(|e| {
+                            tracing::error!(
+                                "Prowlarr: deserialization error for '{}': {} - response start: {}",
+                                query,
+                                e,
+                                &body[..body.len().min(500)]
+                            );
                             e
                         })?;
 
@@ -118,11 +123,11 @@ impl SearchProvider for ProwlarrProvider {
         }?;
 
         let body = resp.text().await?;
-        tracing::info!("Prowlarr: reponse {} octets pour '{}'", body.len(), query);
+        tracing::info!("Prowlarr: response {} bytes for '{}'", body.len(), query);
 
         let response: Vec<ProwlarrSearchResult> = serde_json::from_str(&body).map_err(|e| {
             tracing::error!(
-                "Prowlarr: erreur deserialization pour '{}': {} - debut reponse: {}",
+                "Prowlarr: deserialization error for '{}': {} - response start: {}",
                 query,
                 e,
                 &body[..body.len().min(500)]
@@ -204,7 +209,7 @@ impl SearchProvider for ProwlarrProvider {
                     let body = flaresolverr.get(&flaresolverr_url).await?;
                     serde_json::from_str(&body)
                         .map_err(|e| {
-                            tracing::error!("Prowlarr: erreur deserialization pour TMDB ID {}: {} - debut reponse: {}", tmdb_id, e, &body[..body.len().min(500)]);
+                            tracing::error!("Prowlarr: deserialization error for TMDB ID {}: {} - response start: {}", tmdb_id, e, &body[..body.len().min(500)]);
                             e
                         })?
                 } else {

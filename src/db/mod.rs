@@ -1,7 +1,11 @@
+pub mod collections;
 pub mod favorites;
 pub mod media;
 pub mod media_files;
 pub mod search_results;
+pub mod security;
 pub mod tasks;
+pub mod tv;
+pub mod users;
 pub mod watch_history;
 pub mod watchlist;

@@ -4,7 +4,7 @@ use sysinfo::{CpuRefreshKind, Disks, RefreshKind, System};
 use tokio::time;
 
 pub async fn sentinel_worker(state: Arc<AppState>) -> anyhow::Result<()> {
-    tracing::info!("Le worker Sentinel demarre...");
+    tracing::info!("Sentinel worker starting...");
 
     let mut sys = System::new_with_specifics(
         RefreshKind::new()
@@ -23,11 +23,11 @@ pub async fn sentinel_worker(state: Arc<AppState>) -> anyhow::Result<()> {
             .await
             .is_ok();
         if !db_ok {
-            tracing::error!("Sentinel: ALERTE DB DOWN");
+            tracing::error!("Sentinel: ALERT - DATABASE DOWN");
             let _ = state.event_tx.send(
                 WsEvent::SystemAlert {
                     level: "critical".to_string(),
-                    message: "Base de donnees inaccessible".to_string(),
+                    message: "Database unreachable".to_string(),
                 }
                 .to_json(),
             );
@@ -40,11 +40,11 @@ pub async fn sentinel_worker(state: Arc<AppState>) -> anyhow::Result<()> {
                 .await
                 .is_ok(),
             Err(e) => {
-                tracing::error!("Sentinel: ALERTE REDIS DOWN: {}", e);
+                tracing::error!("Sentinel: ALERT - REDIS DOWN: {}", e);
                 let _ = state.event_tx.send(
                     WsEvent::SystemAlert {
                         level: "critical".to_string(),
-                        message: "Redis inaccessible".to_string(),
+                        message: "Redis unreachable".to_string(),
                     }
                     .to_json(),
                 );
@@ -101,11 +101,11 @@ pub async fn sentinel_worker(state: Arc<AppState>) -> anyhow::Result<()> {
             );
 
             if disk_percent > 90.0 {
-                tracing::warn!("Sentinel: ALERTE STOCKAGE CRITIQUE ({:.1}%)", disk_percent);
+                tracing::warn!("Sentinel: ALERT - CRITICAL STORAGE ({:.1}%)", disk_percent);
                 let _ = state.event_tx.send(
                     WsEvent::SystemAlert {
                         level: "warning".to_string(),
-                        message: format!("Stockage critique: {:.1}% utilise", disk_percent),
+                        message: format!("Critical storage: {:.1}% used", disk_percent),
                     }
                     .to_json(),
                 );
@@ -114,11 +114,11 @@ pub async fn sentinel_worker(state: Arc<AppState>) -> anyhow::Result<()> {
 
         // Alert if RAM critical (> 90%)
         if mem_percent > 90.0 {
-            tracing::warn!("Sentinel: ALERTE MEMOIRE CRITIQUE ({:.1}%)", mem_percent);
+            tracing::warn!("Sentinel: ALERT - CRITICAL MEMORY ({:.1}%)", mem_percent);
             let _ = state.event_tx.send(
                 WsEvent::SystemAlert {
                     level: "warning".to_string(),
-                    message: format!("Memoire critique: {:.1}% utilisee", mem_percent),
+                    message: format!("Critical memory: {:.1}% used", mem_percent),
                 }
                 .to_json(),
             );

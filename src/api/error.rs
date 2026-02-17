@@ -8,30 +8,36 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum ApiError {
-    #[error("Erreur interne du serveur: {0}")]
+    #[error("Internal server error: {0}")]
     Internal(#[from] anyhow::Error),
 
-    #[error("Erreur de base de données")]
+    #[error("Database error")]
     Database(#[source] sqlx::Error),
 
-    #[error("Entrée invalide: {0}")]
+    #[error("Invalid input: {0}")]
     InvalidInput(String),
 
-    #[error("Ressource non trouvée: {0}")]
+    #[error("Resource not found: {0}")]
     NotFound(String),
 
-    #[error("Erreur du bus de messages: {0}")]
+    #[error("Message bus error: {0}")]
     MessageBus(String),
 
-    #[error("Erreur interne du serveur")]
+    #[error("Access denied: {0}")]
+    Forbidden(String),
+
+    #[error("Internal server error")]
     InternalServerError,
+
+    #[error("Service unavailable: {0}")]
+    ServiceUnavailable(&'static str),
 }
 
 impl From<sqlx::Error> for ApiError {
     fn from(err: sqlx::Error) -> Self {
         match err {
             sqlx::Error::RowNotFound => {
-                ApiError::NotFound("La ressource demandée n'a pas été trouvée.".to_string())
+                ApiError::NotFound("The requested resource was not found.".to_string())
             }
             _ => ApiError::Database(err),
         }
@@ -42,36 +48,37 @@ impl IntoResponse for ApiError {
     fn into_response(self) -> Response {
         let (status, error_message) = match self {
             ApiError::Database(e) => {
-                tracing::error!("Erreur de base de données: {:?}", e);
+                tracing::error!("Database error: {:?}", e);
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    "Une erreur de base de données est survenue.".to_string(),
+                    "A database error occurred.".to_string(),
                 )
             }
             ApiError::Internal(e) => {
-                tracing::error!("Erreur interne: {:?}", e);
+                tracing::error!("Internal error: {:?}", e);
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    "Une erreur interne est survenue.".to_string(),
+                    "An internal error occurred.".to_string(),
                 )
             }
             ApiError::InvalidInput(msg) => (StatusCode::BAD_REQUEST, msg),
             ApiError::NotFound(msg) => (StatusCode::NOT_FOUND, msg),
+            ApiError::Forbidden(msg) => (StatusCode::FORBIDDEN, msg),
             ApiError::MessageBus(e) => {
-                tracing::error!("Erreur du bus de messages: {:?}", e);
+                tracing::error!("Message bus error: {:?}", e);
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    "Une erreur interne est survenue lors de la communication avec les workers."
-                        .to_string(),
+                    "An internal error occurred while communicating with workers.".to_string(),
                 )
             }
             ApiError::InternalServerError => {
-                tracing::error!("Erreur interne du serveur sans détail spécifique.");
+                tracing::error!("Internal server error with no specific details.");
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    "Une erreur interne inattendue est survenue.".to_string(),
+                    "An unexpected internal error occurred.".to_string(),
                 )
             }
+            ApiError::ServiceUnavailable(msg) => (StatusCode::SERVICE_UNAVAILABLE, msg.to_string()),
         };
 
         let body = Json(json!({ "error": error_message }));

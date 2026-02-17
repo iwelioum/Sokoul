@@ -18,7 +18,13 @@ pub async fn get_from_cache<T: DeserializeOwned>(
 
 pub async fn set_to_cache<T: Serialize>(client: &Client, key: &str, value: &T) -> RedisResult<()> {
     let mut con = client.get_multiplexed_async_connection().await?;
-    let json = serde_json::to_string(value).unwrap();
+    let json = serde_json::to_string(value).map_err(|e| {
+        redis::RedisError::from((
+            redis::ErrorKind::TypeError,
+            "Serialization failed",
+            e.to_string(),
+        ))
+    })?;
     con.set_ex(key, json, 3600).await
 }
 
@@ -29,7 +35,13 @@ pub async fn set_to_cache_with_ttl<T: Serialize>(
     ttl_secs: u64,
 ) -> RedisResult<()> {
     let mut con = client.get_multiplexed_async_connection().await?;
-    let json = serde_json::to_string(value).unwrap();
+    let json = serde_json::to_string(value).map_err(|e| {
+        redis::RedisError::from((
+            redis::ErrorKind::TypeError,
+            "Serialization failed",
+            e.to_string(),
+        ))
+    })?;
     con.set_ex(key, json, ttl_secs).await
 }
 

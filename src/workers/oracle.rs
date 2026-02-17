@@ -23,11 +23,11 @@ struct AiScoreEntry {
 
 pub async fn oracle_worker(state: Arc<AppState>) -> anyhow::Result<()> {
     if !CONFIG.oracle_enabled {
-        tracing::info!("Oracle (IA) desactive via la configuration.");
+        tracing::info!("Oracle (AI) disabled via configuration.");
         return Ok(());
     }
 
-    tracing::info!("Le worker Oracle demarre...");
+    tracing::info!("Oracle worker starting...");
     let client = reqwest::Client::new();
 
     let stream = state
@@ -51,7 +51,7 @@ pub async fn oracle_worker(state: Arc<AppState>) -> anyhow::Result<()> {
         let payload: SearchResultsFoundPayload = match serde_json::from_slice(&message.payload) {
             Ok(p) => p,
             Err(e) => {
-                tracing::error!("Payload invalide pour Oracle: {}", e);
+                tracing::error!("Invalid payload for Oracle: {}", e);
                 message
                     .ack()
                     .await
@@ -61,18 +61,14 @@ pub async fn oracle_worker(state: Arc<AppState>) -> anyhow::Result<()> {
         };
 
         tracing::info!(
-            "Oracle: Analyse demandee pour media_id {}",
+            "Oracle: analysis requested for media_id {}",
             payload.media_id
         );
 
         let media = match db::media::get_media_by_id(&state.db_pool, payload.media_id).await {
             Ok(m) => m,
             Err(e) => {
-                tracing::error!(
-                    "Oracle: impossible de charger le media {}: {}",
-                    payload.media_id,
-                    e
-                );
+                tracing::error!("Oracle: failed to load media {}: {}", payload.media_id, e);
                 message
                     .ack()
                     .await
@@ -84,6 +80,10 @@ pub async fn oracle_worker(state: Arc<AppState>) -> anyhow::Result<()> {
             db::search_results::get_results_by_media_id(&state.db_pool, payload.media_id).await?;
 
         if results.is_empty() {
+            tracing::debug!(
+                "Oracle: no search results for media_id {}, skipping.",
+                payload.media_id
+            );
             message
                 .ack()
                 .await
@@ -93,10 +93,10 @@ pub async fn oracle_worker(state: Arc<AppState>) -> anyhow::Result<()> {
 
         let titles: Vec<String> = results.iter().map(|r| r.title.clone()).collect();
         let prompt = format!(
-            "Tu es un expert en cinema. Analyse la liste de fichiers suivante pour le film/serie '{}' ({:?}). \
-            Identifie les fichiers qui correspondent vraiment (pas de fake, bonne annee) et attribue un score de qualite (0-100) base sur la resolution et les mots cles (HDR, HEVC, etc). \
-            Liste des fichiers: {:?}. \
-            Reponds UNIQUEMENT avec un tableau JSON d'objets {{ \"index\": int, \"score\": int, \"valid\": bool }}.",
+            "You are a cinema expert. Analyze the following file list for the movie/series '{}' ({:?}). \
+            Identify files that truly match (no fakes, correct year) and assign a quality score (0-100) based on resolution and keywords (HDR, HEVC, etc). \
+            File list: {:?}. \
+            Respond ONLY with a JSON array of objects {{ \"index\": int, \"score\": int, \"valid\": bool }}.",
             media.title, media.year, titles
         );
 
@@ -139,7 +139,7 @@ pub async fn oracle_worker(state: Arc<AppState>) -> anyhow::Result<()> {
                                         .await
                                         {
                                             tracing::error!(
-                                                "Erreur MAJ score result_id {}: {}",
+                                                "Failed to update score for result_id {}: {}",
                                                 result_id,
                                                 e
                                             );
@@ -149,7 +149,7 @@ pub async fn oracle_worker(state: Arc<AppState>) -> anyhow::Result<()> {
                                     }
                                 }
                                 tracing::info!(
-                                    "Oracle: {} resultats mis a jour pour media_id {}",
+                                    "Oracle: {} results updated for media_id {}",
                                     updated,
                                     payload.media_id
                                 );
@@ -165,7 +165,7 @@ pub async fn oracle_worker(state: Arc<AppState>) -> anyhow::Result<()> {
                             }
                             Err(e) => {
                                 tracing::error!(
-                                    "Oracle: Impossible de parser la reponse IA: {} - contenu: {}",
+                                    "Oracle: failed to parse AI response: {} - content: {}",
                                     e,
                                     llama_resp.content
                                 );
@@ -173,15 +173,12 @@ pub async fn oracle_worker(state: Arc<AppState>) -> anyhow::Result<()> {
                         }
                     }
                     Err(e) => {
-                        tracing::error!(
-                            "Oracle: Erreur de deserialisation de la reponse llama.cpp: {}",
-                            e
-                        );
+                        tracing::error!("Oracle: failed to deserialize llama.cpp response: {}", e);
                     }
                 }
             }
             Err(e) => {
-                tracing::error!("Erreur appel IA: {}", e);
+                tracing::error!("AI call error: {}", e);
             }
         }
 

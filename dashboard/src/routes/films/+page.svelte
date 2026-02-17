@@ -1,7 +1,9 @@
 <script lang="ts">
-	import { tmdbDiscover, listLibrary } from '$lib/api/client';
+	import { tmdbDiscover, listLibrary, isLoggedIn } from '$lib/api/client';
 	import type { TmdbSearchItem, Favorite } from '$lib/api/client';
 	import MediaCard from '$lib/components/MediaCard.svelte';
+	import MegaFilter from '$lib/components/MegaFilter.svelte';
+	import type { FilterState } from '$lib/components/MegaFilter.svelte';
 	import Skeleton from '$lib/components/Skeleton.svelte';
 	import { onMount } from 'svelte';
 
@@ -11,35 +13,29 @@
 	let loading = $state(true);
 	let hasMore = $state(true);
 
-	const filters = {
-		genres: [
-			{ id: 28, name: 'Action' },
-			{ id: 18, name: 'Drame' },
-			{ id: 35, name: 'Comédie' },
-			{ id: 53, name: 'Thriller' },
-			{ id: 878, name: 'Sci-Fi' },
-			{ id: 27, name: 'Horreur' },
-		],
-		sorts: [
-			{ id: 'popularity.desc', name: 'Popularité' },
-			{ id: 'release_date.desc', name: 'Date de sortie' },
-			{ id: 'vote_average.desc', name: 'Note' },
-		],
-	};
-
-	let selectedGenre: number | null = $state(null);
+	// Filter state
+	let filterOpen = $state(false);
+	let mediaType: 'movie' | 'tv' | 'all' = $state('movie');
+	let selectedGenres: number[] = $state([]);
 	let selectedSort = $state('popularity.desc');
-	let selectedYear = $state(new Date().getFullYear());
+	let yearMin = $state(1980);
+	let yearMax = $state(new Date().getFullYear());
+	let providerFilter: string | null = $state(null);
+	let providerName: string | null = $state(null);
+	let activeFilterCount = $state(0);
 
 	async function fetchItems() {
 		if (!hasMore) return;
 		loading = true;
 		try {
-			const newItems = await tmdbDiscover('movie', {
-				with_genres: selectedGenre ? String(selectedGenre) : undefined,
+			const mType = mediaType === 'all' ? 'movie' : mediaType;
+			const newItems = await tmdbDiscover(mType, {
+				with_genres: selectedGenres.length > 0 ? selectedGenres.join(',') : undefined,
 				sort_by: selectedSort,
-				year: selectedYear,
+				year: yearMin === yearMax ? yearMin : undefined,
 				page: page,
+				with_watch_providers: providerFilter ?? undefined,
+				watch_region: providerFilter ? 'FR' : undefined,
 			});
 			if (newItems.results.length === 0) {
 				hasMore = false;
@@ -48,22 +44,52 @@
 				page++;
 			}
 		} catch (error) {
-			console.error("Failed to discover movies:", error);
+			console.error("Failed to discover:", error);
 		} finally {
 			loading = false;
 		}
 	}
-	
+
 	async function fetchLibrary() {
+		if (!isLoggedIn()) { libraryIds = new Set(); return; }
 		try {
 			const libraryItems = await listLibrary();
 			libraryIds = new Set(libraryItems.items.map((item: Favorite) => item.tmdb_id));
 		} catch (error) {
-			console.error("Failed to fetch library:", error);
+			if (!(error instanceof Error && error.message.startsWith('API 401:'))) {
+				console.error("Failed to fetch library:", error);
+			}
 		}
 	}
 
-	function applyFilters() {
+	function handleApplyFilters(state: FilterState) {
+		mediaType = state.mediaType;
+		selectedGenres = state.genres;
+		selectedSort = state.sort;
+		yearMin = state.yearMin;
+		yearMax = state.yearMax;
+		providerFilter = state.provider;
+		providerName = state.providerName;
+		activeFilterCount = state.genres.length
+			+ (state.provider ? 1 : 0)
+			+ (state.yearMin !== 1980 || state.yearMax !== new Date().getFullYear() ? 1 : 0)
+			+ (state.sort !== 'popularity.desc' ? 1 : 0);
+
+		items = [];
+		page = 1;
+		hasMore = true;
+		fetchItems();
+	}
+
+	function clearAllFilters() {
+		selectedGenres = [];
+		selectedSort = 'popularity.desc';
+		yearMin = 1980;
+		yearMax = new Date().getFullYear();
+		providerFilter = null;
+		providerName = null;
+		activeFilterCount = 0;
+		window.history.replaceState({}, '', '/films');
 		items = [];
 		page = 1;
 		hasMore = true;
@@ -71,28 +97,79 @@
 	}
 
 	onMount(() => {
+		const params = new URL(window.location.href).searchParams;
+		providerFilter = params.get('provider');
+		providerName = params.get('provider_name');
+		if (providerFilter) activeFilterCount = 1;
 		fetchItems();
 		fetchLibrary();
 	});
 </script>
 
-<div class="page-container">
-	<h1>Films</h1>
+<svelte:head>
+	<title>{providerName ? `${providerName} — Films` : 'Films'} — SOKOUL</title>
+</svelte:head>
 
-	<div class="filters">
-		<select bind:value={selectedGenre} onchange={applyFilters}>
-			<option value={null}>Tous les genres</option>
-			{#each filters.genres as genre}
-				<option value={genre.id}>{genre.name}</option>
-			{/each}
-		</select>
-		<select bind:value={selectedSort} onchange={applyFilters}>
-			{#each filters.sorts as sort}
-				<option value={sort.id}>{sort.name}</option>
-			{/each}
-		</select>
-		<input type="number" bind:value={selectedYear} onchange={applyFilters} />
+<MegaFilter
+	bind:open={filterOpen}
+	bind:mediaType
+	bind:selectedGenres
+	bind:selectedSort
+	bind:yearMin
+	bind:yearMax
+	bind:selectedProvider={providerFilter}
+	onApply={handleApplyFilters}
+	onClose={() => {}}
+/>
+
+<div class="page-container">
+	<div class="page-header">
+		<div class="header-left">
+			{#if providerName}
+				<h1>{providerName} — Films</h1>
+			{:else}
+				<h1>Films</h1>
+			{/if}
+		</div>
+		<div class="header-right">
+			{#if activeFilterCount > 0}
+				<button class="btn-clear" onclick={clearAllFilters}>
+					<svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+					Effacer
+				</button>
+			{/if}
+			<button class="btn-filter" onclick={() => { filterOpen = true; }}>
+				<svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/></svg>
+				FILTRER
+				{#if activeFilterCount > 0}
+					<span class="badge">{activeFilterCount}</span>
+				{/if}
+			</button>
+		</div>
 	</div>
+
+	<!-- Active filter tags -->
+	{#if activeFilterCount > 0}
+		<div class="active-filters">
+			{#if providerName}
+				<span class="filter-tag">
+					📺 {providerName}
+					<button onclick={() => { providerFilter = null; providerName = null; activeFilterCount--; items = []; page = 1; hasMore = true; fetchItems(); }}>×</button>
+				</span>
+			{/if}
+			{#if selectedGenres.length > 0}
+				<span class="filter-tag">
+					🎭 {selectedGenres.length} genre{selectedGenres.length > 1 ? 's' : ''}
+				</span>
+			{/if}
+			{#if yearMin !== 1980 || yearMax !== new Date().getFullYear()}
+				<span class="filter-tag">📅 {yearMin}–{yearMax}</span>
+			{/if}
+			{#if selectedSort !== 'popularity.desc'}
+				<span class="filter-tag">📊 Tri personnalisé</span>
+			{/if}
+		</div>
+	{/if}
 
 	<div class="grid">
 		{#each items as item (item.id)}
@@ -111,27 +188,164 @@
 	{#if hasMore && !loading}
 		<button class="load-more" onclick={fetchItems}>Charger plus</button>
 	{/if}
+
+	{#if !loading && items.length === 0 && !hasMore}
+		<div class="empty-state">
+			<svg viewBox="0 0 24 24" fill="currentColor" width="48" height="48" style="opacity:0.3"><path d="M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4h-4z"/></svg>
+			<p>Aucun résultat trouvé</p>
+			<button class="btn-clear" onclick={clearAllFilters}>Réinitialiser les filtres</button>
+		</div>
+	{/if}
 </div>
 
 <style>
 	.page-container {
-		padding: 20px;
+		padding: 90px calc(3.5vw + 5px) 20px;
 	}
 
-	.filters {
+	.page-header {
 		display: flex;
-		gap: 20px;
+		align-items: center;
+		justify-content: space-between;
+		gap: 16px;
+		flex-wrap: wrap;
 		margin-bottom: 20px;
 	}
 
+	.header-left h1 {
+		font-size: 28px;
+		font-weight: 700;
+		color: #F9F9F9;
+		margin: 0;
+	}
+
+	.header-right {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+	}
+
+	.btn-filter {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		padding: 10px 20px;
+		background: linear-gradient(135deg, #0072D2 0%, #0585F2 100%);
+		border: none;
+		border-radius: 10px;
+		color: #fff;
+		font-size: 14px;
+		font-weight: 700;
+		letter-spacing: 1.5px;
+		cursor: pointer;
+		transition: all 250ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+		text-transform: uppercase;
+	}
+
+	.btn-filter:hover {
+		transform: scale(1.05);
+		box-shadow: 0 8px 24px rgba(0, 114, 210, 0.35);
+	}
+
+	.badge {
+		background: rgba(255, 255, 255, 0.25);
+		border-radius: 10px;
+		padding: 1px 7px;
+		font-size: 11px;
+		font-weight: 700;
+	}
+
+	.btn-clear {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		padding: 8px 14px;
+		background: rgba(249, 249, 249, 0.08);
+		border: 1px solid rgba(249, 249, 249, 0.15);
+		border-radius: 8px;
+		color: #CACACA;
+		font-size: 13px;
+		cursor: pointer;
+		transition: all 250ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+	}
+
+	.btn-clear:hover {
+		background: rgba(249, 249, 249, 0.15);
+		color: #F9F9F9;
+	}
+
+	/* Active filter tags */
+	.active-filters {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
+		margin-bottom: 20px;
+	}
+
+	.filter-tag {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		padding: 5px 12px;
+		background: rgba(0, 114, 210, 0.1);
+		border: 1px solid rgba(0, 114, 210, 0.25);
+		border-radius: 16px;
+		color: #CACACA;
+		font-size: 12px;
+		font-weight: 500;
+	}
+
+	.filter-tag button {
+		background: none;
+		border: none;
+		color: rgba(249,249,249,0.5);
+		font-size: 16px;
+		cursor: pointer;
+		padding: 0 0 0 4px;
+		line-height: 1;
+	}
+
+	.filter-tag button:hover { color: #F9F9F9; }
+
 	.grid {
 		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+		grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
 		gap: 20px;
 	}
 
 	.load-more {
 		display: block;
-		margin: 20px auto;
+		margin: 30px auto;
+		padding: 12px 32px;
+		background: rgba(249, 249, 249, 0.08);
+		border: 1px solid rgba(249, 249, 249, 0.15);
+		border-radius: 10px;
+		color: #F9F9F9;
+		font-size: 14px;
+		font-weight: 600;
+		cursor: pointer;
+		transition: all 250ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+	}
+
+	.load-more:hover {
+		background: rgba(249, 249, 249, 0.15);
+	}
+
+	.empty-state {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 16px;
+		padding: 60px 20px;
+		color: #CACACA;
+	}
+
+	.empty-state p {
+		font-size: 16px;
+	}
+
+	@media (max-width: 600px) {
+		.page-header { flex-direction: column; align-items: flex-start; }
+		.grid { grid-template-columns: repeat(2, 1fr); }
 	}
 </style>

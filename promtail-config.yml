@@ -1,0 +1,90 @@
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+positions:
+  filename: /tmp/positions.yaml
+
+scrape_configs:
+  # System logs
+  - job_name: system
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: system
+          __path__: /var/log/syslog
+
+  # Sokoul API logs
+  - job_name: sokoul-api
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: sokoul-api
+          service: sokoul-api
+          __path__: /var/log/docker/sokoul-api.log
+    pipeline_stages:
+      - json:
+          expressions:
+            timestamp: timestamp
+            level: level
+            service: service
+            message: message
+      - labels:
+          level: level
+          service: service
+
+  # PostgreSQL logs
+  - job_name: postgres
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: postgres
+          service: postgres
+          __path__: /var/log/docker/postgres.log
+    pipeline_stages:
+      - regex:
+          expression: '(?P<timestamp>.*) \| (?P<level>.*) \| (?P<message>.*)'
+      - labels:
+          level: level
+
+  # Redis logs
+  - job_name: redis
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: redis
+          service: redis
+          __path__: /var/log/docker/redis.log
+
+  # NATS logs
+  - job_name: nats
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: nats
+          service: nats
+          __path__: /var/log/docker/nats.log
+
+  # Nginx logs
+  - job_name: nginx
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: nginx
+          service: nginx
+          __path__: /var/log/docker/nginx.log
+    pipeline_stages:
+      - json:
+          expressions:
+            time_local: time_local
+            remote_addr: remote_addr
+            request: request
+            status: status
+            bytes_sent: bytes_sent
+      - labels:
+          status: status

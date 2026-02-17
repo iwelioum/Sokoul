@@ -1,0 +1,89 @@
+# Production Multi-Stage Build for Sokoul v2
+# Stage 1: Build Rust backend
+FROM rust:1.76-slim-bookworm AS rust-builder
+
+WORKDIR /app
+
+# Install system dependencies required for compilation
+RUN apt-get update && apt-get install -y \
+    pkg-config \
+    libssl-dev \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy Cargo files for caching dependencies
+COPY Cargo.toml Cargo.lock ./
+
+# Create dummy binary to cache dependencies
+RUN mkdir src && echo "fn main() {}" > src/main.rs && \
+    cargo build --release && \
+    rm -f target/release/deps/sokoul*
+
+# Copy actual source code
+COPY src ./src
+
+# Build optimized release binary
+RUN cargo build --release --jobs $(nproc)
+
+# Stage 2: Build SvelteKit frontend (Node.js)
+FROM node:20-alpine AS node-builder
+
+WORKDIR /app/dashboard
+
+# Copy package files
+COPY dashboard/package*.json ./
+
+# Install dependencies
+RUN npm ci --only=production && \
+    npm install -D @sveltejs/adapter-node
+
+# Copy dashboard source
+COPY dashboard/src ./src
+COPY dashboard/static ./static
+COPY dashboard/svelte.config.js ./
+COPY dashboard/tsconfig.json ./
+COPY dashboard/vite.config.ts ./
+
+# Build production bundle
+RUN npm run build
+
+# Stage 3: Runtime - Minimal production image
+FROM debian:bookworm-slim
+
+WORKDIR /app
+
+# Install minimal runtime dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libssl3 \
+    ca-certificates \
+    curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && useradd -m -u 1000 sokoul
+
+# Copy Rust binary from builder
+COPY --from=rust-builder /app/target/release/sokoul /app/sokoul
+
+# Copy frontend build
+COPY --from=node-builder /app/dashboard/build /app/dashboard/build
+COPY --from=node-builder /app/dashboard/node_modules /app/dashboard/node_modules
+COPY --from=node-builder /app/dashboard/package.json /app/dashboard/
+
+# Copy static files (migrations, scripts)
+COPY migrations /app/migrations
+COPY init.sql /app/init.sql
+
+# Change ownership to non-root user
+RUN chown -R sokoul:sokoul /app
+
+# Switch to non-root user
+USER sokoul
+
+# Expose ports
+EXPOSE 3000 9090
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD curl -sf http://localhost:3000/health || exit 1
+
+# Start application
+CMD ["./sokoul"]

@@ -33,9 +33,31 @@ url = "2.5"
 axum-prometheus = "0.6"
 tower = { version = "0.4", features = ["util", "limit"] }
 tokio-util = { version = "0.7", features = ["io"] }
+jsonwebtoken = "9.3"
+bcrypt = "0.15"
+lettre = { version = "0.11.19", features = ["builder", "tokio1", "tokio1-native-tls", "smtp-transport"] }
+lettre_email = "0.9.4"
+prometheus = { version = "0.14.0", features = ["push", "protobuf"] }
+lazy_static = "1.5.0"
+zip = "0.6"
+urlencoding = "2.1"
+
+# Production release optimizations
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true
+panic = "abort"
 
 [dev-dependencies]
 wiremock = "0.6"
 tokio-test = "0.4"
 regex = "1.10"
 urlencoding = "2.1"
+reqwest = { version = "0.11", features = ["json", "cookies"] }
+tokio = { version = "1.36", features = ["full"] }
+uuid = { version = "1.7", features = ["serde", "v4"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+rand = "0.8"

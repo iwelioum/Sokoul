@@ -4,9 +4,10 @@
 	import {
 		tmdbTvDetails, tmdbSeasonDetails, tmdbCredits, tmdbVideos, tmdbSimilar,
 		tmdbImageUrl, addToLibrary, removeFromLibrary,
-		addToWatchlist, removeFromWatchlist, getLibraryStatus, createMedia, triggerSearch, startDownload, getSearchResults
+		addToWatchlist, removeFromWatchlist, getLibraryStatus, createMedia, triggerSearch, startDownload, getSearchResults,
+		searchOmdb, getFanartMovie
 	} from '$lib/api/client';
-	import type { TmdbTvDetail, TmdbSeasonDetail, TmdbCastMember, TmdbVideo, TmdbSearchItem, LibraryStatus, Media, SearchResult } from '$lib/api/client';
+	import type { TmdbTvDetail, TmdbSeasonDetail, TmdbCastMember, TmdbVideo, TmdbSearchItem, LibraryStatus, Media, SearchResult, OmdbResponse, FanartMovieImages } from '$lib/api/client';
 	import MediaRow from '$lib/components/MediaRow.svelte';
 	import Skeleton from '$lib/components/Skeleton.svelte';
 
@@ -19,6 +20,10 @@
 	let libraryStatus: LibraryStatus | null = $state(null);
 	let loading = $state(true);
 	let error = $state('');
+
+	// Enrichment data
+	let omdbData: OmdbResponse | null = $state(null);
+	let fanartData: FanartMovieImages | null = $state(null);
 
 	// Season/episode selector
 	let selectedSeason = $state(1);
@@ -74,6 +79,13 @@
 			error = `Erreur lors du chargement: ${e.message}`;
 		}
 		loading = false;
+
+		// Load enrichment data in background (non-blocking)
+		if (show) {
+			getFanartMovie(id).then(f => fanartData = f).catch(() => {});
+			searchOmdb(show.name, show.first_air_date ? parseInt(show.first_air_date.substring(0, 4)) : undefined)
+				.then(o => omdbData = o).catch(() => {});
+		}
 	}
 
 	async function loadSeason(showId: number, seasonNumber: number) {
@@ -95,7 +107,7 @@
 
 	async function handleDownload() {
 		if (!show) return;
-		goto(`/downloads?query=${encodeURIComponent(show.name)}&tmdbId=${show.id}`);
+		goto(`/downloads?query=${encodeURIComponent(show.name)}&tmdbId=${show.id}&mediaType=tv`);
 	}
 
 	async function startTorrentDownload(searchResultId: number, mediaId: string) {
@@ -134,16 +146,20 @@
 
 	async function toggleWatchlist() {
 		if (!show) return;
-		if (libraryStatus?.in_watchlist) {
-			await removeFromWatchlist(show.id, 'tv');
-			if (libraryStatus) libraryStatus = { ...libraryStatus, in_watchlist: false };
-		} else {
-			await addToWatchlist({
-				tmdb_id: show.id, media_type: 'tv', title: show.name,
-				poster_url: tmdbImageUrl(show.poster_path)
-			});
-			if (libraryStatus) libraryStatus = { ...libraryStatus, in_watchlist: true };
-			else libraryStatus = { in_library: false, in_watchlist: true, watch_progress: null, completed: false };
+		const wasIn = libraryStatus?.in_watchlist ?? false;
+		if (libraryStatus) libraryStatus = { ...libraryStatus, in_watchlist: !wasIn };
+		else libraryStatus = { in_library: false, in_watchlist: true, watch_progress: null, completed: false };
+		try {
+			if (wasIn) {
+				await removeFromWatchlist(show.id, 'tv');
+			} else {
+				await addToWatchlist({
+					tmdb_id: show.id, media_type: 'tv', title: show.name,
+					poster_url: tmdbImageUrl(show.poster_path)
+				});
+			}
+		} catch {
+			if (libraryStatus) libraryStatus = { ...libraryStatus, in_watchlist: wasIn };
 		}
 	}
 </script>
@@ -171,21 +187,17 @@
 		</div>
 	</div>
 {:else if show}
-	<!-- Breadcrumbs -->
-	<nav class="breadcrumbs" aria-label="Fil d'Ariane">
-		<a href="/">Accueil</a>
-		<span class="bc-sep">›</span>
-		<a href="/series">Séries</a>
-		<span class="bc-sep">›</span>
-		<span class="bc-current">{show.name}</span>
-	</nav>
-
 	<!-- Backdrop Hero -->
 	<div class="detail-hero">
 		{#if show.backdrop_path}
 			<div class="hero-backdrop" style="background-image:url({tmdbImageUrl(show.backdrop_path, 'original')})"></div>
 		{/if}
 		<div class="hero-gradient"></div>
+
+		<a href="/series" class="back-btn" aria-label="Retour aux séries">
+			<svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+			Séries
+		</a>
 
 		<div class="hero-content">
 			{#if show.poster_path}
@@ -211,10 +223,22 @@
 					{#if show.vote_average}
 						<span class="rating">★ {show.vote_average.toFixed(1)}</span>
 					{/if}
+					{#if omdbData?.imdbRating}
+						<span class="rating imdb">IMDb {omdbData.imdbRating}</span>
+					{/if}
+					{#if omdbData?.Ratings}
+						{#each omdbData.Ratings.filter(r => r.Source === 'Rotten Tomatoes') as rt}
+							<span class="rating rt">🍅 {rt.Value}</span>
+						{/each}
+					{/if}
 					{#if show.status}
 						<span class="status-pill">{show.status}</span>
 					{/if}
 				</div>
+
+				{#if omdbData?.Awards && omdbData.Awards !== 'N/A'}
+					<p class="awards">🏆 {omdbData.Awards}</p>
+				{/if}
 
 				<div class="genres">
 					{#each show.genres as genre (genre.id)}
@@ -299,6 +323,45 @@
 			<section class="detail-section">
 				<h2 class="section-title">Synopsis</h2>
 				<p class="overview">{show.overview}</p>
+			</section>
+		{/if}
+
+		<!-- Infos enrichies (OMDb) -->
+		{#if omdbData && omdbData.Title}
+			<section class="detail-section">
+				<h2 class="section-title">Informations complémentaires</h2>
+				<div class="enrichment-grid">
+					{#if omdbData.Director && omdbData.Director !== 'N/A'}
+						<div class="info-item"><span class="info-label">Créateur</span><span class="info-value">{omdbData.Director}</span></div>
+					{/if}
+					{#if omdbData.Writer && omdbData.Writer !== 'N/A'}
+						<div class="info-item"><span class="info-label">Scénariste</span><span class="info-value">{omdbData.Writer}</span></div>
+					{/if}
+					{#if omdbData.Country && omdbData.Country !== 'N/A'}
+						<div class="info-item"><span class="info-label">Pays</span><span class="info-value">{omdbData.Country}</span></div>
+					{/if}
+					{#if omdbData.Language && omdbData.Language !== 'N/A'}
+						<div class="info-item"><span class="info-label">Langue</span><span class="info-value">{omdbData.Language}</span></div>
+					{/if}
+					{#if omdbData.Rated && omdbData.Rated !== 'N/A'}
+						<div class="info-item"><span class="info-label">Classification</span><span class="info-value">{omdbData.Rated}</span></div>
+					{/if}
+				</div>
+			</section>
+		{/if}
+
+		<!-- Fanart.tv Images -->
+		{#if fanartData && (fanartData.hdmovielogo?.length > 0 || fanartData.moviebackground?.length > 0)}
+			<section class="detail-section">
+				<h2 class="section-title">Galerie artistique</h2>
+				<div class="fanart-gallery">
+					{#if fanartData.hdmovielogo?.length > 0}
+						<img class="fanart-logo" src={fanartData.hdmovielogo[0].url} alt="Logo HD" loading="lazy" />
+					{/if}
+					{#each fanartData.moviebackground?.slice(0, 4) ?? [] as bg}
+						<img class="fanart-bg" src={bg.url} alt="Background" loading="lazy" />
+					{/each}
+				</div>
 			</section>
 		{/if}
 
@@ -405,32 +468,29 @@
 {/if}
 
 <style>
-	/* ── Breadcrumbs ── */
-	.breadcrumbs {
+	/* ── Back button ── */
+	.back-btn {
+		position: absolute;
+		top: 80px;
+		left: 20px;
+		z-index: 5;
 		display: flex;
 		align-items: center;
 		gap: 6px;
+		padding: 8px 16px;
+		background: rgba(0, 0, 0, 0.4);
+		backdrop-filter: blur(8px);
+		color: rgba(255, 255, 255, 0.9);
+		border-radius: 50px;
 		font-size: 13px;
-		color: var(--text-muted);
-		padding: 0 0 16px;
-	}
-
-	.breadcrumbs a {
-		color: var(--text-secondary);
-		text-decoration: none;
-		transition: color var(--transition-fast);
-	}
-
-	.breadcrumbs a:hover { color: var(--text-primary); }
-	.bc-sep { color: var(--text-muted); }
-
-	.bc-current {
-		color: var(--text-primary);
 		font-weight: 500;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-		max-width: 200px;
+		text-decoration: none;
+		transition: all var(--transition-fast);
+	}
+
+	.back-btn:hover {
+		background: rgba(0, 0, 0, 0.6);
+		color: #fff;
 	}
 
 	.error-state {
@@ -824,4 +884,20 @@
 		color: var(--danger);
 		font-weight: 500;
 	}
+
+	/* ── Enrichment ── */
+	.rating.imdb { color: #f5c518; font-weight: 700; }
+	.rating.rt { color: #fa320a; font-weight: 600; }
+	.awards { color: #f5c518; font-size: 13px; margin-top: 6px; font-style: italic; }
+	.enrichment-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+		gap: 12px;
+	}
+	.info-item { display: flex; flex-direction: column; gap: 2px; }
+	.info-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
+	.info-value { font-size: 14px; color: var(--text-primary); }
+	.fanart-gallery { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+	.fanart-logo { max-height: 80px; width: auto; object-fit: contain; }
+	.fanart-bg { width: 280px; height: 160px; object-fit: cover; border-radius: 8px; }
 </style>

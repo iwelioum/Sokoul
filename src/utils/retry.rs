@@ -36,7 +36,7 @@ where
             Ok(result) => {
                 if attempt > 1 {
                     tracing::info!(
-                        "{}: réussi à la tentative {}/{}",
+                        "{}: succeeded on attempt {}/{}",
                         operation_name,
                         attempt,
                         config.max_attempts
@@ -47,7 +47,7 @@ where
             Err(e) => {
                 if attempt >= config.max_attempts {
                     tracing::error!(
-                        "{}: échec après {}/{} tentatives — {}",
+                        "{}: failed after {}/{} attempts — {}",
                         operation_name,
                         attempt,
                         config.max_attempts,
@@ -58,7 +58,7 @@ where
 
                 let actual_delay = (delay as u64).min(config.max_delay_ms);
                 tracing::warn!(
-                    "{}: tentative {}/{} échouée ({}), retry dans {}ms…",
+                    "{}: attempt {}/{} failed ({}), retrying in {}ms…",
                     operation_name,
                     attempt,
                     config.max_attempts,

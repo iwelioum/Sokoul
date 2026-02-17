@@ -1,13 +1,11 @@
 <script lang="ts">
 	import {
-		tmdbTrending, tmdbDiscover, getContinueWatching,
-		tmdbImageUrl, getItemTitle, getItemYear,
-		getDirectStreamLinks
+		tmdbTrending, tmdbDiscover, getContinueWatching
 	} from '$lib/api/client';
-	import type { TmdbSearchItem, WatchHistoryEntry, StreamLinks } from '$lib/api/client';
+	import type { TmdbSearchItem, WatchHistoryEntry } from '$lib/api/client';
 	import MediaRow from '$lib/components/MediaRow.svelte';
-	import VideoPlayer from '$lib/components/VideoPlayer.svelte';
 	import HeroCarousel from '$lib/components/HeroCarousel.svelte';
+	import BrandTiles from '$lib/components/BrandTiles.svelte';
 	import { goto } from '$app/navigation';
 
 	// ── State ──
@@ -22,11 +20,24 @@
 	let loadingTrending = $state(true);
 	let loadingPlatforms = $state(true);
 
-	// Player
-	let showPlayer = $state(false);
-	let playerLinks: StreamLinks | null = $state(null);
-	let playerTitle = $state('');
-	let loadingPlayer = $state(false);
+	function getPlayableMediaType(item: TmdbSearchItem): 'movie' | 'tv' | null {
+		if (item.media_type === 'movie' || item.media_type === 'tv') return item.media_type;
+		if (item.first_air_date && !item.release_date) return 'tv';
+		if (item.release_date || item.title) return 'movie';
+		return null;
+	}
+
+	function getWatchPath(item: TmdbSearchItem): string | null {
+		const mediaType = getPlayableMediaType(item);
+		if (mediaType === 'tv') return `/watch/tv/${item.id}?season=1&episode=1`;
+		if (mediaType === 'movie') return `/watch/movie/${item.id}`;
+		return null;
+	}
+
+	function getDetailPath(item: TmdbSearchItem): string {
+		const mediaType = item.media_type || 'movie';
+		return `/${mediaType}/${item.id}`;
+	}
 
 	// ── Load data ──
 	$effect(() => {
@@ -42,9 +53,9 @@
 			tmdbTrending('movie', 'week'),
 			tmdbTrending('tv', 'week'),
 		]);
-		if (all.status === 'fulfilled') trendingAll = all.value;
-		if (movies.status === 'fulfilled') trendingMovies = movies.value;
-		if (series.status === 'fulfilled') trendingSeries = series.value;
+		if (all.status === 'fulfilled') trendingAll = all.value.filter((item) => getPlayableMediaType(item) !== null);
+		if (movies.status === 'fulfilled') trendingMovies = movies.value.filter((item) => getPlayableMediaType(item) !== null);
+		if (series.status === 'fulfilled') trendingSeries = series.value.filter((item) => getPlayableMediaType(item) !== null);
 		loadingTrending = false;
 	}
 
@@ -55,9 +66,9 @@
 			tmdbDiscover('movie', { with_watch_providers: '337', watch_region: 'FR', sort_by: 'popularity.desc' }),
 			tmdbDiscover('movie', { with_watch_providers: '119', watch_region: 'FR', sort_by: 'popularity.desc' }),
 		]);
-		if (netflix.status === 'fulfilled') netflixMovies = netflix.value.results;
-		if (disney.status === 'fulfilled') disneyMovies = disney.value.results;
-		if (amazon.status === 'fulfilled') amazonMovies = amazon.value.results;
+		if (netflix.status === 'fulfilled') netflixMovies = netflix.value.results.filter((item) => getPlayableMediaType(item) !== null);
+		if (disney.status === 'fulfilled') disneyMovies = disney.value.results.filter((item) => getPlayableMediaType(item) !== null);
+		if (amazon.status === 'fulfilled') amazonMovies = amazon.value.results.filter((item) => getPlayableMediaType(item) !== null);
 		loadingPlatforms = false;
 	}
 
@@ -68,20 +79,22 @@
 	}
 
 	async function handleHeroPlay(item: TmdbSearchItem) {
-		loadingPlayer = true;
-		try {
-			const type = item.media_type || 'movie';
-			playerLinks = await getDirectStreamLinks(type, item.id);
-			playerTitle = item.title || item.name || '';
-			showPlayer = true;
-		} catch (e) {
-			console.error(e);
-		}
-		loadingPlayer = false;
+		const watchPath = getWatchPath(item);
+		goto(watchPath ?? getDetailPath(item));
 	}
 
 	function handleHeroDetail(item: TmdbSearchItem) {
-		goto(`/${item.media_type || 'movie'}/${item.id}`);
+		goto(getDetailPath(item));
+	}
+
+	function getHistoryPath(entry: WatchHistoryEntry): string {
+		if (entry.media_type_wh === 'tv' && entry.tmdb_id) {
+			return `/watch/tv/${entry.tmdb_id}?season=1&episode=1`;
+		}
+		if (entry.media_type_wh === 'movie' && entry.tmdb_id) {
+			return `/watch/movie/${entry.tmdb_id}`;
+		}
+		return `/${entry.media_type_wh ?? 'movie'}/${entry.tmdb_id ?? ''}`;
 	}
 
 	function progressPercent(entry: WatchHistoryEntry): number {
@@ -101,35 +114,54 @@
 	loading={loadingTrending}
 />
 
+<!-- Brand Tiles (Disney+ style) -->
+<BrandTiles />
+
 <!-- Catalog (Contained) -->
 <div class="catalog">
 
 	{#if continueWatching.length > 0}
 		<section class="continue-section">
 			<h2 class="section-title">Reprendre la lecture</h2>
-			<div class="continue-row">
-				{#each continueWatching as entry (entry.id)}
-					{#if entry.tmdb_id && entry.media_type_wh}
-						{@const pct = progressPercent(entry)}
-						<a href="/{entry.media_type_wh}/{entry.tmdb_id}" class="continue-card" aria-label={entry.title ?? 'Reprendre'}>
-							<div class="continue-poster">
-								{#if entry.poster_url}
-									<img src={entry.poster_url} alt={entry.title ?? ''} loading="lazy" />
-								{:else}
-									<div class="no-poster-sm"></div>
-								{/if}
-								<div class="continue-overlay">
-									<svg viewBox="0 0 24 24" fill="currentColor" width="28" height="28"><path d="M8 5v14l11-7z"/></svg>
+			<div class="continue-wrapper">
+				{#if continueWatching.length > 4}
+					<button class="scroll-btn scroll-left" onclick={() => { document.querySelector('.continue-row')?.scrollBy({ left: -320, behavior: 'smooth' }); }} aria-label="Défiler à gauche">
+						<svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+					</button>
+				{/if}
+				<div class="continue-row">
+					{#each continueWatching as entry (entry.id)}
+						{#if entry.tmdb_id && entry.media_type_wh}
+							{@const pct = progressPercent(entry)}
+							<a
+								href={getHistoryPath(entry)}
+								class="continue-card"
+								aria-label={entry.title ?? 'Reprendre'}
+							>
+								<div class="continue-poster">
+									{#if entry.poster_url}
+										<img src={entry.poster_url} alt={entry.title ?? ''} loading="lazy" />
+									{:else}
+										<div class="no-poster-sm"></div>
+									{/if}
+									<div class="continue-overlay">
+										<svg viewBox="0 0 24 24" fill="currentColor" width="28" height="28"><path d="M8 5v14l11-7z"/></svg>
+									</div>
+									<div class="continue-progress">
+										<div class="continue-bar" style="width:{pct}%"></div>
+									</div>
 								</div>
-								<div class="continue-progress">
-									<div class="continue-bar" style="width:{pct}%"></div>
-								</div>
-							</div>
-							<p class="continue-title">{entry.title ?? '—'}</p>
-							<p class="continue-pct">{pct}%</p>
-						</a>
-					{/if}
-				{/each}
+								<p class="continue-title">{entry.title ?? '—'}</p>
+								<p class="continue-pct">{pct}%</p>
+							</a>
+						{/if}
+					{/each}
+				</div>
+				{#if continueWatching.length > 4}
+					<button class="scroll-btn scroll-right" onclick={() => { document.querySelector('.continue-row')?.scrollBy({ left: 320, behavior: 'smooth' }); }} aria-label="Défiler à droite">
+						<svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M8.59 16.59L10 18l6-6-6-6-1.41 1.41L13.17 12z"/></svg>
+					</button>
+				{/if}
 			</div>
 		</section>
 	{/if}
@@ -142,14 +174,6 @@
 	<MediaRow title="Nouveautés Amazon Prime" items={amazonMovies} loading={loadingPlatforms} />
 
 </div>
-
-{#if showPlayer && playerLinks}
-	<VideoPlayer
-		sources={playerLinks.sources}
-		title={playerTitle}
-		onClose={() => { showPlayer = false; playerLinks = null; }}
-	/>
-{/if}
 
 <style>
 	.hero {
@@ -279,24 +303,35 @@
 		animation: shimmer 1.5s infinite;
 	}
 
-	.catalog { padding: 32px 0 0; }
+	.catalog { padding: 20px calc(3.5vw + 5px) 0; }
 
 	.section-title {
 		font-size: 18px;
 		font-weight: 700;
 		color: var(--text-primary);
 		margin-bottom: 12px;
-		padding: 0 4px;
+		padding: 0;
 	}
 
-	.continue-section { margin-bottom: 2rem; }
+	.continue-section { margin-bottom: 2rem; position: relative; }
+
+	.continue-wrapper {
+		position: relative;
+	}
 
 	.continue-row {
 		display: flex;
 		gap: 12px;
 		overflow-x: auto;
-		padding: 4px 4px 12px;
-		scrollbar-width: thin;
+		scroll-snap-type: x mandatory;
+		scrollbar-width: none;
+		-ms-overflow-style: none;
+		padding: 10px 0 16px;
+		scroll-behavior: smooth;
+	}
+
+	.continue-row::-webkit-scrollbar {
+		display: none;
 	}
 
 	.continue-card {
@@ -304,6 +339,7 @@
 		width: 160px;
 		text-decoration: none;
 		color: inherit;
+		scroll-snap-align: start;
 	}
 
 	.continue-poster {
@@ -332,6 +368,7 @@
 		justify-content: center;
 		color: #fff;
 		opacity: 0;
+		pointer-events: none;
 		transition: opacity var(--transition-smooth);
 	}
 
@@ -354,6 +391,38 @@
 		background: var(--bg-secondary);
 	}
 
+	/* Scroll buttons identiques aux autres carousels */
+	.scroll-btn {
+		position: absolute;
+		top: 50%;
+		transform: translateY(-50%);
+		z-index: 10;
+		width: 44px;
+		height: 44px;
+		border-radius: 50%;
+		border: none;
+		background: rgba(26, 29, 41, 0.85);
+		color: #F9F9F9;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		cursor: pointer;
+		opacity: 0;
+		transition: opacity 250ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+		backdrop-filter: blur(4px);
+	}
+
+	.continue-section:hover .scroll-btn {
+		opacity: 1;
+	}
+
+	.scroll-btn:hover {
+		background: rgba(249, 249, 249, 0.2);
+	}
+
+	.scroll-left { left: -16px; }
+	.scroll-right { right: -16px; }
+
 	.continue-title {
 		font-size: 12px;
 		color: var(--text-primary);
@@ -373,6 +442,12 @@
 		border-top-color: #000;
 		border-radius: 50%;
 		animation: spin 0.7s linear infinite;
+	}
+
+	@media (max-width: 900px) {
+		.scroll-btn {
+			display: none;
+		}
 	}
 
 	@keyframes spin { to { transform: rotate(360deg); } }

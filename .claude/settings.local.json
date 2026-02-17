@@ -22,7 +22,13 @@
       "Bash(done)",
       "Bash(timeout:*)",
       "Bash(cargo test:*)",
-      "Bash(npx svelte-check:*)"
+      "Bash(npx svelte-check:*)",
+      "Bash(openssl rand:*)",
+      "Bash(docker run:*)",
+      "Bash(docker start:*)",
+      "Bash(docker port:*)",
+      "Bash(docker exec:*)",
+      "Bash(cargo run:*)"
     ]
   }
 }

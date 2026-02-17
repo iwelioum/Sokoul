@@ -2,7 +2,7 @@ use crate::{
     api::error::ApiError,
     db,
     events::{self, DownloadRequestedPayload},
-    AppState,
+    security, AppState,
 };
 use axum::{
     extract::{Path, State},
@@ -30,13 +30,77 @@ pub async fn start_download_handler(
     let result = results
         .iter()
         .find(|r| r.id == payload.search_result_id)
-        .ok_or_else(|| ApiError::NotFound("Résultat de recherche non trouvé".to_string()))?;
+        .ok_or_else(|| ApiError::NotFound("Search result not found".to_string()))?;
 
     let magnet_or_url = result
         .magnet_link
         .clone()
         .or_else(|| result.url.clone())
-        .ok_or_else(|| ApiError::InvalidInput("Pas de magnet/URL pour ce résultat".to_string()))?;
+        .ok_or_else(|| {
+            ApiError::InvalidInput("No magnet/URL available for this result".to_string())
+        })?;
+
+    // Security Check: Validate URL safety before allowing download
+    let security_check = security::check_url_safety(&state, &magnet_or_url).await;
+
+    if security_check.risk_level == "critical" {
+        // Block critical risk and log event
+        let _ = db::security::insert_audit_log(
+            &state.db_pool,
+            None,
+            "download_blocked",
+            Some("url"),
+            Some(&payload.search_result_id.to_string()),
+            Some(&magnet_or_url),
+            None,
+            None,
+            "critical",
+            "blocked",
+            Some(serde_json::json!({
+                "reason": security_check.reason,
+                "virustotal_count": security_check.virustotal_malicious_count,
+                "urlhaus_threat": security_check.urlhaus_threat,
+            })),
+        )
+        .await;
+
+        let admin_email =
+            std::env::var("ADMIN_EMAIL").unwrap_or_else(|_| "admin@sokoul.local".to_string());
+        let _ = state
+            .email_service
+            .send_critical_alert(
+                &admin_email,
+                &magnet_or_url,
+                &security_check.risk_level,
+                &security_check.reason,
+            )
+            .await;
+
+        return Err(ApiError::Forbidden(format!(
+            "Download blocked - Security risk detected: {}",
+            security_check.reason
+        )));
+    }
+
+    // Log warning-level risks but allow
+    if security_check.risk_level == "warning" {
+        let _ = db::security::insert_audit_log(
+            &state.db_pool,
+            None,
+            "download_warning",
+            Some("url"),
+            Some(&payload.search_result_id.to_string()),
+            Some(&magnet_or_url),
+            None,
+            None,
+            "warning",
+            "allowed",
+            Some(serde_json::json!({
+                "reason": security_check.reason,
+            })),
+        )
+        .await;
+    }
 
     let download_event = DownloadRequestedPayload {
         media_id: payload.media_id,
@@ -57,9 +121,14 @@ pub async fn start_download_handler(
     Ok((
         StatusCode::ACCEPTED,
         Json(serde_json::json!({
-            "message": "Téléchargement lancé.",
+            "message": "Download started.",
             "media_id": payload.media_id,
             "search_result_id": payload.search_result_id,
+            "security_warning": if security_check.risk_level == "warning" {
+                Some(security_check.reason)
+            } else {
+                None
+            },
         })),
     ))
 }

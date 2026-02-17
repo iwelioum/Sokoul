@@ -4,7 +4,7 @@ use playwright::api::{Browser, BrowserContext, Page};
 use std::sync::Arc;
 use tokio::time::Duration;
 
-/// Un provider de recherche qui scrape des sites de streaming en utilisant Playwright.
+/// A search provider that scrapes streaming sites using Playwright.
 pub struct StreamingProvider {
     browser: Arc<Browser>,
 }
@@ -14,27 +14,21 @@ impl StreamingProvider {
         Self { browser }
     }
 
-    /// Scrape une page de streaming pour trouver des liens video.
+    /// Scrape a streaming page to find video links.
     async fn scrape_site(
         &self,
         page: &Page,
         search_url: &str,
         search_query: &str,
     ) -> anyhow::Result<Vec<TorrentResult>> {
-        tracing::info!(
-            "Scraping en cours sur '{}' pour '{}'...",
-            search_url,
-            search_query
-        );
+        tracing::info!("Scraping '{}' for '{}'...", search_url, search_query);
 
-        // Naviguer vers l'URL
         page.goto_builder(search_url).goto().await?;
-        tracing::debug!("Navigation vers {} réussie.", search_url);
+        tracing::debug!("Navigation to {} succeeded.", search_url);
 
-        // Attendre le chargement de la page
         tokio::time::sleep(Duration::from_secs(5)).await;
 
-        // Extraire les liens video via JavaScript
+        // Extract video links via JavaScript
         let js_result = page.evaluate::<(), Vec<String>>(
             r#"() => {
                 const links = [];
@@ -52,7 +46,7 @@ impl StreamingProvider {
         let found_urls: Vec<String> = match js_result {
             Ok(urls) => urls,
             Err(e) => {
-                tracing::warn!("Échec extraction JS sur {}: {}", search_url, e);
+                tracing::warn!("JS extraction failed on {}: {}", search_url, e);
                 vec![]
             }
         };
@@ -75,7 +69,7 @@ impl StreamingProvider {
             })
             .collect::<Vec<_>>();
 
-        tracing::info!("Scraping terminé, {} liens trouvés.", results.len());
+        tracing::info!("Scraping completed, {} links found.", results.len());
         Ok(results)
     }
 }

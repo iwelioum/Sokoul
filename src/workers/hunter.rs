@@ -10,13 +10,14 @@ use crate::{
 };
 use futures::StreamExt;
 use librqbit::{AddTorrent, Session};
+use reqwest::header::LOCATION;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::Semaphore;
 use url::Url;
 
 pub async fn hunter_worker(state: Arc<AppState>) -> anyhow::Result<()> {
-    tracing::info!("Le worker Hunter demarre...");
+    tracing::info!("Hunter worker starting...");
 
     let download_dir = PathBuf::from(&CONFIG.download_dir);
     tokio::fs::create_dir_all(&download_dir).await?;
@@ -46,7 +47,7 @@ pub async fn hunter_worker(state: Arc<AppState>) -> anyhow::Result<()> {
         let payload: DownloadRequestedPayload = match serde_json::from_slice(&message.payload) {
             Ok(p) => p,
             Err(e) => {
-                tracing::error!("Payload invalide pour Hunter: {}", e);
+                tracing::error!("Invalid payload for Hunter: {}", e);
                 message
                     .ack()
                     .await
@@ -56,19 +57,15 @@ pub async fn hunter_worker(state: Arc<AppState>) -> anyhow::Result<()> {
         };
 
         tracing::info!(
-            "Hunter: telechargement demande pour '{}' (media_id: {})",
+            "Hunter: download requested for '{}' (media_id: {})",
             payload.title,
             payload.media_id
         );
 
-        // Fuzzy validation du titre
         let media = match db::media::get_media_by_id(&state.db_pool, payload.media_id).await {
             Ok(m) => Some(m),
             Err(e) => {
-                tracing::warn!(
-                    "Hunter: impossible de charger le media pour validation fuzzy: {}",
-                    e
-                );
+                tracing::warn!("Hunter: failed to load media for fuzzy validation: {}", e);
                 None
             }
         };
@@ -76,7 +73,7 @@ pub async fn hunter_worker(state: Arc<AppState>) -> anyhow::Result<()> {
         if let Some(ref media) = media {
             let similarity = fuzzy::title_similarity(&payload.title, &media.title);
             tracing::info!(
-                "Hunter: similarite titre '{}' vs '{}' = {:.2}%",
+                "Hunter: title similarity '{}' vs '{}' = {:.2}%",
                 payload.title,
                 media.title,
                 similarity * 100.0
@@ -84,7 +81,7 @@ pub async fn hunter_worker(state: Arc<AppState>) -> anyhow::Result<()> {
 
             if !fuzzy::is_title_match(&payload.title, &media.title, 0.50) {
                 tracing::warn!(
-                    "Hunter: titre '{}' ne correspond pas a '{}' (score: {:.2}%), skip.",
+                    "Hunter: title '{}' does not match '{}' (score: {:.2}%), skipping.",
                     payload.title,
                     media.title,
                     similarity * 100.0
@@ -119,7 +116,7 @@ pub async fn hunter_worker(state: Arc<AppState>) -> anyhow::Result<()> {
         let task_id = match task {
             Ok(t) => Some(t.id),
             Err(e) => {
-                tracing::error!("Echec creation tache pour download: {}", e);
+                tracing::error!("Failed to create task for download: {}", e);
                 None
             }
         };
@@ -139,7 +136,7 @@ pub async fn hunter_worker(state: Arc<AppState>) -> anyhow::Result<()> {
                 .to_json(),
             );
 
-            // Retry avec backoff exponentiel
+            // Retry with exponential backoff
             let retry_config = RetryConfig {
                 max_attempts: 3,
                 initial_delay_ms: 5000,
@@ -162,7 +159,7 @@ pub async fn hunter_worker(state: Arc<AppState>) -> anyhow::Result<()> {
             match result {
                 Ok(output_name) => {
                     tracing::info!(
-                        "Telechargement termine pour '{}': {}",
+                        "Download completed for '{}': {}",
                         payload.title,
                         output_name
                     );
@@ -194,7 +191,7 @@ pub async fn hunter_worker(state: Arc<AppState>) -> anyhow::Result<()> {
                     );
                 }
                 Err(e) => {
-                    tracing::error!("Echec telechargement '{}': {}", payload.title, e);
+                    tracing::error!("Download failed for '{}': {}", payload.title, e);
 
                     if let Some(tid) = task_id {
                         let _ = db::tasks::update_task_status(
@@ -228,16 +225,62 @@ pub async fn hunter_worker(state: Arc<AppState>) -> anyhow::Result<()> {
 }
 
 async fn download_torrent(session: &Arc<Session>, magnet_or_url: &str) -> anyhow::Result<String> {
-    let _ = Url::parse(magnet_or_url)
-        .map_err(|e| anyhow::anyhow!("URL/magnet invalide: {}: {}", e, magnet_or_url))?;
+    let mut current = magnet_or_url.to_string();
+
+    // Prowlarr/Jackett download URLs may redirect (301/302) to a magnet link.
+    // rqbit doesn't handle HTTP redirects here, so resolve them ourselves.
+    for _ in 0..5 {
+        let parsed = Url::parse(&current)
+            .map_err(|e| anyhow::anyhow!("Invalid URL/magnet: {}: {}", e, current))?;
+
+        match parsed.scheme() {
+            "http" | "https" => {
+                let client = reqwest::Client::builder()
+                    .redirect(reqwest::redirect::Policy::none())
+                    .build()?;
+
+                let resp = client.get(parsed.as_str()).send().await?;
+
+                if resp.status().is_redirection() {
+                    let loc = resp
+                        .headers()
+                        .get(LOCATION)
+                        .and_then(|v| v.to_str().ok())
+                        .ok_or_else(|| anyhow::anyhow!("Redirect without Location: {}", current))?;
+
+                    // Location can be a magnet:? or a relative/absolute URL.
+                    current = parsed
+                        .join(loc)
+                        .map(|u| u.to_string())
+                        .unwrap_or_else(|_| loc.to_string());
+                    continue;
+                }
+
+                if !resp.status().is_success() {
+                    return Err(anyhow::anyhow!(
+                        "GET {} returned {}",
+                        current,
+                        resp.status()
+                    ));
+                }
+
+                break;
+            }
+            "magnet" => break,
+            _ => break,
+        }
+    }
+
+    let _ = Url::parse(&current)
+        .map_err(|e| anyhow::anyhow!("Invalid URL/magnet: {}: {}", e, current))?;
 
     let handle = session
-        .add_torrent(AddTorrent::from_url(magnet_or_url), None)
+        .add_torrent(AddTorrent::from_url(&current), None)
         .await?
         .into_handle()
-        .ok_or_else(|| anyhow::anyhow!("Torrent deja gere ou echec d'ajout: {}", magnet_or_url))?;
+        .ok_or_else(|| anyhow::anyhow!("Torrent already managed or failed to add: {}", current))?;
 
     handle.wait_until_completed().await?;
 
-    Ok(magnet_or_url.to_string())
+    Ok(current)
 }

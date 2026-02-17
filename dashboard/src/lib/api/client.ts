@@ -1,16 +1,38 @@
 const API_BASE = '/api';
 
-// API Key from environment (set at build time or runtime)
-let apiKey = '';
+// Auth token storage
+let authToken = '';
 
-export function setApiKey(key: string) {
-	apiKey = key;
+export function setAuthToken(token: string) {
+	authToken = token;
+	if (typeof localStorage !== 'undefined') {
+		localStorage.setItem('sokoul_token', token);
+	}
 }
+
+export function getAuthToken(): string {
+	if (!authToken && typeof localStorage !== 'undefined') {
+		authToken = localStorage.getItem('sokoul_token') || '';
+	}
+	return authToken;
+}
+
+export function clearAuth() {
+	authToken = '';
+	if (typeof localStorage !== 'undefined') {
+		localStorage.removeItem('sokoul_token');
+	}
+}
+
+const API_KEY = 'c29rb3VsLXRlc3Qta2V5LTEyMzQ1';
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
 	const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-	if (apiKey) {
-		headers['X-API-Key'] = apiKey;
+	const token = getAuthToken();
+	if (token) {
+		headers['Authorization'] = `Bearer ${token}`;
+	} else {
+		headers['Authorization'] = `Bearer ${API_KEY}`;
 	}
 	const res = await fetch(`${API_BASE}${path}`, {
 		headers,
@@ -24,6 +46,51 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 		return undefined as T;
 	}
 	return res.json();
+}
+
+// ══════════════════════════════════════════════════
+// AUTH
+// ══════════════════════════════════════════════════
+
+export interface UserPublic {
+	id: string;
+	username: string;
+	email: string;
+	role: string;
+	avatar_url: string | null;
+	is_active: boolean;
+	created_at: string;
+}
+
+export interface AuthResponse {
+	token: string;
+	user: UserPublic;
+}
+
+export async function register(username: string, email: string, password: string): Promise<AuthResponse> {
+	const res = await request<AuthResponse>('/auth/register', {
+		method: 'POST',
+		body: JSON.stringify({ username, email, password })
+	});
+	setAuthToken(res.token);
+	return res;
+}
+
+export async function login(email: string, password: string): Promise<AuthResponse> {
+	const res = await request<AuthResponse>('/auth/login', {
+		method: 'POST',
+		body: JSON.stringify({ email, password })
+	});
+	setAuthToken(res.token);
+	return res;
+}
+
+export async function getMe(): Promise<UserPublic> {
+	return request<UserPublic>('/auth/me');
+}
+
+export function isLoggedIn(): boolean {
+	return !!getAuthToken();
 }
 
 // ══════════════════════════════════════════════════
@@ -129,6 +196,13 @@ export interface StreamSource {
 	name: string;
 	url: string;
 	quality: string;
+	category?: string;
+	language?: string;
+}
+
+export interface FrenchSourceGroup {
+	category: string;
+	sources: StreamSource[];
 }
 
 export interface StreamLinks {
@@ -568,6 +642,66 @@ export function getDirectStreamLinks(
 }
 
 // ══════════════════════════════════════════════════
+// Types & API — Custom Player (stream extraction)
+// ══════════════════════════════════════════════════
+
+export interface ExtractedStream {
+	provider: string;
+	url: string;
+	quality: string;
+	audio_lang: string | null;
+	headers: Record<string, string> | null;
+	stream_type: 'Hls' | 'Mp4';
+	category?: string;
+	language?: string;
+}
+
+export interface SubtitleTrack {
+	language: string;
+	label: string;
+	url: string;
+	is_default: boolean;
+}
+
+export interface ExtractionResponse {
+	tmdb_id: number;
+	media_type: string;
+	streams: ExtractedStream[];
+	iframe_fallbacks: StreamSource[];
+	french_groups?: FrenchSourceGroup[];
+	subtitles: SubtitleTrack[];
+}
+
+export function extractStreams(
+	mediaType: string,
+	tmdbId: number,
+	season?: number,
+	episode?: number
+): Promise<ExtractionResponse> {
+	let url = `/streaming/extract/${mediaType}/${tmdbId}`;
+	if (season !== undefined) url += `?season=${season}&episode=${episode ?? 1}`;
+	return request(url);
+}
+
+export function getSubtitles(
+	mediaType: string,
+	tmdbId: number,
+	season?: number,
+	episode?: number,
+	languages: string[] = ['fr', 'en']
+): Promise<SubtitleTrack[]> {
+	let url = `/streaming/subtitles/${mediaType}/${tmdbId}?lang=${languages.join(',')}`;
+	if (season !== undefined) url += `&season=${season}&episode=${episode ?? 1}`;
+	return request(url);
+}
+
+export function getProxyUrl(streamUrl: string, referer?: string): string {
+	const params = new URLSearchParams({ url: streamUrl });
+	if (referer) params.set('referer', referer);
+	return `${API_BASE}/streaming/proxy?${params}`;
+}
+
+// ══════════════════════════════════════════════════
 // API — Library (Favorites)
 // ══════════════════════════════════════════════════
 
@@ -644,6 +778,10 @@ export function triggerSearch(query: string): Promise<{ message: string }> {
 	return request('/search', { method: 'POST', body: JSON.stringify({ query }) });
 }
 
+export function directSearch(query: string, mediaId: string): Promise<{ results: SearchResult[]; count: number }> {
+	return request('/search/direct', { method: 'POST', body: JSON.stringify({ query, media_id: mediaId }) });
+}
+
 export function getSearchResults(mediaId: string): Promise<SearchResult[]> {
 	return request(`/media/${mediaId}/results`);
 }
@@ -711,22 +849,747 @@ export function getRecommendations(mediaId: string): Promise<Recommendation[]> {
 // WebSocket
 // ══════════════════════════════════════════════════
 
-export function connectWebSocket(onMessage: (data: WsEvent) => void): WebSocket {
-	const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-	const ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
+export function connectWebSocket(onMessage: (data: WsEvent) => void): WebSocket | null {
+	try {
+		// Connect directly to backend (port 3000) bypassing Vite proxy
+		const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+		const backendHost = window.location.hostname + ':3000';
+		const token = getAuthToken();
+		
+		// Add token as query parameter if available
+		const wsUrl = token 
+			? `${protocol}//${backendHost}/ws?token=${encodeURIComponent(token)}`
+			: `${protocol}//${backendHost}/ws`;
+		
+		const ws = new WebSocket(wsUrl);
 
-	ws.onmessage = (event) => {
-		try {
-			const data = JSON.parse(event.data);
-			onMessage(data);
-		} catch {
-			onMessage({ type: 'raw', data: event.data });
-		}
-	};
+		ws.onopen = () => {
+			console.log('✅ WebSocket connecté au backend');
+		};
 
-	ws.onclose = () => {
-		setTimeout(() => connectWebSocket(onMessage), 3000);
-	};
+		ws.onmessage = (event) => {
+			try {
+				const data = JSON.parse(event.data);
+				// Ignore internal messages
+				if (data.type === 'connected') {
+					console.log('🔌 WebSocket ready');
+					return;
+				}
+				onMessage(data);
+			} catch {
+				onMessage({ type: 'raw', data: event.data });
+			}
+		};
 
-	return ws;
+		ws.onerror = (error) => {
+			console.warn('⚠️ WebSocket error (notifications désactivées):', error);
+		};
+
+		ws.onclose = (event) => {
+			console.log(`WebSocket fermé (code: ${event.code}), reconnexion dans 10s...`);
+			setTimeout(() => connectWebSocket(onMessage), 10000);
+		};
+
+		return ws;
+	} catch (error) {
+		console.warn('Impossible de connecter le WebSocket, notifications désactivées:', error);
+		return null;
+	}
+}
+
+// ══════════════════════════════════════════════════
+// TYPES — Enrichment (Fanart.tv, OMDb, TheTVDB)
+// ══════════════════════════════════════════════════
+
+export interface FanartImage {
+	id?: string;
+	url?: string;
+	lang?: string;
+	likes?: string;
+}
+
+export interface FanartMovieImages {
+	hdmovielogo: FanartImage[];
+	hdmovieclearart: FanartImage[];
+	movieposter: FanartImage[];
+	moviebackground: FanartImage[];
+	moviethumb: FanartImage[];
+	moviebanner: FanartImage[];
+	moviedisc: FanartImage[];
+	movieart: FanartImage[];
+}
+
+export interface FanartTvImages {
+	hdtvlogo: FanartImage[];
+	hdclearart: FanartImage[];
+	tvposter: FanartImage[];
+	tvbanner: FanartImage[];
+	tvthumb: FanartImage[];
+	showbackground: FanartImage[];
+	seasonposter: FanartImage[];
+	seasonbanner: FanartImage[];
+	characterart: FanartImage[];
+}
+
+export interface OmdbRating {
+	Source: string;
+	Value: string;
+}
+
+export interface OmdbResponse {
+	Title?: string;
+	Year?: string;
+	Rated?: string;
+	Released?: string;
+	Runtime?: string;
+	Genre?: string;
+	Director?: string;
+	Writer?: string;
+	Actors?: string;
+	Plot?: string;
+	Language?: string;
+	Country?: string;
+	Awards?: string;
+	Poster?: string;
+	Ratings: OmdbRating[];
+	imdbRating?: string;
+	imdbVotes?: string;
+	imdbID?: string;
+	Type?: string;
+	BoxOffice?: string;
+	Production?: string;
+}
+
+export interface ThetvdbSeries {
+	id?: number;
+	name?: string;
+	slug?: string;
+	image?: string;
+	year?: string;
+	overview?: string;
+	status?: { name?: string };
+	firstAired?: string;
+	originalNetwork?: string;
+	averageRuntime?: number;
+}
+
+export interface ThetvdbEpisode {
+	id?: number;
+	name?: string;
+	overview?: string;
+	image?: string;
+	seasonNumber?: number;
+	number?: number;
+	aired?: string;
+	runtime?: number;
+}
+
+export interface ThetvdbArtwork {
+	id?: number;
+	image?: string;
+	thumbnail?: string;
+	type?: number;
+	language?: string;
+	score?: number;
+}
+
+// ══════════════════════════════════════════════════
+// API — Fanart.tv
+// ══════════════════════════════════════════════════
+
+export function getFanartMovie(tmdbId: number): Promise<FanartMovieImages> {
+	return request(`/fanart/movie/${tmdbId}`);
+}
+
+export function getFanartTv(tvdbId: number): Promise<FanartTvImages> {
+	return request(`/fanart/tv/${tvdbId}`);
+}
+
+// ══════════════════════════════════════════════════
+// API — OMDb
+// ══════════════════════════════════════════════════
+
+export function getOmdbByImdbId(imdbId: string): Promise<OmdbResponse> {
+	return request(`/omdb/imdb/${imdbId}`);
+}
+
+export function searchOmdb(title: string, year?: number): Promise<OmdbResponse> {
+	const params = new URLSearchParams({ title });
+	if (year) params.set('year', year.toString());
+	return request(`/omdb/search?${params}`);
+}
+
+// ══════════════════════════════════════════════════
+// API — TheTVDB
+// ══════════════════════════════════════════════════
+
+export function getThetvdbSeries(tvdbId: number): Promise<ThetvdbSeries | null> {
+	return request(`/thetvdb/series/${tvdbId}`);
+}
+
+export function getThetvdbEpisodes(tvdbId: number, season?: number): Promise<ThetvdbEpisode[]> {
+	const params = season !== undefined ? `?season=${season}` : '';
+	return request(`/thetvdb/series/${tvdbId}/episodes${params}`);
+}
+
+export function getThetvdbArtworks(tvdbId: number): Promise<ThetvdbArtwork[]> {
+	return request(`/thetvdb/series/${tvdbId}/artworks`);
+}
+
+export function searchThetvdb(query: string): Promise<ThetvdbSeries[]> {
+	return request(`/thetvdb/search?query=${encodeURIComponent(query)}`);
+}
+
+// ══════════════════════════════════════════════════
+// TYPES — TVMaze
+// ══════════════════════════════════════════════════
+
+export interface TvMazeShow {
+	id: number;
+	url?: string;
+	name?: string;
+	type?: string;
+	language?: string;
+	genres?: string[];
+	status?: string;
+	runtime?: number;
+	premiered?: string;
+	ended?: string;
+	rating?: { average?: number };
+	network?: { id?: number; name?: string; country?: { name?: string; code?: string } };
+	image?: { medium?: string; original?: string };
+	summary?: string;
+}
+
+export interface TvMazeSearchResult {
+	score?: number;
+	show: TvMazeShow;
+}
+
+export interface TvMazeEpisode {
+	id: number;
+	name?: string;
+	season?: number;
+	number?: number;
+	airdate?: string;
+	runtime?: number;
+	rating?: { average?: number };
+	image?: { medium?: string; original?: string };
+	summary?: string;
+}
+
+export interface TvMazeCastMember {
+	person?: { id: number; name?: string; image?: { medium?: string; original?: string } };
+	character?: { id: number; name?: string; image?: { medium?: string; original?: string } };
+}
+
+// ══════════════════════════════════════════════════
+// API — TVMaze
+// ══════════════════════════════════════════════════
+
+export function searchTvMaze(query: string): Promise<TvMazeSearchResult[]> {
+	return request(`/tvmaze/search?query=${encodeURIComponent(query)}`);
+}
+
+export function getTvMazeShow(showId: number): Promise<TvMazeShow | null> {
+	return request(`/tvmaze/show/${showId}`);
+}
+
+export function getTvMazeEpisodes(showId: number): Promise<TvMazeEpisode[]> {
+	return request(`/tvmaze/show/${showId}/episodes`);
+}
+
+export function getTvMazeCast(showId: number): Promise<TvMazeCastMember[]> {
+	return request(`/tvmaze/show/${showId}/cast`);
+}
+
+export function lookupTvMazeByTvdb(tvdbId: number): Promise<TvMazeShow | null> {
+	return request(`/tvmaze/lookup/tvdb/${tvdbId}`);
+}
+
+// ══════════════════════════════════════════════════
+// TYPES — Jikan (Anime/MyAnimeList)
+// ══════════════════════════════════════════════════
+
+export interface JikanAnime {
+	mal_id: number;
+	url?: string;
+	images?: { jpg?: { image_url?: string; large_image_url?: string }; webp?: { image_url?: string; large_image_url?: string } };
+	trailer?: { youtube_id?: string; url?: string };
+	title?: string;
+	title_english?: string;
+	title_japanese?: string;
+	type?: string;
+	episodes?: number;
+	status?: string;
+	airing?: boolean;
+	duration?: string;
+	rating?: string;
+	score?: number;
+	scored_by?: number;
+	rank?: number;
+	popularity?: number;
+	members?: number;
+	synopsis?: string;
+	season?: string;
+	year?: number;
+	genres?: { mal_id: number; name?: string }[];
+	studios?: { mal_id: number; name?: string }[];
+}
+
+export interface JikanResponse<T> {
+	data: T;
+	pagination?: { last_visible_page?: number; has_next_page?: boolean };
+}
+
+export interface JikanCharacter {
+	character?: { mal_id: number; name?: string; images?: { jpg?: { image_url?: string } } };
+	role?: string;
+}
+
+// ══════════════════════════════════════════════════
+// API — Jikan (Anime)
+// ══════════════════════════════════════════════════
+
+export function searchJikanAnime(query: string, page?: number): Promise<JikanResponse<JikanAnime[]>> {
+	const params = new URLSearchParams({ query });
+	if (page) params.set('page', page.toString());
+	return request(`/jikan/anime/search?${params}`);
+}
+
+export function getJikanAnime(malId: number): Promise<JikanAnime | null> {
+	return request(`/jikan/anime/${malId}`);
+}
+
+export function getJikanTopAnime(filter?: string, page?: number, limit?: number): Promise<JikanResponse<JikanAnime[]>> {
+	const params = new URLSearchParams();
+	if (filter) params.set('filter', filter);
+	if (page) params.set('page', page.toString());
+	if (limit) params.set('limit', limit.toString());
+	return request(`/jikan/anime/top?${params}`);
+}
+
+export function getJikanSeasonAnime(year: number, season: string, page?: number): Promise<JikanResponse<JikanAnime[]>> {
+	const params = new URLSearchParams({ year: year.toString(), season });
+	if (page) params.set('page', page.toString());
+	return request(`/jikan/anime/season?${params}`);
+}
+
+export function getJikanAnimeCharacters(malId: number): Promise<JikanCharacter[]> {
+	return request(`/jikan/anime/${malId}/characters`);
+}
+
+export function getJikanAnimeRecommendations(malId: number): Promise<any> {
+	return request(`/jikan/anime/${malId}/recommendations`);
+}
+
+// ══════════════════════════════════════════════════
+// TYPES — Trakt
+// ══════════════════════════════════════════════════
+
+export interface TraktIds {
+	trakt?: number;
+	slug?: string;
+	imdb?: string;
+	tmdb?: number;
+	tvdb?: number;
+}
+
+export interface TraktMovie {
+	title?: string;
+	year?: number;
+	ids?: TraktIds;
+}
+
+export interface TraktShow {
+	title?: string;
+	year?: number;
+	ids?: TraktIds;
+}
+
+export interface TraktTrendingMovie {
+	watchers?: number;
+	movie: TraktMovie;
+}
+
+export interface TraktTrendingShow {
+	watchers?: number;
+	show: TraktShow;
+}
+
+// ══════════════════════════════════════════════════
+// API — Trakt
+// ══════════════════════════════════════════════════
+
+export function getTraktTrendingMovies(limit?: number): Promise<TraktTrendingMovie[]> {
+	const params = limit ? `?limit=${limit}` : '';
+	return request(`/trakt/movies/trending${params}`);
+}
+
+export function getTraktPopularMovies(limit?: number): Promise<TraktMovie[]> {
+	const params = limit ? `?limit=${limit}` : '';
+	return request(`/trakt/movies/popular${params}`);
+}
+
+export function getTraktTrendingShows(limit?: number): Promise<TraktTrendingShow[]> {
+	const params = limit ? `?limit=${limit}` : '';
+	return request(`/trakt/shows/trending${params}`);
+}
+
+export function getTraktPopularShows(limit?: number): Promise<TraktShow[]> {
+	const params = limit ? `?limit=${limit}` : '';
+	return request(`/trakt/shows/popular${params}`);
+}
+
+export function getTraktRelatedMovies(id: string, limit?: number): Promise<TraktMovie[]> {
+	const params = limit ? `?limit=${limit}` : '';
+	return request(`/trakt/movies/${id}/related${params}`);
+}
+
+export function getTraktRelatedShows(id: string, limit?: number): Promise<TraktShow[]> {
+	const params = limit ? `?limit=${limit}` : '';
+	return request(`/trakt/shows/${id}/related${params}`);
+}
+
+// ══════════════════════════════════════════════════
+// TYPES — TasteDive
+// ══════════════════════════════════════════════════
+
+export interface TasteDiveItem {
+	Name?: string;
+	Type?: string;
+	wTeaser?: string;
+	wUrl?: string;
+	yUrl?: string;
+	yID?: string;
+}
+
+export interface TasteDiveResponse {
+	similar: { info: TasteDiveItem[]; results: TasteDiveItem[] };
+}
+
+// ══════════════════════════════════════════════════
+// API — TasteDive
+// ══════════════════════════════════════════════════
+
+export function getTasteDiveSimilar(query: string, mediaType?: string, limit?: number): Promise<TasteDiveResponse> {
+	const params = new URLSearchParams({ query });
+	if (mediaType) params.set('type', mediaType);
+	if (limit) params.set('limit', limit.toString());
+	return request(`/tastedive/similar?${params}`);
+}
+
+// ══════════════════════════════════════════════════
+// TYPES — Watchmode
+// ══════════════════════════════════════════════════
+
+export interface WatchmodeTitle {
+	id?: number;
+	name?: string;
+	year?: number;
+	type?: string;
+	tmdb_id?: number;
+	imdb_id?: string;
+}
+
+export interface WatchmodeSource {
+	source_id?: number;
+	name?: string;
+	type?: string;
+	region?: string;
+	web_url?: string;
+	format?: string;
+	price?: number;
+}
+
+export interface WatchmodeSearchResult {
+	title_results?: WatchmodeTitle[];
+}
+
+// ══════════════════════════════════════════════════
+// API — Watchmode
+// ══════════════════════════════════════════════════
+
+export function searchWatchmode(query: string): Promise<WatchmodeSearchResult> {
+	return request(`/watchmode/search?query=${encodeURIComponent(query)}`);
+}
+
+export function getWatchmodeSources(titleId: number): Promise<WatchmodeSource[]> {
+	return request(`/watchmode/title/${titleId}/sources`);
+}
+
+export function getWatchmodeSourcesByTmdb(tmdbId: number, mediaType: string): Promise<WatchmodeSource[]> {
+	return request(`/watchmode/sources/tmdb/${tmdbId}/${mediaType}`);
+}
+
+// ══════════════════════════════════════════════════
+// IMDBBOT (Alternative IMDb)
+// ══════════════════════════════════════════════════
+
+export interface ImdbSearchResult {
+	result_type?: string;
+	id?: string;
+	image?: string;
+	description?: string;
+	title?: string;
+}
+
+export interface ImdbMovie {
+	id?: string;
+	title?: string;
+	year?: number;
+	description?: string;
+	image?: string;
+	imdb_id?: string;
+	rating?: number;
+	vote_count?: number;
+}
+
+export function searchImdbBot(query: string): Promise<ImdbSearchResult[]> {
+	return request(`/imdbbot/search?q=${encodeURIComponent(query)}`);
+}
+
+export function getImdbbotDetails(imdbId: string): Promise<ImdbMovie | null> {
+	return request(`/imdbbot/${imdbId}`);
+}
+
+export function getImdbbotRatings(imdbId: string): Promise<Record<string, any> | null> {
+	return request(`/imdbbot/${imdbId}/ratings`);
+}
+
+// ══════════════════════════════════════════════════
+// SIMKL (Movie + TV + Anime + Streaming)
+// ══════════════════════════════════════════════════
+
+export interface SimklSearchResult {
+	id?: number;
+	title?: string;
+	year?: number;
+	poster?: string;
+	fanart?: string;
+	type?: string;
+	rating?: number;
+	imdb?: string;
+	tmdb?: number;
+}
+
+export interface SimklShowDetails {
+	id?: number;
+	title?: string;
+	year?: number;
+	description?: string;
+	poster?: string;
+	fanart?: string;
+	seasons?: number;
+	episodes?: number;
+	rating?: number;
+	genres?: string[];
+	country?: string;
+	runtime?: number;
+}
+
+export interface SimklStreamSource {
+	source?: string;
+	url?: string;
+	region?: string;
+	is_free?: boolean;
+}
+
+export function searchSimkl(query: string, type: string = 'show'): Promise<SimklSearchResult[]> {
+	return request(`/simkl/search?q=${encodeURIComponent(query)}&type=${type}`);
+}
+
+export function getSimklDetails(id: number, type: string = 'show'): Promise<SimklShowDetails | null> {
+	return request(`/simkl/${id}/${type}`);
+}
+
+export function getSimklTrending(type: string = 'show'): Promise<SimklSearchResult[]> {
+	return request(`/simkl/trending/${type}`);
+}
+
+export function getSimklSources(id: number): Promise<SimklStreamSource[]> {
+	return request(`/simkl/${id}/sources`);
+}
+
+// ══════════════════════════════════════════════════
+// UNOGS (Netflix Search by Region)
+// ══════════════════════════════════════════════════
+
+export interface UnogsResult {
+	id?: string;
+	title?: string;
+	image?: string;
+	year?: number;
+	type?: string;
+	imdb_id?: string;
+}
+
+export interface UnogsRegion {
+	id?: string;
+	country?: string;
+}
+
+export function searchUnogs(query: string, type: string = 'movie'): Promise<UnogsResult[]> {
+	return request(`/unogs/search?q=${encodeURIComponent(query)}&type=${type}`);
+}
+
+export function getUnogsFromImdb(imdbId: string): Promise<UnogsResult | null> {
+	return request(`/unogs/imdb/${imdbId}`);
+}
+
+export function getUnogsRegions(): Promise<UnogsRegion[]> {
+	return request(`/unogs/regions`);
+}
+
+export function searchUnogsInRegion(region: string, query: string): Promise<UnogsResult[]> {
+	return request(`/unogs/region/${region}/search?q=${encodeURIComponent(query)}`);
+}
+
+// ══════════════════════════════════════════════════
+// STREAM (Czech Streams)
+// ══════════════════════════════════════════════════
+
+export interface StreamItem {
+	id?: string;
+	title?: string;
+	description?: string;
+	image?: string;
+	url?: string;
+	category?: string;
+	country?: string;
+}
+
+export interface StreamProgram {
+	id?: string;
+	title?: string;
+	description?: string;
+	image?: string;
+	start_time?: string;
+	end_time?: string;
+	channel?: string;
+}
+
+// ══════════════════════════════════════════════════
+// COLLECTIONS (Game of Thrones, Breaking Bad, etc)
+// ══════════════════════════════════════════════════
+
+export interface Collection {
+	id: string;
+	name: string;
+	description?: string;
+	category: string;
+	api_source: string;
+	cover_image_url?: string;
+	backdrop_url?: string;
+	created_at: string;
+}
+
+export interface CollectionItem {
+	id: string;
+	collection_id: string;
+	external_id?: string;
+	name: string;
+	description?: string;
+	image_url?: string;
+	item_type?: string;
+	data_json?: Record<string, any>;
+	created_at: string;
+}
+
+export function getCollections(): Promise<Collection[]> {
+	return request('/collections');
+}
+
+export function getCollection(id: string): Promise<Collection> {
+	return request(`/collections/${id}`);
+}
+
+export function getCollectionItems(id: string, page: number = 1, limit: number = 20): Promise<CollectionItem[]> {
+	return request(`/collections/${id}/items?page=${page}&limit=${limit}`);
+}
+
+export function getCollectionItemsByType(
+	id: string,
+	itemType: string,
+	page: number = 1,
+	limit: number = 20
+): Promise<CollectionItem[]> {
+	return request(`/collections/${id}/items/${itemType}?page=${page}&limit=${limit}`);
+}
+
+// ══════════════════════════════════════════════════
+// TV CHANNELS & EPG
+// ══════════════════════════════════════════════════
+
+export interface TvChannel {
+	id: string;
+	name: string;
+	code: string;
+	country?: string;
+	logo_url?: string;
+	category?: string;
+	is_free: boolean;
+	is_active: boolean;
+	stream_url?: string;
+	created_at: string;
+}
+
+export interface TvProgram {
+	id: string;
+	channel_id: string;
+	title: string;
+	description?: string;
+	start_time: string;
+	end_time: string;
+	genre?: string;
+	image_url?: string;
+	rating?: number;
+	external_id?: string;
+	created_at: string;
+}
+
+export function getTvChannels(): Promise<TvChannel[]> {
+	return request('/tv/channels');
+}
+
+export function getTvChannel(id: string): Promise<TvChannel> {
+	return request(`/tv/channels/${id}`);
+}
+
+export function getTvChannelPrograms(
+	id: string,
+	page: number = 1,
+	limit: number = 50
+): Promise<TvProgram[]> {
+	return request(`/tv/channels/${id}/programs?page=${page}&limit=${limit}`);
+}
+
+export function getTvChannelStream(code: string): Promise<{
+	id: string;
+	name: string;
+	code: string;
+	stream_url?: string;
+	logo_url?: string;
+}> {
+	return request(`/tv/channels/${code}/stream`);
+}
+
+export function getTvProgramsNow(): Promise<TvProgram[]> {
+	return request('/tv/programs/now');
+}
+
+export function searchTvPrograms(query: string, limit: number = 20): Promise<TvProgram[]> {
+	return request(`/tv/programs/search?q=${encodeURIComponent(query)}&limit=${limit}`);
+}
+
+export function searchStream(query: string): Promise<StreamItem[]> {
+	return request(`/stream/search?q=${encodeURIComponent(query)}`);
+}
+
+export function getStreamDetails(id: string): Promise<StreamItem | null> {
+	return request(`/stream/${id}`);
+}
+
+export function getStreamByCategory(category: string): Promise<StreamItem[]> {
+	return request(`/stream/category/${category}`);
 }

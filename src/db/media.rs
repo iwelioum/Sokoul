@@ -44,6 +44,21 @@ pub async fn get_media_by_id(pool: &PgPool, id: Uuid) -> Result<Media, sqlx::Err
     Ok(media)
 }
 
+pub async fn get_media_by_tmdb_and_type(
+    pool: &PgPool,
+    tmdb_id: i32,
+    media_type: &str,
+) -> Result<Option<Media>, sqlx::Error> {
+    let media =
+        sqlx::query_as::<_, Media>("SELECT * FROM media WHERE tmdb_id = $1 AND media_type = $2")
+            .bind(tmdb_id)
+            .bind(media_type)
+            .fetch_optional(pool)
+            .await?;
+
+    Ok(media)
+}
+
 pub async fn list_media(pool: &PgPool, limit: i64, offset: i64) -> Result<Vec<Media>, sqlx::Error> {
     let media_list = sqlx::query_as::<_, Media>(
         "SELECT * FROM media ORDER BY updated_at DESC LIMIT $1 OFFSET $2",

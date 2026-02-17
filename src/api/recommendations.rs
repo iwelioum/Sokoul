@@ -41,7 +41,7 @@ pub async fn get_recommendations_handler(
     let media = crate::db::media::get_media_by_id(&state.db_pool, media_id).await?;
 
     let tmdb_id = media.tmdb_id.ok_or_else(|| {
-        ApiError::InvalidInput("Ce média n'a pas de TMDB ID pour les recommandations.".into())
+        ApiError::InvalidInput("This media has no TMDB ID for recommendations.".into())
     })?;
 
     let client = reqwest::Client::new();
@@ -56,7 +56,7 @@ pub async fn get_recommendations_handler(
         ),
         _ => {
             return Err(ApiError::InvalidInput(
-                "Les recommandations ne sont disponibles que pour les films et séries.".into(),
+                "Recommendations are only available for movies and TV shows.".into(),
             ))
         }
     };
@@ -70,10 +70,10 @@ pub async fn get_recommendations_handler(
         ])
         .send()
         .await
-        .map_err(|e| ApiError::Internal(anyhow::anyhow!("Erreur TMDB: {}", e)))?
+        .map_err(|e| ApiError::Internal(anyhow::anyhow!("TMDB error: {}", e)))?
         .json::<TmdbRecommendationResponse>()
         .await
-        .map_err(|e| ApiError::Internal(anyhow::anyhow!("Erreur parsing TMDB: {}", e)))?;
+        .map_err(|e| ApiError::Internal(anyhow::anyhow!("TMDB parsing error: {}", e)))?;
 
     let recommendations: Vec<Recommendation> = response
         .results

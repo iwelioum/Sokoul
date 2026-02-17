@@ -4,9 +4,10 @@
 	import {
 		tmdbMovieDetails, tmdbCredits, tmdbVideos, tmdbSimilar,
 		tmdbImageUrl, addToLibrary, removeFromLibrary,
-		addToWatchlist, removeFromWatchlist, getLibraryStatus, createMedia, triggerSearch, startDownload, getSearchResults
+		addToWatchlist, removeFromWatchlist, getLibraryStatus, createMedia, triggerSearch, startDownload, getSearchResults,
+		getOmdbByImdbId, getFanartMovie
 	} from '$lib/api/client';
-	import type { TmdbMovieDetail, TmdbCastMember, TmdbVideo, TmdbSearchItem, LibraryStatus, Media, SearchResult } from '$lib/api/client';
+	import type { TmdbMovieDetail, TmdbCastMember, TmdbVideo, TmdbSearchItem, LibraryStatus, Media, SearchResult, OmdbResponse, FanartMovieImages } from '$lib/api/client';
 	import MediaRow from '$lib/components/MediaRow.svelte';
 	import Skeleton from '$lib/components/Skeleton.svelte';
 
@@ -20,6 +21,9 @@
 	let loading = $state(true);
 	let error = $state('');
 
+	// Enrichment data
+	let omdbData: OmdbResponse | null = $state(null);
+	let fanartData: FanartMovieImages | null = $state(null);
 	// Optimistic UI
 	let libAdding = $state(false);
 
@@ -57,6 +61,14 @@
 			error = `Erreur lors du chargement: ${e.message}`;
 		}
 		loading = false;
+
+		// Load enrichment data in background (non-blocking)
+		if (movie) {
+			getFanartMovie(id).then(f => fanartData = f).catch(() => {});
+			if (movie.imdb_id) {
+				getOmdbByImdbId(movie.imdb_id).then(o => omdbData = o).catch(() => {});
+			}
+		}
 	}
 
 	function handlePlay() {
@@ -66,7 +78,7 @@
 
 	async function handleDownload() {
 		if (!movie) return;
-		goto(`/downloads?query=${encodeURIComponent(movie.title)}&tmdbId=${movie.id}`);
+		goto(`/downloads?query=${encodeURIComponent(movie.title)}&tmdbId=${movie.id}&mediaType=movie`);
 	}
 
 	async function startTorrentDownload(searchResultId: number, mediaId: string) {
@@ -105,16 +117,20 @@
 
 	async function toggleWatchlist() {
 		if (!movie) return;
-		if (libraryStatus?.in_watchlist) {
-			await removeFromWatchlist(movie.id, 'movie');
-			if (libraryStatus) libraryStatus = { ...libraryStatus, in_watchlist: false };
-		} else {
-			await addToWatchlist({
-				tmdb_id: movie.id, media_type: 'movie', title: movie.title,
-				poster_url: tmdbImageUrl(movie.poster_path)
-			});
-			if (libraryStatus) libraryStatus = { ...libraryStatus, in_watchlist: true };
-			else libraryStatus = { in_library: false, in_watchlist: true, watch_progress: null, completed: false };
+		const wasIn = libraryStatus?.in_watchlist ?? false;
+		if (libraryStatus) libraryStatus = { ...libraryStatus, in_watchlist: !wasIn };
+		else libraryStatus = { in_library: false, in_watchlist: true, watch_progress: null, completed: false };
+		try {
+			if (wasIn) {
+				await removeFromWatchlist(movie.id, 'movie');
+			} else {
+				await addToWatchlist({
+					tmdb_id: movie.id, media_type: 'movie', title: movie.title,
+					poster_url: tmdbImageUrl(movie.poster_path)
+				});
+			}
+		} catch {
+			if (libraryStatus) libraryStatus = { ...libraryStatus, in_watchlist: wasIn };
 		}
 	}
 
@@ -147,21 +163,17 @@
 		</div>
 	</div>
 {:else if movie}
-	<!-- Breadcrumbs -->
-	<nav class="breadcrumbs" aria-label="Fil d'Ariane">
-		<a href="/">Accueil</a>
-		<span class="bc-sep">›</span>
-		<a href="/films">Films</a>
-		<span class="bc-sep">›</span>
-		<span class="bc-current">{movie.title}</span>
-	</nav>
-
 	<!-- Backdrop Hero -->
 	<div class="detail-hero">
 		{#if movie.backdrop_path}
 			<div class="hero-backdrop" style="background-image:url({tmdbImageUrl(movie.backdrop_path, 'original')})"></div>
 		{/if}
 		<div class="hero-gradient"></div>
+
+		<a href="/films" class="back-btn" aria-label="Retour aux films">
+			<svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+			Films
+		</a>
 
 		<div class="hero-content">
 			{#if movie.poster_path}
@@ -184,7 +196,19 @@
 					{#if movie.vote_average}
 						<span class="rating">★ {movie.vote_average.toFixed(1)}</span>
 					{/if}
+					{#if omdbData?.imdbRating}
+						<span class="rating imdb">IMDb {omdbData.imdbRating}</span>
+					{/if}
+					{#if omdbData?.Ratings}
+						{#each omdbData.Ratings.filter(r => r.Source === 'Rotten Tomatoes') as rt}
+							<span class="rating rt">🍅 {rt.Value}</span>
+						{/each}
+					{/if}
 				</div>
+
+				{#if omdbData?.Awards && omdbData.Awards !== 'N/A'}
+					<p class="awards">🏆 {omdbData.Awards}</p>
+				{/if}
 
 				<div class="genres">
 					{#each movie.genres as genre (genre.id)}
@@ -272,6 +296,51 @@
 			</section>
 		{/if}
 
+		<!-- Infos enrichies (OMDb) -->
+		{#if omdbData && omdbData.Title}
+			<section class="detail-section">
+				<h2 class="section-title">Informations complémentaires</h2>
+				<div class="enrichment-grid">
+					{#if omdbData.Director && omdbData.Director !== 'N/A'}
+						<div class="info-item"><span class="info-label">Réalisateur</span><span class="info-value">{omdbData.Director}</span></div>
+					{/if}
+					{#if omdbData.Writer && omdbData.Writer !== 'N/A'}
+						<div class="info-item"><span class="info-label">Scénariste</span><span class="info-value">{omdbData.Writer}</span></div>
+					{/if}
+					{#if omdbData.BoxOffice && omdbData.BoxOffice !== 'N/A'}
+						<div class="info-item"><span class="info-label">Box Office</span><span class="info-value">{omdbData.BoxOffice}</span></div>
+					{/if}
+					{#if omdbData.Country && omdbData.Country !== 'N/A'}
+						<div class="info-item"><span class="info-label">Pays</span><span class="info-value">{omdbData.Country}</span></div>
+					{/if}
+					{#if omdbData.Language && omdbData.Language !== 'N/A'}
+						<div class="info-item"><span class="info-label">Langue</span><span class="info-value">{omdbData.Language}</span></div>
+					{/if}
+					{#if omdbData.Rated && omdbData.Rated !== 'N/A'}
+						<div class="info-item"><span class="info-label">Classification</span><span class="info-value">{omdbData.Rated}</span></div>
+					{/if}
+					{#if omdbData.Production && omdbData.Production !== 'N/A'}
+						<div class="info-item"><span class="info-label">Production</span><span class="info-value">{omdbData.Production}</span></div>
+					{/if}
+				</div>
+			</section>
+		{/if}
+
+		<!-- Fanart.tv Images -->
+		{#if fanartData && (fanartData.hdmovielogo?.length > 0 || fanartData.moviebackground?.length > 0)}
+			<section class="detail-section">
+				<h2 class="section-title">Galerie artistique</h2>
+				<div class="fanart-gallery">
+					{#if fanartData.hdmovielogo?.length > 0}
+						<img class="fanart-logo" src={fanartData.hdmovielogo[0].url} alt="Logo HD" loading="lazy" />
+					{/if}
+					{#each fanartData.moviebackground?.slice(0, 4) ?? [] as bg}
+						<img class="fanart-bg" src={bg.url} alt="Background" loading="lazy" />
+					{/each}
+				</div>
+			</section>
+		{/if}
+
 		<!-- Trailer -->
 		{#if trailer}
 			<section class="detail-section">
@@ -324,39 +393,35 @@
 {/if}
 
 <style>
-	/* ── Breadcrumbs ── */
-	.breadcrumbs {
+	/* ── Back button ── */
+	.back-btn {
+		position: absolute;
+		top: 80px;
+		left: 20px;
+		z-index: 5;
 		display: flex;
 		align-items: center;
 		gap: 6px;
+		padding: 8px 16px;
+		background: rgba(0, 0, 0, 0.5);
+		backdrop-filter: blur(8px);
+		color: rgba(249, 249, 249, 0.9);
+		border-radius: 4px;
 		font-size: 13px;
-		color: var(--text-muted);
-		padding: 0 0 16px;
-	}
-
-	.breadcrumbs a {
-		color: var(--text-secondary);
-		text-decoration: none;
-		transition: color var(--transition-fast);
-	}
-
-	.breadcrumbs a:hover { color: var(--text-primary); }
-
-	.bc-sep { color: var(--text-muted); }
-
-	.bc-current {
-		color: var(--text-primary);
 		font-weight: 500;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-		max-width: 200px;
+		text-decoration: none;
+		transition: all var(--transition-fast);
+	}
+
+	.back-btn:hover {
+		background: rgba(0, 0, 0, 0.7);
+		color: #f9f9f9;
 	}
 
 	.error-state {
 		padding: 60px 24px;
 		text-align: center;
-		color: var(--text-secondary);
+		color: rgba(249, 249, 249, 0.6);
 	}
 
 	.btn-back {
@@ -368,27 +433,28 @@
 
 	.detail-skeleton { animation: none; }
 
-	/* ── Hero ── */
+	/* ── Hero — Disney+ fixed background style ── */
 	.detail-hero {
 		position: relative;
-		min-height: 480px;
+		min-height: 100vh;
 		display: flex;
 		align-items: flex-end;
-		margin: -24px -24px 0;
 		overflow: hidden;
 	}
 
 	.hero-backdrop {
-		position: absolute;
+		position: fixed;
 		inset: 0;
 		background-size: cover;
 		background-position: center 20%;
+		opacity: 0.8;
+		z-index: -1;
 	}
 
 	.hero-gradient {
 		position: absolute;
 		inset: 0;
-		background: linear-gradient(to bottom, rgba(10,10,15,0.3) 0%, rgba(10,10,15,0.8) 60%, var(--bg-primary) 100%);
+		background: linear-gradient(to bottom, rgba(26, 29, 41, 0.3) 0%, rgba(26, 29, 41, 0.85) 60%, #1A1D29 100%);
 	}
 
 	.hero-content {
@@ -397,21 +463,21 @@
 		display: flex;
 		align-items: flex-end;
 		gap: 28px;
-		padding: 32px;
+		padding: 32px calc(3.5vw + 5px);
 		width: 100%;
 	}
 
 	.hero-poster {
 		width: 160px;
-		border-radius: var(--radius);
-		box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+		border-radius: 10px;
+		box-shadow: rgb(0 0 0 / 69%) 0px 26px 30px -10px, rgb(0 0 0 / 73%) 0px 16px 10px -10px;
 		flex-shrink: 0;
 	}
 
 	.hero-info { flex: 1; min-width: 0; }
 
 	.tagline {
-		color: var(--text-secondary);
+		color: rgba(249, 249, 249, 0.5);
 		font-style: italic;
 		font-size: 14px;
 		margin-bottom: 8px;
@@ -420,7 +486,7 @@
 	.detail-title {
 		font-size: clamp(24px, 3.5vw, 42px);
 		font-weight: 800;
-		color: #fff;
+		color: #f9f9f9;
 		line-height: 1.1;
 		text-shadow: 0 2px 8px rgba(0,0,0,0.4);
 		margin-bottom: 10px;
@@ -430,7 +496,7 @@
 		display: flex;
 		align-items: center;
 		gap: 12px;
-		color: var(--text-secondary);
+		color: rgba(249, 249, 249, 0.6);
 		font-size: 14px;
 		margin-bottom: 12px;
 	}
@@ -445,70 +511,77 @@
 	}
 
 	.genre-pill {
-		background: rgba(108,92,231,0.2);
-		border: 1px solid rgba(108,92,231,0.4);
-		color: var(--accent);
+		background: rgba(249, 249, 249, 0.1);
+		border: 1px solid rgba(249, 249, 249, 0.2);
+		color: rgba(249, 249, 249, 0.8);
 		font-size: 12px;
 		padding: 3px 10px;
-		border-radius: 20px;
+		border-radius: 4px;
 	}
 
 	.action-buttons {
 		display: flex;
 		flex-wrap: wrap;
 		gap: 10px;
+		align-items: center;
 	}
 
+	/* Play button: accent gold */
 	.btn-primary {
 		display: flex;
 		align-items: center;
 		gap: 8px;
-		padding: 10px 22px;
+		padding: 12px 28px;
 		background: var(--accent);
 		color: #fff;
 		border: none;
-		border-radius: var(--radius-sm);
-		font-size: 14px;
-		font-weight: 600;
+		border-radius: 4px;
+		font-size: 15px;
+		font-weight: 700;
 		cursor: pointer;
+		text-transform: uppercase;
+		letter-spacing: 1.5px;
 		transition: all var(--transition-fast);
 	}
 
 	.btn-primary:hover { background: var(--accent-hover); transform: scale(1.02); }
 	.btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
 
+	/* Outline button: transparent, border */
 	.btn-outline {
 		display: flex;
 		align-items: center;
 		gap: 6px;
 		padding: 10px 18px;
-		background: rgba(255,255,255,0.08);
+		background: rgba(0, 0, 0, 0.3);
 		color: var(--text-primary);
-		border: 1px solid rgba(255,255,255,0.2);
-		border-radius: var(--radius-sm);
+		border: 2px solid var(--border);
+		border-radius: 4px;
 		font-size: 13px;
-		font-weight: 500;
+		font-weight: 600;
 		cursor: pointer;
+		text-transform: uppercase;
+		letter-spacing: 1px;
 		transition: all var(--transition-fast);
 	}
 
-	.btn-outline:hover { background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.4); }
-	.btn-outline.active { background: rgba(108,92,231,0.2); border-color: var(--accent); color: var(--accent); }
+	.btn-outline:hover { background: var(--bg-hover); border-color: var(--accent); }
+	.btn-outline.active { background: rgba(0, 114, 210, 0.2); border-color: var(--accent); color: var(--text-primary); }
 
 	/* ── Body ── */
-	.detail-body { padding: 32px 0; }
+	.detail-body { padding: 32px calc(3.5vw + 5px); }
 
 	.detail-section { margin-bottom: 40px; }
 
 	.section-title {
 		font-size: 18px;
 		font-weight: 700;
-		color: var(--text-primary);
+		color: #f9f9f9;
 		margin-bottom: 14px;
 	}
 
 	.overview {
-		color: var(--text-secondary);
+		color: rgba(249, 249, 249, 0.7);
 		font-size: 15px;
 		line-height: 1.7;
 		max-width: 800px;
@@ -519,9 +592,10 @@
 		position: relative;
 		aspect-ratio: 16 / 9;
 		max-width: 800px;
-		border-radius: var(--radius);
+		border-radius: 10px;
 		overflow: hidden;
 		background: #000;
+		box-shadow: rgb(0 0 0 / 69%) 0px 26px 30px -10px;
 	}
 
 	.trailer-wrap iframe {
@@ -552,9 +626,9 @@
 	.cast-photo {
 		width: 100%;
 		aspect-ratio: 2 / 3;
-		border-radius: var(--radius-sm);
+		border-radius: 10px;
 		overflow: hidden;
-		background: var(--bg-card);
+		background: #252833;
 		margin-bottom: 6px;
 	}
 
@@ -571,13 +645,13 @@
 		align-items: center;
 		justify-content: center;
 		color: var(--text-muted);
-		background: var(--bg-secondary);
+		background: #252833;
 	}
 
 	.cast-name {
 		font-size: 12px;
 		font-weight: 600;
-		color: var(--text-primary);
+		color: #f9f9f9;
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
@@ -585,7 +659,7 @@
 
 	.cast-character {
 		font-size: 11px;
-		color: var(--text-muted);
+		color: rgba(249, 249, 249, 0.5);
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
@@ -599,9 +673,9 @@
 	}
 
 	.torrent-item {
-		background: var(--bg-card);
+		background: #252833;
 		border: 1px solid var(--border);
-		border-radius: var(--radius-sm);
+		border-radius: 10px;
 		padding: 15px;
 		display: flex;
 		flex-direction: column;
@@ -611,7 +685,7 @@
 	.torrent-title {
 		font-size: 15px;
 		font-weight: 600;
-		color: var(--text-primary);
+		color: #f9f9f9;
 	}
 
 	.torrent-meta {
@@ -619,7 +693,7 @@
 		flex-wrap: wrap;
 		gap: 10px;
 		font-size: 12px;
-		color: var(--text-secondary);
+		color: rgba(249, 249, 249, 0.6);
 	}
 
 	.torrent-meta span:not(:last-child)::after {
@@ -637,5 +711,58 @@
 	.error-message {
 		color: var(--danger);
 		font-weight: 500;
+	}
+
+	/* ── Enrichment ── */
+	.rating.imdb {
+		color: #f5c518;
+		font-weight: 700;
+	}
+	.rating.rt {
+		color: #fa320a;
+		font-weight: 600;
+	}
+	.awards {
+		color: #f5c518;
+		font-size: 13px;
+		margin-top: 6px;
+		font-style: italic;
+	}
+	.enrichment-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+		gap: 12px;
+	}
+	.info-item {
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+	}
+	.info-label {
+		font-size: 11px;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		color: rgba(249, 249, 249, 0.4);
+	}
+	.info-value {
+		font-size: 14px;
+		color: #f9f9f9;
+	}
+	.fanart-gallery {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 12px;
+		align-items: center;
+	}
+	.fanart-logo {
+		max-height: 80px;
+		width: auto;
+		object-fit: contain;
+	}
+	.fanart-bg {
+		width: 280px;
+		height: 160px;
+		object-fit: cover;
+		border-radius: 10px;
 	}
 </style>

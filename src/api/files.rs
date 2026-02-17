@@ -19,14 +19,12 @@ pub async fn stream_file_handler(
 
     let path = std::path::Path::new(&file.file_path);
     if !path.exists() {
-        return Err(ApiError::NotFound(
-            "Fichier introuvable sur le disque".into(),
-        ));
+        return Err(ApiError::NotFound("File not found on disk".into()));
     }
 
-    let tokio_file = tokio::fs::File::open(path).await.map_err(|e| {
-        ApiError::Internal(anyhow::anyhow!("Impossible d'ouvrir le fichier: {}", e))
-    })?;
+    let tokio_file = tokio::fs::File::open(path)
+        .await
+        .map_err(|e| ApiError::Internal(anyhow::anyhow!("Unable to open file: {}", e)))?;
 
     let metadata = tokio_file
         .metadata()
