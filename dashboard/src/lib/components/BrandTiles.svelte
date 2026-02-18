@@ -1,15 +1,13 @@
 <script lang="ts">
 	const brands = [
-		{ name: 'Disney+', logo: '/brands/disney.svg', provider: '337' },
-		{ name: 'Pixar', logo: '/brands/pixar.svg', provider: '337' },
-		{ name: 'Marvel', logo: '/brands/marvel.svg', provider: '337' },
-		{ name: 'Star Wars', logo: '/brands/starwars.svg', provider: '337' },
-		{ name: 'National Geographic', logo: '/brands/natgeo.svg', provider: '337' },
 		{ name: 'Netflix', logo: '/brands/netflix.svg', provider: '8' },
-		{ name: 'HBO', logo: '/brands/hbo.svg', provider: '384' },
-		{ name: 'Paramount+', logo: '/brands/paramount.svg', provider: '531' },
+		{ name: 'Disney+', logo: '/brands/disney.svg', provider: '337' },
 		{ name: 'Amazon Prime', logo: '/brands/prime.svg', provider: '119' },
+		{ name: 'HBO', logo: '/brands/hbo.svg', provider: '384' },
 		{ name: 'Apple TV+', logo: '/brands/appletv.svg', provider: '350' },
+		{ name: 'Paramount+', logo: '/brands/paramount.svg', provider: '531' },
+		{ name: 'Pixar', logo: '/brands/pixar.svg', provider: '337' },
+		{ name: 'National Geographic', logo: '/brands/natgeo.svg', provider: '337' },
 		{ name: 'Warner Bros.', logo: '/brands/warner.svg', provider: '8' },
 	];
 

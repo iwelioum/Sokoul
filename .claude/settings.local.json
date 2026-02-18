@@ -28,7 +28,12 @@
       "Bash(docker start:*)",
       "Bash(docker port:*)",
       "Bash(docker exec:*)",
-      "Bash(cargo run:*)"
+      "Bash(cargo run:*)",
+      "Bash(wc:*)",
+      "Bash(rustc:*)",
+      "Bash(echo:*)",
+      "Bash(cargo:*)",
+      "Bash(node:*)"
     ]
   }
 }

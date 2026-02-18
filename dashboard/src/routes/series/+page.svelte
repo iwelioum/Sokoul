@@ -2,15 +2,28 @@
 	import { tmdbDiscover, listLibrary, isLoggedIn } from '$lib/api/client';
 	import type { TmdbSearchItem, Favorite } from '$lib/api/client';
 	import MediaCard from '$lib/components/MediaCard.svelte';
+	import MediaRow from '$lib/components/MediaRow.svelte';
 	import MegaFilter from '$lib/components/MegaFilter.svelte';
 	import type { FilterState } from '$lib/components/MegaFilter.svelte';
 	import Skeleton from '$lib/components/Skeleton.svelte';
 	import { onMount } from 'svelte';
 
+	const TV_GENRES = [
+		{ id: 18, name: 'Drame' },
+		{ id: 35, name: 'Comédie' },
+		{ id: 80, name: 'Crime' },
+		{ id: 10759, name: 'Action & Aventure' },
+		{ id: 10765, name: 'SF & Fantastique' },
+		{ id: 9648, name: 'Mystère' },
+		{ id: 16, name: 'Animation' },
+	];
+
 	let items: TmdbSearchItem[] = $state([]);
+	let genreItems: Record<number, TmdbSearchItem[]> = $state({});
 	let libraryIds = $state(new Set<number>());
 	let page = $state(1);
 	let loading = $state(true);
+	let loadingGenres = $state(true);
 	let hasMore = $state(true);
 
 	// Filter state
@@ -23,6 +36,23 @@
 	let providerFilter: string | null = $state(null);
 	let providerName: string | null = $state(null);
 	let activeFilterCount = $state(0);
+
+	async function loadGenreRows() {
+		loadingGenres = true;
+		const results = await Promise.allSettled(
+			TV_GENRES.map(g =>
+				tmdbDiscover('tv', { with_genres: String(g.id), sort_by: 'popularity.desc', page: 1 })
+			)
+		);
+		const newGenreItems: Record<number, TmdbSearchItem[]> = {};
+		results.forEach((result, i) => {
+			if (result.status === 'fulfilled') {
+				newGenreItems[TV_GENRES[i].id] = result.value.results.slice(0, 20);
+			}
+		});
+		genreItems = newGenreItems;
+		loadingGenres = false;
+	}
 
 	async function fetchItems() {
 		if (!hasMore) return;
@@ -89,18 +119,30 @@
 		providerFilter = null;
 		providerName = null;
 		activeFilterCount = 0;
+		window.history.replaceState({}, '', '/series');
 		items = [];
 		page = 1;
 		hasMore = true;
-		fetchItems();
+		loadGenreRows();
 	}
 
 	onMount(() => {
 		const params = new URL(window.location.href).searchParams;
 		providerFilter = params.get('provider');
 		providerName = params.get('provider_name');
-		if (providerFilter) activeFilterCount = 1;
-		fetchItems();
+
+		const genreParam = params.get('genre');
+		if (genreParam) {
+			const genreId = parseInt(genreParam);
+			if (!isNaN(genreId)) selectedGenres = [genreId];
+		}
+
+		if (providerFilter || selectedGenres.length > 0) {
+			activeFilterCount = (providerFilter ? 1 : 0) + selectedGenres.length;
+			fetchItems();
+		} else {
+			loadGenreRows();
+		}
 		fetchLibrary();
 	});
 </script>
@@ -169,30 +211,43 @@
 		</div>
 	{/if}
 
-	<div class="grid">
-		{#each items as item (item.id)}
-			<MediaCard item={item} inLibrary={libraryIds.has(item.id)} />
+	{#if activeFilterCount === 0 && !providerFilter}
+		<!-- Genre rows view -->
+		{#each TV_GENRES as genre (genre.id)}
+			<MediaRow
+				title={genre.name}
+				items={genreItems[genre.id] ?? []}
+				loading={loadingGenres}
+				seeMoreHref={`/series?genre=${genre.id}&genre_name=${encodeURIComponent(genre.name)}`}
+			/>
 		{/each}
-	</div>
-
-	{#if loading}
+	{:else}
+		<!-- Filtered flat grid view -->
 		<div class="grid">
-			{#each Array(20) as _}
-				<Skeleton />
+			{#each items as item (item.id)}
+				<MediaCard item={item} inLibrary={libraryIds.has(item.id)} />
 			{/each}
 		</div>
-	{/if}
 
-	{#if hasMore && !loading}
-		<button class="load-more" onclick={fetchItems}>Charger plus</button>
-	{/if}
+		{#if loading}
+			<div class="grid">
+				{#each Array(20) as _}
+					<Skeleton />
+				{/each}
+			</div>
+		{/if}
 
-	{#if !loading && items.length === 0 && !hasMore}
-		<div class="empty-state">
-			<svg viewBox="0 0 24 24" fill="currentColor" width="48" height="48" style="opacity:0.3"><path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 1.99-.9 1.99-2L23 5c0-1.1-.9-2-2-2zm0 14H3V5h18v12z"/></svg>
-			<p>Aucun résultat trouvé</p>
-			<button class="btn-clear" onclick={clearAllFilters}>Réinitialiser les filtres</button>
-		</div>
+		{#if hasMore && !loading}
+			<button class="load-more" onclick={fetchItems}>Charger plus</button>
+		{/if}
+
+		{#if !loading && items.length === 0 && !hasMore}
+			<div class="empty-state">
+				<svg viewBox="0 0 24 24" fill="currentColor" width="48" height="48" style="opacity:0.3"><path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 1.99-.9 1.99-2L23 5c0-1.1-.9-2-2-2zm0 14H3V5h18v12z"/></svg>
+				<p>Aucun résultat trouvé</p>
+				<button class="btn-clear" onclick={clearAllFilters}>Réinitialiser les filtres</button>
+			</div>
+		{/if}
 	{/if}
 </div>
 

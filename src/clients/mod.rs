@@ -1,4 +1,5 @@
 pub mod collections;
+pub mod consumet;
 pub mod fanart;
 pub mod flaresolverr;
 pub mod imdbbot;

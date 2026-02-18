@@ -1,6 +1,7 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
+use std::collections::HashMap;
 use uuid::Uuid;
 
 // ── Media ──
@@ -231,4 +232,40 @@ pub struct PaginatedWatchlist {
     pub page: i64,
     pub per_page: i64,
     pub total_pages: i64,
+}
+
+// ── Streaming ──
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct StreamResponse {
+    pub sources: Vec<StreamSource>,
+    pub recommended: usize, // Index de la source recommandée
+    pub subtitles: Vec<SubtitleTrack>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct StreamSource {
+    pub url: String,
+    pub quality: String,  // "1080p", "720p", "auto"
+    pub provider: String, // "flixhq", "vidsrc", etc.
+    pub has_vf: bool,
+    pub is_alive: bool,
+    pub audio_tracks: Vec<AudioTrack>,
+    /// HTTP headers required to fetch this stream (e.g. Referer from Consumet).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub headers: Option<HashMap<String, String>>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct SubtitleTrack {
+    pub lang: String,
+    pub label: String,
+    pub url: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct AudioTrack {
+    pub id: u32,
+    pub lang: String,
+    pub label: String,
 }

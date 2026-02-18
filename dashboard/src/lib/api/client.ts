@@ -571,6 +571,10 @@ export function tmdbDiscover(
 		sort_by?: string;
 		page?: number;
 		year?: number;
+		'primary_release_date.gte'?: string;
+		'primary_release_date.lte'?: string;
+		'first_air_date.gte'?: string;
+		'first_air_date.lte'?: string;
 	} = {}
 ): Promise<TmdbPaginatedResponse> {
 	const qs = new URLSearchParams();
@@ -679,6 +683,24 @@ export function extractStreams(
 	episode?: number
 ): Promise<ExtractionResponse> {
 	let url = `/streaming/extract/${mediaType}/${tmdbId}`;
+	if (season !== undefined) url += `?season=${season}&episode=${episode ?? 1}`;
+	return request(url);
+}
+
+/**
+ * Resolve direct HLS/MP4 streams via the self-hosted Consumet API (FlixHQ).
+ * Returns the same ExtractionResponse shape as extractStreams() so CustomPlayer
+ * works without changes.
+ *
+ * Use this as the primary source; fall back to extractStreams() if it fails.
+ */
+export function resolveConsumetStreams(
+	mediaType: string,
+	tmdbId: number,
+	season?: number,
+	episode?: number
+): Promise<ExtractionResponse> {
+	let url = `/streaming/consumet/${mediaType}/${tmdbId}`;
 	if (season !== undefined) url += `?season=${season}&episode=${episode ?? 1}`;
 	return request(url);
 }

@@ -1,6 +1,7 @@
 use crate::{
     api::error::ApiError,
-    clients::subtitles::SubtitleClient,
+    clients::{consumet::ConsumetClient, subtitles::SubtitleClient},
+    config::CONFIG,
     db,
     extractors::{self, registry::ExtractorRegistry, SubtitleTrack as ExtSubtitleTrack},
     security, AppState,
@@ -905,4 +906,210 @@ pub async fn serve_subtitle_vtt_handler(
         ],
         vtt,
     ))
+}
+
+// ── Consumet API resolver ─────────────────────────────────────────────────
+
+/// GET /streaming/consumet/:media_type/:tmdb_id
+///
+/// Resolves direct HLS/MP4 stream URLs via the self-hosted Consumet API
+/// (FlixHQ as primary source). Returns the same ExtractionResponse format
+/// as /streaming/extract so CustomPlayer can use it without changes.
+///
+/// Priority algorithm (§3.1 of streaming CDC):
+///   P1 — Alive 1080p sources
+///   P2 — Alive 720p sources
+///   P3 — Remaining alive sources
+///   Fallback — All sources unfiltered if every alive-check failed
+pub async fn resolve_consumet_handler(
+    State(state): State<Arc<AppState>>,
+    Path((media_type, tmdb_id)): Path<(String, i32)>,
+    Query(params): Query<StreamQuery>,
+) -> Result<Json<ExtractionResponse>, ApiError> {
+    if CONFIG.consumet_url.is_empty() {
+        return Err(ApiError::InvalidInput(
+            "Consumet API not configured (CONSUMET_URL missing).".into(),
+        ));
+    }
+
+    // Check Redis cache
+    let cache_key = format!(
+        "consumet:{}:{}:{}:{}",
+        media_type,
+        tmdb_id,
+        params.season.unwrap_or(0),
+        params.episode.unwrap_or(0)
+    );
+
+    if let Ok(mut conn) = state.redis_client.get_multiplexed_async_connection().await {
+        if let Ok(cached) = redis::AsyncCommands::get::<_, String>(&mut conn, &cache_key).await {
+            if let Ok(response) = serde_json::from_str::<ExtractionResponse>(&cached) {
+                tracing::info!(
+                    "Consumet cache hit for {} {} ({} sources)",
+                    media_type,
+                    tmdb_id,
+                    response.streams.len()
+                );
+                return Ok(Json(response));
+            }
+        }
+    }
+
+    let client = ConsumetClient::new(CONFIG.consumet_url.clone());
+
+    // 1. Resolve sources via Consumet
+    let sources = if media_type == "tv" {
+        let season = params.season.unwrap_or(1) as u32;
+        let episode = params.episode.unwrap_or(1) as u32;
+        client
+            .resolve_episode(tmdb_id, season, episode)
+            .await
+            .map_err(|e| {
+                tracing::warn!("Consumet episode resolution failed: {}", e);
+                ApiError::Internal(e)
+            })?
+    } else {
+        client
+            .resolve_movie(tmdb_id)
+            .await
+            .map_err(|e| {
+                tracing::warn!("Consumet movie resolution failed: {}", e);
+                ApiError::Internal(e)
+            })?
+    };
+
+    if sources.is_empty() {
+        return Err(ApiError::Internal(anyhow::anyhow!(
+            "Consumet returned no sources for {} {}",
+            media_type,
+            tmdb_id
+        )));
+    }
+
+    // 2. Concurrent alive checks (3 s timeout each, all in parallel)
+    let check_client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(3))
+        .build()
+        .unwrap_or_default();
+
+    let alive_checks: Vec<_> = sources
+        .iter()
+        .map(|s| {
+            let c = check_client.clone();
+            let url = s.url.clone();
+            async move {
+                c.head(&url)
+                    .send()
+                    .await
+                    .map(|r| r.status().is_success() || r.status().as_u16() == 405)
+                    .unwrap_or(false)
+            }
+        })
+        .collect();
+
+    let alive_results = futures::future::join_all(alive_checks).await;
+
+    // 3. Convert Consumet sources → ExtractedStream, keep only alive ones
+    let quality_score = |q: &str| -> u32 {
+        if q.contains("1080") {
+            1080
+        } else if q.contains("720") {
+            720
+        } else if q.contains("480") {
+            480
+        } else if q.contains("360") {
+            360
+        } else {
+            0
+        }
+    };
+
+    let source_to_stream = |source: &crate::models::StreamSource| {
+        let quality = source.quality.clone();
+        let stream_type = if source.url.contains(".m3u8") {
+            extractors::StreamType::Hls
+        } else {
+            extractors::StreamType::Mp4
+        };
+        // Detect French audio hint from quality label
+        let audio_lang = {
+            let q = quality.to_lowercase();
+            if q.contains("vf") || q.contains("french") || q.contains("vostfr") {
+                Some("fr".to_string())
+            } else {
+                None
+            }
+        };
+        extractors::ExtractedStream {
+            provider: source.provider.clone(),
+            url: source.url.clone(),
+            quality,
+            audio_lang,
+            headers: source.headers.clone(),
+            stream_type,
+            category: None,
+            language: None,
+        }
+    };
+
+    let mut streams: Vec<extractors::ExtractedStream> = sources
+        .iter()
+        .zip(alive_results.iter())
+        .filter(|(_, alive)| **alive)
+        .map(|(source, _)| source_to_stream(source))
+        .collect();
+
+    // Fallback: if all alive checks failed, return all sources unfiltered
+    if streams.is_empty() {
+        tracing::warn!(
+            "All Consumet sources failed alive check for {} {} — returning unfiltered",
+            media_type,
+            tmdb_id
+        );
+        streams = sources
+            .iter()
+            .map(|s| source_to_stream(s))
+            .collect();
+    }
+
+    // Sort: highest quality first
+    streams.sort_by(|a, b| quality_score(&b.quality).cmp(&quality_score(&a.quality)));
+
+    // 4. Build subtitles list
+    let subtitle_client = SubtitleClient::new();
+    let subtitles = subtitle_client
+        .search(
+            tmdb_id,
+            &media_type,
+            params.season,
+            params.episode,
+            &["fr", "en"],
+        )
+        .await
+        .unwrap_or_default();
+
+    tracing::info!(
+        "Consumet resolved {} stream(s), {} subtitle(s) for {} {}",
+        streams.len(),
+        subtitles.len(),
+        media_type,
+        tmdb_id
+    );
+
+    let response = ExtractionResponse {
+        tmdb_id,
+        media_type,
+        streams,
+        iframe_fallbacks: vec![],
+        french_groups: vec![],
+        subtitles,
+    };
+
+    if let Ok(mut conn) = state.redis_client.get_multiplexed_async_connection().await {
+        if let Ok(json) = serde_json::to_string(&response) {
+            let _: Result<(), _> = redis::AsyncCommands::set_ex(&mut conn, &cache_key, json, 3600).await;
+        }
+    }
+
+    Ok(Json(response))
 }

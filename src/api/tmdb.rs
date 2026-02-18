@@ -84,10 +84,12 @@ pub async fn discover_handler(
     Query(params): Query<DiscoverParams>,
 ) -> Result<Json<crate::clients::tmdb::TmdbPaginatedResponse>, ApiError> {
     let key = format!(
-        "tmdb:discover:{}:{}:{}:{}",
+        "tmdb:discover:{}:{}:{}:{}:{}:{}",
         media_type,
         params.with_watch_providers.as_deref().unwrap_or("none"),
         params.watch_region.as_deref().unwrap_or("none"),
+        params.with_genres.as_deref().unwrap_or("none"),
+        params.sort_by.as_deref().unwrap_or("none"),
         params.page.unwrap_or(1)
     );
     handle_cache(&state, key, 3600, async {

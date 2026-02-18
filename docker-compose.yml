@@ -141,6 +141,15 @@ services:
     ports:
       - "3100:3100"
 
+  consumet:
+    image: ghcr.io/consumet/api.consumet.org:latest
+    container_name: sokoul-consumet
+    restart: unless-stopped
+    ports:
+      - "3002:3000"
+    environment:
+      - NODE_ENV=production
+
 volumes:
   pg_data:
     driver: local

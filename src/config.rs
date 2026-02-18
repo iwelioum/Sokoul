@@ -81,6 +81,8 @@ pub struct Config {
     pub auto_block_critical: bool,
     // Rate limiting
     pub rate_limit_rps: u64,
+    // Consumet API (self-hosted stream resolver — docker service)
+    pub consumet_url: String,
 }
 
 impl Config {
@@ -161,6 +163,7 @@ impl Config {
                 .unwrap_or_else(|_| "30".to_string())
                 .parse()
                 .unwrap_or(30),
+            consumet_url: env::var("CONSUMET_URL").unwrap_or_default(),
         }
     }
 }

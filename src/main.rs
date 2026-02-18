@@ -814,6 +814,10 @@ async fn main() -> anyhow::Result<()> {
         .route(
             "/streaming/subtitles/vtt",
             get(api::streaming::serve_subtitle_vtt_handler),
+        )
+        .route(
+            "/streaming/consumet/:media_type/:tmdb_id",
+            get(api::streaming::resolve_consumet_handler),
         );
 
     // Collections routes (nested under /api/collections)

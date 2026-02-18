@@ -1,8 +1,9 @@
 <script lang="ts">
 	import {
-		tmdbTrending, tmdbDiscover, getContinueWatching
+		tmdbTrending, tmdbDiscover, getContinueWatching, listWatchlist, isLoggedIn, tmdbImageUrl
 	} from '$lib/api/client';
-	import type { TmdbSearchItem, WatchHistoryEntry } from '$lib/api/client';
+	import type { TmdbSearchItem, WatchHistoryEntry, WatchlistEntry } from '$lib/api/client';
+
 	import MediaRow from '$lib/components/MediaRow.svelte';
 	import HeroCarousel from '$lib/components/HeroCarousel.svelte';
 	import BrandTiles from '$lib/components/BrandTiles.svelte';
@@ -16,9 +17,13 @@
 	let disneyMovies: TmdbSearchItem[] = $state([]);
 	let amazonMovies: TmdbSearchItem[] = $state([]);
 	let continueWatching: WatchHistoryEntry[] = $state([]);
+	let watchlistItems: WatchlistEntry[] = $state([]);
 
 	let loadingTrending = $state(true);
 	let loadingPlatforms = $state(true);
+
+	// ── Derived ──
+	const top10 = $derived(trendingAll.slice(0, 10));
 
 	function getPlayableMediaType(item: TmdbSearchItem): 'movie' | 'tv' | null {
 		if (item.media_type === 'movie' || item.media_type === 'tv') return item.media_type;
@@ -44,6 +49,7 @@
 		loadTrending();
 		loadPlatforms();
 		loadHistory();
+		loadWatchlist();
 	});
 
 	async function loadTrending() {
@@ -78,6 +84,14 @@
 		} catch { /* ignore */ }
 	}
 
+	async function loadWatchlist() {
+		if (!isLoggedIn()) return;
+		try {
+			const res = await listWatchlist(1, 20);
+			watchlistItems = res.items;
+		} catch { /* ignore */ }
+	}
+
 	async function handleHeroPlay(item: TmdbSearchItem) {
 		const watchPath = getWatchPath(item);
 		goto(watchPath ?? getDetailPath(item));
@@ -106,7 +120,7 @@
 	<title>SOKOUL — Accueil</title>
 </svelte:head>
 
-<!-- Hero Carousel (Full Width) -->
+<!-- 1. Hero Carousel (Full Width) -->
 <HeroCarousel
 	items={trendingAll.slice(0, 5)}
 	onPlay={handleHeroPlay}
@@ -114,12 +128,10 @@
 	loading={loadingTrending}
 />
 
-<!-- Brand Tiles (Disney+ style) -->
-<BrandTiles />
-
 <!-- Catalog (Contained) -->
 <div class="catalog">
 
+	<!-- 3. Reprendre la lecture -->
 	{#if continueWatching.length > 0}
 		<section class="continue-section">
 			<h2 class="section-title">Reprendre la lecture</h2>
@@ -166,144 +178,89 @@
 		</section>
 	{/if}
 
+	<!-- 4. Ma Liste -->
+	{#if watchlistItems.length > 0}
+		<section class="watchlist-section">
+			<h2 class="section-title">
+				Ma liste
+				<a href="/library" class="see-more-link">Voir tout</a>
+			</h2>
+			<div class="continue-row">
+				{#each watchlistItems as item (item.id)}
+					{#if item.tmdb_id && item.media_type_wl}
+						<a
+							href="/{item.media_type_wl}/{item.tmdb_id}"
+							class="continue-card"
+							aria-label={item.title ?? 'Voir'}
+						>
+							<div class="continue-poster">
+								{#if item.poster_url}
+									<img src={item.poster_url} alt={item.title ?? ''} loading="lazy" />
+								{:else}
+									<div class="no-poster-sm"></div>
+								{/if}
+								<div class="continue-overlay">
+									<svg viewBox="0 0 24 24" fill="currentColor" width="28" height="28"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
+								</div>
+							</div>
+							<p class="continue-title">{item.title ?? '—'}</p>
+						</a>
+					{/if}
+				{/each}
+			</div>
+		</section>
+	{/if}
+
+	<!-- 5. Top 10 en France -->
+	{#if !loadingTrending && top10.length >= 5}
+		<section class="top10-section">
+			<h2 class="section-title">Top 10 en France aujourd'hui</h2>
+			<div class="top10-row">
+				{#each top10 as item, i (item.id)}
+					<a href={getDetailPath(item)} class="top10-card" aria-label={item.title ?? item.name ?? ''}>
+						<span class="top10-number">{i + 1}</span>
+						<div class="top10-poster">
+							{#if item.poster_path}
+								<img
+									src={tmdbImageUrl(item.poster_path, 'w300')}
+									alt={item.title ?? item.name ?? ''}
+									loading="lazy"
+								/>
+							{:else}
+								<div class="no-poster-sm"></div>
+							{/if}
+							<div class="top10-play-overlay">
+								<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M8 5v14l11-7z"/></svg>
+							</div>
+						</div>
+					</a>
+				{/each}
+			</div>
+		</section>
+	{/if}
+
+	<!-- 6. Tendances du jour -->
 	<MediaRow title="Tendances du jour" items={trendingAll} loading={loadingTrending} />
+
+	<!-- 7. Films populaires -->
 	<MediaRow title="Films populaires" items={trendingMovies} loading={loadingTrending} />
+
+	<!-- 8. Séries populaires -->
 	<MediaRow title="Séries populaires" items={trendingSeries} loading={loadingTrending} />
-	<MediaRow title="Nouveautés Netflix" items={netflixMovies} loading={loadingPlatforms} />
-	<MediaRow title="Nouveautés Disney+" items={disneyMovies} loading={loadingPlatforms} />
-	<MediaRow title="Nouveautés Amazon Prime" items={amazonMovies} loading={loadingPlatforms} />
+
+	<!-- 9 & 10. Plateformes -->
+	<MediaRow title="Populaires sur Netflix"       items={netflixMovies} loading={loadingPlatforms} seeMoreHref="/films?provider=8&provider_name=Netflix" />
+	<MediaRow title="Populaires sur Disney+"       items={disneyMovies}  loading={loadingPlatforms} seeMoreHref="/films?provider=337&provider_name=Disney%2B" />
+	<MediaRow title="Populaires sur Amazon Prime"  items={amazonMovies}  loading={loadingPlatforms} seeMoreHref="/films?provider=119&provider_name=Amazon%20Prime" />
 
 </div>
 
+<!-- 11. Brand Tiles -->
+<BrandTiles />
+
 <style>
-	.hero {
-		position: relative;
-		min-height: 520px;
-		display: flex;
-		align-items: flex-end;
-		margin: -24px -24px 0;
-		overflow: hidden;
-	}
-
-	.hero-bg {
-		position: absolute;
-		inset: 0;
-		background: linear-gradient(135deg, rgba(108,92,231,0.3) 0%, rgba(10,10,15,0.6) 50%, var(--bg-primary) 100%);
-	}
-
-	.hero-bg.has-backdrop {
-		background-image: var(--backdrop);
-		background-size: cover;
-		background-position: center 30%;
-	}
-
-	.hero-bg.has-backdrop::after {
-		content: '';
-		position: absolute;
-		inset: 0;
-		background: linear-gradient(to bottom, rgba(10,10,15,0.2) 0%, rgba(10,10,15,0.7) 60%, var(--bg-primary) 100%);
-	}
-
-	.hero-content {
-		position: relative;
-		padding: 40px 32px 48px;
-		max-width: 680px;
-		z-index: 1;
-	}
-
-	.hero-meta {
-		display: flex;
-		align-items: center;
-		gap: 10px;
-		margin-bottom: 12px;
-	}
-
-	.hero-type {
-		background: var(--accent);
-		color: #fff;
-		font-size: 11px;
-		font-weight: 700;
-		letter-spacing: 1px;
-		padding: 3px 10px;
-		border-radius: 4px;
-	}
-
-	.hero-rating { color: var(--warning); font-weight: 700; font-size: 15px; }
-	.hero-year { color: var(--text-secondary); font-size: 14px; }
-
-	.hero-title {
-		font-size: clamp(28px, 4vw, 48px);
-		font-weight: 800;
-		color: #fff;
-		line-height: 1.1;
-		text-shadow: 0 2px 12px rgba(0,0,0,0.5);
-		margin-bottom: 12px;
-	}
-
-	.hero-overview {
-		color: rgba(255,255,255,0.8);
-		font-size: 14px;
-		line-height: 1.6;
-		max-width: 560px;
-		display: -webkit-box;
-		-webkit-line-clamp: 3;
-		line-clamp: 3;
-		-webkit-box-orient: vertical;
-		overflow: hidden;
-		margin-bottom: 24px;
-	}
-
-	.hero-actions {
-		display: flex;
-		gap: 12px;
-		flex-wrap: wrap;
-	}
-
-	.btn-play {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-		padding: 12px 28px;
-		background: #fff;
-		color: #000;
-		border: none;
-		border-radius: 8px;
-		font-size: 15px;
-		font-weight: 700;
-		cursor: pointer;
-		transition: all var(--transition-fast);
-	}
-
-	.btn-play:hover { background: rgba(255,255,255,0.85); transform: scale(1.03); }
-	.btn-play:disabled { opacity: 0.6; cursor: not-allowed; }
-
-	.btn-info {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-		padding: 12px 24px;
-		background: rgba(255,255,255,0.15);
-		backdrop-filter: blur(8px);
-		color: #fff;
-		border: 1px solid rgba(255,255,255,0.3);
-		border-radius: 8px;
-		font-size: 15px;
-		font-weight: 600;
-		cursor: pointer;
-		transition: all var(--transition-fast);
-	}
-
-	.btn-info:hover { background: rgba(255,255,255,0.25); }
-
-	.hero-skeleton {
-		min-height: 520px;
-		margin: -24px -24px 0;
-		background: linear-gradient(90deg, var(--bg-card) 25%, var(--bg-hover) 50%, var(--bg-card) 75%);
-		background-size: 200% 100%;
-		animation: shimmer 1.5s infinite;
-	}
-
-	.catalog { padding: 20px calc(3.5vw + 5px) 0; }
+	/* ── Catalog ── */
+	.catalog { padding: 0 calc(3.5vw + 5px) 20px; }
 
 	.section-title {
 		font-size: 18px;
@@ -311,13 +268,26 @@
 		color: var(--text-primary);
 		margin-bottom: 12px;
 		padding: 0;
+		display: flex;
+		align-items: center;
+		gap: 16px;
 	}
 
+	.see-more-link {
+		font-size: 13px;
+		font-weight: 500;
+		color: var(--text-muted);
+		text-decoration: none;
+		transition: color 200ms;
+	}
+
+	.see-more-link:hover { color: var(--text-primary); }
+
+	/* ── Reprendre la lecture ── */
 	.continue-section { margin-bottom: 2rem; position: relative; }
+	.watchlist-section { margin-bottom: 2rem; }
 
-	.continue-wrapper {
-		position: relative;
-	}
+	.continue-wrapper { position: relative; }
 
 	.continue-row {
 		display: flex;
@@ -330,9 +300,7 @@
 		scroll-behavior: smooth;
 	}
 
-	.continue-row::-webkit-scrollbar {
-		display: none;
-	}
+	.continue-row::-webkit-scrollbar { display: none; }
 
 	.continue-card {
 		flex-shrink: 0;
@@ -385,13 +353,8 @@
 
 	.continue-bar { height: 100%; background: var(--accent); }
 
-	.no-poster-sm {
-		width: 100%;
-		height: 100%;
-		background: var(--bg-secondary);
-	}
+	.no-poster-sm { width: 100%; height: 100%; background: var(--bg-secondary); }
 
-	/* Scroll buttons identiques aux autres carousels */
 	.scroll-btn {
 		position: absolute;
 		top: 50%;
@@ -412,14 +375,8 @@
 		backdrop-filter: blur(4px);
 	}
 
-	.continue-section:hover .scroll-btn {
-		opacity: 1;
-	}
-
-	.scroll-btn:hover {
-		background: rgba(249, 249, 249, 0.2);
-	}
-
+	.continue-section:hover .scroll-btn { opacity: 1; }
+	.scroll-btn:hover { background: rgba(249, 249, 249, 0.2); }
 	.scroll-left { left: -16px; }
 	.scroll-right { right: -16px; }
 
@@ -435,24 +392,81 @@
 
 	.continue-pct { font-size: 11px; color: var(--text-muted); padding: 0 2px; }
 
-	.spinner-sm {
-		width: 16px;
-		height: 16px;
-		border: 2px solid rgba(0,0,0,0.3);
-		border-top-color: #000;
-		border-radius: 50%;
-		animation: spin 0.7s linear infinite;
+	/* ── Top 10 ── */
+	.top10-section { margin-bottom: 2rem; }
+
+	.top10-row {
+		display: flex;
+		gap: 0;
+		overflow-x: auto;
+		scrollbar-width: none;
+		padding: 10px 0 16px;
 	}
+
+	.top10-row::-webkit-scrollbar { display: none; }
+
+	.top10-card {
+		position: relative;
+		flex-shrink: 0;
+		display: flex;
+		align-items: flex-end;
+		text-decoration: none;
+		/* number overlaps left, poster offset right */
+		padding-left: 36px;
+	}
+
+	.top10-number {
+		position: absolute;
+		left: 0;
+		bottom: -6px;
+		font-size: 96px;
+		font-weight: 900;
+		line-height: 1;
+		color: transparent;
+		-webkit-text-stroke: 3px rgba(249, 249, 249, 0.55);
+		text-stroke: 3px rgba(249, 249, 249, 0.55);
+		letter-spacing: -4px;
+		user-select: none;
+		z-index: 1;
+	}
+
+	.top10-poster {
+		position: relative;
+		width: 130px;
+		aspect-ratio: 2 / 3;
+		border-radius: var(--radius);
+		overflow: hidden;
+		background: var(--bg-card);
+		z-index: 2;
+		transition: transform 200ms;
+	}
+
+	.top10-card:hover .top10-poster { transform: scale(1.04); }
+
+	.top10-poster img {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+	}
+
+	.top10-play-overlay {
+		position: absolute;
+		inset: 0;
+		background: rgba(0,0,0,0.5);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		color: #fff;
+		opacity: 0;
+		transition: opacity 200ms;
+	}
+
+	.top10-card:hover .top10-play-overlay { opacity: 1; }
 
 	@media (max-width: 900px) {
-		.scroll-btn {
-			display: none;
-		}
-	}
-
-	@keyframes spin { to { transform: rotate(360deg); } }
-	@keyframes shimmer {
-		0% { background-position: 200% 0; }
-		100% { background-position: -200% 0; }
+		.scroll-btn { display: none; }
+		.top10-number { font-size: 72px; }
+		.top10-poster { width: 100px; }
+		.top10-card { padding-left: 28px; }
 	}
 </style>
