@@ -17,7 +17,7 @@ pub struct OmdbRating {
     pub value: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct OmdbResponse {
     #[serde(rename = "Title")]
     pub title: Option<String>,
@@ -120,35 +120,5 @@ impl OmdbClient {
             OmdbResponse::default()
         });
         Ok(data)
-    }
-}
-
-impl Default for OmdbResponse {
-    fn default() -> Self {
-        Self {
-            title: None,
-            year: None,
-            rated: None,
-            released: None,
-            runtime: None,
-            genre: None,
-            director: None,
-            writer: None,
-            actors: None,
-            plot: None,
-            language: None,
-            country: None,
-            awards: None,
-            poster: None,
-            ratings: vec![],
-            imdb_rating: None,
-            imdb_rating_field: None,
-            imdb_votes: None,
-            imdb_id: None,
-            media_type: None,
-            box_office: None,
-            production: None,
-            response: None,
-        }
     }
 }

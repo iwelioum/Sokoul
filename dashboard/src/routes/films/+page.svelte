@@ -34,6 +34,7 @@
 	let selectedSort = $state('popularity.desc');
 	let yearMin = $state(1980);
 	let yearMax = $state(new Date().getFullYear());
+	let voteMin = $state(0);
 	let providerFilter: string | null = $state(null);
 	let providerName: string | null = $state(null);
 	let activeFilterCount = $state(0);
@@ -63,7 +64,9 @@
 			const newItems = await tmdbDiscover(mType, {
 				with_genres: selectedGenres.length > 0 ? selectedGenres.join(',') : undefined,
 				sort_by: selectedSort,
-				year: yearMin === yearMax ? yearMin : undefined,
+				'primary_release_date.gte': `${yearMin}-01-01`,
+				'primary_release_date.lte': `${yearMax}-12-31`,
+				'vote_average.gte': voteMin > 0 ? voteMin : undefined,
 				page: page,
 				with_watch_providers: providerFilter ?? undefined,
 				watch_region: providerFilter ? 'FR' : undefined,
@@ -99,12 +102,14 @@
 		selectedSort = state.sort;
 		yearMin = state.yearMin;
 		yearMax = state.yearMax;
+		voteMin = state.voteMin;
 		providerFilter = state.provider;
 		providerName = state.providerName;
 		activeFilterCount = state.genres.length
 			+ (state.provider ? 1 : 0)
 			+ (state.yearMin !== 1980 || state.yearMax !== new Date().getFullYear() ? 1 : 0)
-			+ (state.sort !== 'popularity.desc' ? 1 : 0);
+			+ (state.sort !== 'popularity.desc' ? 1 : 0)
+			+ (state.voteMin > 0 ? 1 : 0);
 
 		items = [];
 		page = 1;
@@ -117,6 +122,7 @@
 		selectedSort = 'popularity.desc';
 		yearMin = 1980;
 		yearMax = new Date().getFullYear();
+		voteMin = 0;
 		providerFilter = null;
 		providerName = null;
 		activeFilterCount = 0;
@@ -159,6 +165,7 @@
 	bind:selectedSort
 	bind:yearMin
 	bind:yearMax
+	bind:voteMin
 	bind:selectedProvider={providerFilter}
 	onApply={handleApplyFilters}
 	onClose={() => {}}

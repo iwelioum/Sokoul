@@ -1,6 +1,6 @@
 use axum::{
     extract::{Request, State},
-    http::StatusCode,
+    http::{header, StatusCode},
     middleware::Next,
     response::{IntoResponse, Response},
     routing::post,
@@ -15,6 +15,9 @@ use uuid::Uuid;
 use crate::config::CONFIG;
 use crate::db;
 use crate::AppState;
+
+/// Cookie name for the access token
+const ACCESS_TOKEN_COOKIE: &str = "access_token";
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Claims {
@@ -48,13 +51,27 @@ pub fn auth_routes() -> Router<Arc<AppState>> {
     Router::new()
         .route("/auth/register", post(register_handler))
         .route("/auth/login", post(login_handler))
+        .route("/auth/logout", post(logout_handler))
         .route("/auth/me", axum::routing::get(me_handler))
+}
+
+/// Build a Set-Cookie header value for the access token (HttpOnly, Secure, SameSite)
+fn build_auth_cookie(token: &str, max_age_secs: i64) -> String {
+    let secure_flag = if CONFIG.node_env == "production" {
+        "; Secure"
+    } else {
+        ""
+    };
+    format!(
+        "{}={}; HttpOnly; Path=/; Max-Age={}; SameSite=Lax{}",
+        ACCESS_TOKEN_COOKIE, token, max_age_secs, secure_flag
+    )
 }
 
 async fn register_handler(
     State(state): State<Arc<AppState>>,
     Json(body): Json<RegisterRequest>,
-) -> Result<Json<AuthResponse>, Response> {
+) -> Result<Response, Response> {
     if body.username.len() < 3 || body.username.len() > 32 {
         return Err((
             StatusCode::BAD_REQUEST,
@@ -112,17 +129,23 @@ async fn register_handler(
         })?;
 
     let token = create_jwt(&user.id.to_string(), &user.username, &user.role)?;
+    let cookie = build_auth_cookie(&token, 7 * 86400);
 
-    Ok(Json(AuthResponse {
-        token,
-        user: user.into(),
-    }))
+    Ok((
+        StatusCode::OK,
+        [(header::SET_COOKIE, cookie)],
+        Json(AuthResponse {
+            token: token.clone(),
+            user: user.into(),
+        }),
+    )
+        .into_response())
 }
 
 async fn login_handler(
     State(state): State<Arc<AppState>>,
     Json(body): Json<LoginRequest>,
-) -> Result<Json<AuthResponse>, Response> {
+) -> Result<Response, Response> {
     let user = db::users::find_by_email(&state.db_pool, &body.email)
         .await
         .map_err(|_| {
@@ -150,11 +173,30 @@ async fn login_handler(
     }
 
     let token = create_jwt(&user.id.to_string(), &user.username, &user.role)?;
+    let cookie = build_auth_cookie(&token, 7 * 86400);
 
-    Ok(Json(AuthResponse {
-        token,
-        user: user.into(),
-    }))
+    Ok((
+        StatusCode::OK,
+        [(header::SET_COOKIE, cookie)],
+        Json(AuthResponse {
+            token: token.clone(),
+            user: user.into(),
+        }),
+    )
+        .into_response())
+}
+
+/// POST /auth/logout — Clear the auth cookie
+async fn logout_handler() -> impl IntoResponse {
+    let cookie = format!(
+        "{}=; HttpOnly; Path=/; Max-Age=0; SameSite=Lax",
+        ACCESS_TOKEN_COOKIE
+    );
+    (
+        StatusCode::OK,
+        [(header::SET_COOKIE, cookie)],
+        Json(json!({"message": "Logged out."})),
+    )
 }
 
 async fn me_handler(
@@ -189,6 +231,7 @@ async fn me_handler(
     Ok(Json(user.into()))
 }
 
+#[allow(clippy::result_large_err)]
 fn create_jwt(user_id: &str, username: &str, role: &str) -> Result<String, Response> {
     let now = chrono::Utc::now().timestamp() as usize;
     let claims = Claims {
@@ -223,20 +266,36 @@ pub fn decode_jwt(token: &str) -> Option<Claims> {
     .map(|data| data.claims)
 }
 
-/// Middleware: accepts JWT Bearer token OR API key (backward compatible)
+/// Extract JWT from Cookie header, falling back to Authorization Bearer header
+fn extract_token_from_headers(headers: &axum::http::HeaderMap) -> Option<String> {
+    // 1. Try HttpOnly cookie first
+    if let Some(cookie_header) = headers.get("Cookie").and_then(|v| v.to_str().ok()) {
+        for part in cookie_header.split(';') {
+            let part = part.trim();
+            if let Some(token) = part.strip_prefix(&format!("{}=", ACCESS_TOKEN_COOKIE)) {
+                if !token.is_empty() {
+                    return Some(token.to_string());
+                }
+            }
+        }
+    }
+
+    // 2. Fallback to Authorization header (backward compatible)
+    headers
+        .get("Authorization")
+        .or_else(|| headers.get("X-API-Key"))
+        .and_then(|v| v.to_str().ok())
+        .map(|v| v.trim_start_matches("Bearer ").to_string())
+}
+
+/// Middleware: accepts JWT from Cookie OR Bearer token OR API key
 pub async fn api_key_middleware(request: Request, next: Next) -> Response {
     if CONFIG.api_key.is_empty() && CONFIG.jwt_secret == "sokoul_default_secret_change_me" {
         return next.run(request).await;
     }
 
-    let auth_header = request
-        .headers()
-        .get("Authorization")
-        .or_else(|| request.headers().get("X-API-Key"))
-        .and_then(|v| v.to_str().ok());
-
-    let provided = match auth_header {
-        Some(key) => key.to_string(),
+    let token = match extract_token_from_headers(request.headers()) {
+        Some(t) => t,
         None => {
             return (
                 StatusCode::UNAUTHORIZED,
@@ -246,15 +305,13 @@ pub async fn api_key_middleware(request: Request, next: Next) -> Response {
         }
     };
 
-    let raw_token = provided.trim_start_matches("Bearer ").to_string();
-
     // Try API key first (backward compatible)
-    if !CONFIG.api_key.is_empty() && raw_token == CONFIG.api_key {
+    if !CONFIG.api_key.is_empty() && token == CONFIG.api_key {
         return next.run(request).await;
     }
 
     // Try JWT
-    if decode_jwt(&raw_token).is_some() {
+    if decode_jwt(&token).is_some() {
         return next.run(request).await;
     }
 
@@ -265,11 +322,10 @@ pub async fn api_key_middleware(request: Request, next: Next) -> Response {
         .into_response()
 }
 
-/// Extract user_id from JWT in request headers. Returns None for API key auth.
+/// Extract user_id from JWT in request headers (Cookie or Bearer).
 pub fn extract_user_id(headers: &axum::http::HeaderMap) -> Option<Uuid> {
-    let auth = headers.get("Authorization").and_then(|v| v.to_str().ok())?;
-
-    let token = auth.trim_start_matches("Bearer ");
-    let claims = decode_jwt(token)?;
+    let token = extract_token_from_headers(headers)?;
+    let raw = token.trim_start_matches("Bearer ");
+    let claims = decode_jwt(raw)?;
     Uuid::parse_str(&claims.sub).ok()
 }

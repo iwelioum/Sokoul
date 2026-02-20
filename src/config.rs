@@ -81,8 +81,8 @@ pub struct Config {
     pub auto_block_critical: bool,
     // Rate limiting
     pub rate_limit_rps: u64,
-    // Consumet API (self-hosted stream resolver — docker service)
-    pub consumet_url: String,
+    // Indexer search timeout (seconds)
+    pub indexer_search_timeout_secs: u64,
 }
 
 impl Config {
@@ -163,7 +163,10 @@ impl Config {
                 .unwrap_or_else(|_| "30".to_string())
                 .parse()
                 .unwrap_or(30),
-            consumet_url: env::var("CONSUMET_URL").unwrap_or_default(),
+            indexer_search_timeout_secs: env::var("INDEXER_SEARCH_TIMEOUT_SECS")
+                .unwrap_or_else(|_| "90".to_string())
+                .parse()
+                .unwrap_or(90),
         }
     }
 }

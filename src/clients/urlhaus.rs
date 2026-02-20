@@ -49,7 +49,7 @@ impl UrlhausClient {
     pub async fn check_url(&self, url: &str) -> Result<UrlhausCheckResult, Box<dyn Error>> {
         let client = reqwest::Client::new();
         let response = client
-            .post(&format!("{}/url/", self.base_url))
+            .post(format!("{}/url/", self.base_url))
             .form(&[("url", url)])
             .timeout(std::time::Duration::from_secs(10))
             .send()
@@ -90,7 +90,7 @@ impl UrlhausClient {
     pub async fn search_urls(&self, domain: &str) -> Result<UrlhausSearchResult, Box<dyn Error>> {
         let client = reqwest::Client::new();
         let response = client
-            .post(&format!("{}/urls/", self.base_url))
+            .post(format!("{}/urls/", self.base_url))
             .form(&[("search", domain)])
             .timeout(std::time::Duration::from_secs(10))
             .send()
@@ -132,7 +132,7 @@ impl UrlhausClient {
     ) -> Result<PayloadSearchResult, Box<dyn Error>> {
         let client = reqwest::Client::new();
         let response = client
-            .post(&format!("{}/payload/", self.base_url))
+            .post(format!("{}/payload/", self.base_url))
             .form(&[("sha256_hash", file_hash)])
             .timeout(std::time::Duration::from_secs(10))
             .send()

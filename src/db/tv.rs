@@ -74,6 +74,7 @@ pub async fn get_channel_by_code(
     .await
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn create_channel(
     pool: &PgPool,
     name: &str,
@@ -105,6 +106,7 @@ pub async fn create_channel(
     .await
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn upsert_channel(
     pool: &PgPool,
     name: &str,
@@ -210,6 +212,7 @@ pub async fn search_programs(
     .await
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn create_program(
     pool: &PgPool,
     channel_id: Uuid,

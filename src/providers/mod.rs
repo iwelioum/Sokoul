@@ -1,9 +1,8 @@
 pub mod jackett;
 pub mod prowlarr;
-#[allow(dead_code)]
-pub mod realdebrid;
 pub mod streaming;
 
+use crate::config::CONFIG;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
@@ -64,8 +63,7 @@ impl ProviderRegistry {
         use futures::future::join_all;
         use std::time::Duration;
         use tokio::time::timeout;
-
-        const SEARCH_TIMEOUT: Duration = Duration::from_secs(20);
+        let search_timeout = Duration::from_secs(CONFIG.indexer_search_timeout_secs.max(5));
 
         // Always use text search - public indexers don't support TMDB ID search
         let futures = self.providers.iter().map(|provider| {
@@ -74,12 +72,12 @@ impl ProviderRegistry {
             async move {
                 tracing::info!("Provider '{}': text search for '{}'", name, title);
 
-                let result = match timeout(SEARCH_TIMEOUT, provider.search(&title)).await {
+                let result = match timeout(search_timeout, provider.search(&title)).await {
                     Ok(res) => res,
                     Err(_) => Err(anyhow!(
                         "timeout provider '{}' after {:?}",
                         name,
-                        SEARCH_TIMEOUT
+                        search_timeout
                     )),
                 };
 

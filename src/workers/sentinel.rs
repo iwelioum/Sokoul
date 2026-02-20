@@ -1,4 +1,4 @@
-use crate::{config::CONFIG, events::WsEvent, AppState};
+use crate::{api::watch_history, config::CONFIG, events::WsEvent, AppState};
 use std::{sync::Arc, time::Duration};
 use sysinfo::{CpuRefreshKind, Disks, RefreshKind, System};
 use tokio::time;
@@ -13,9 +13,11 @@ pub async fn sentinel_worker(state: Arc<AppState>) -> anyhow::Result<()> {
     );
 
     let mut interval = time::interval(Duration::from_secs(60));
+    let mut flush_counter: u64 = 0;
 
     loop {
         interval.tick().await;
+        flush_counter += 1;
 
         // 1. Health Check DB
         let db_ok = sqlx::query("SELECT 1")
@@ -52,7 +54,16 @@ pub async fn sentinel_worker(state: Arc<AppState>) -> anyhow::Result<()> {
             }
         };
 
-        // 3. System Metrics
+        // 3. Flush watch progress from Redis to DB every 2 minutes
+        if flush_counter.is_multiple_of(2) && db_ok && redis_ok {
+            match watch_history::flush_watch_progress(&state.redis_client, &state.db_pool).await {
+                Ok(n) if n > 0 => tracing::debug!("Sentinel: flushed {} watch entries", n),
+                Err(e) => tracing::warn!("Sentinel: watch progress flush error: {}", e),
+                _ => {}
+            }
+        }
+
+        // 4. System Metrics
         sys.refresh_all();
         let cpu_usage = sys.global_cpu_info().cpu_usage();
         let total_mem = sys.total_memory();
@@ -73,7 +84,7 @@ pub async fn sentinel_worker(state: Arc<AppState>) -> anyhow::Result<()> {
             if redis_ok { "OK" } else { "DOWN" }
         );
 
-        // 4. Storage monitoring
+        // 5. Storage monitoring
         let disks = Disks::new_with_refreshed_list();
         let download_path = std::path::Path::new(&CONFIG.download_dir);
         if let Some(disk) = disks

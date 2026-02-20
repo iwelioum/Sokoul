@@ -63,7 +63,7 @@ fn validate_create_payload(payload: &CreateMediaPayload) -> Result<(), ApiError>
         )));
     }
     if let Some(year) = payload.year {
-        if year < 1888 || year > 2100 {
+        if !(1888..=2100).contains(&year) {
             return Err(ApiError::InvalidInput("Invalid year.".into()));
         }
     }
@@ -120,7 +120,7 @@ pub async fn list_media_handler(
     State(state): State<Arc<AppState>>,
     Query(pagination): Query<Pagination>,
 ) -> Result<Json<PaginatedResponse<Vec<Media>>>, ApiError> {
-    let per_page = pagination.per_page.min(MAX_PER_PAGE).max(1);
+    let per_page = pagination.per_page.clamp(1, MAX_PER_PAGE);
     let page = pagination.page.max(1);
 
     let limit = i64::from(per_page);

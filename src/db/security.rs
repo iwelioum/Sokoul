@@ -61,6 +61,7 @@ pub struct DomainBlacklist {
 // AUDIT LOGS — Logging security actions
 // ═══════════════════════════════════════════════════════════
 
+#[allow(clippy::too_many_arguments)]
 pub async fn insert_audit_log(
     db: &sqlx::PgPool,
     user_id: Option<Uuid>,

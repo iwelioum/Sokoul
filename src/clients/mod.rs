@@ -1,5 +1,3 @@
-pub mod collections;
-pub mod consumet;
 pub mod fanart;
 pub mod flaresolverr;
 pub mod imdbbot;
@@ -7,7 +5,6 @@ pub mod jikan;
 pub mod omdb;
 pub mod simkl;
 pub mod stream;
-pub mod subtitles;
 pub mod tastedive;
 pub mod thetvdb;
 pub mod tmdb;

@@ -5,7 +5,7 @@ pub fn normalize_torrent_title(title: &str) -> String {
     let mut result = title.to_lowercase();
 
     // Replace common separators with spaces
-    result = result.replace('.', " ").replace('_', " ").replace('-', " ");
+    result = result.replace(['.', '_', '-'], " ");
 
     // Remove quality indicators
     let quality_patterns = [

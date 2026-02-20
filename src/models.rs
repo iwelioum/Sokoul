@@ -237,6 +237,7 @@ pub struct PaginatedWatchlist {
 // ── Streaming ──
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[allow(dead_code)]
 pub struct StreamResponse {
     pub sources: Vec<StreamSource>,
     pub recommended: usize, // Index de la source recommandée
@@ -257,6 +258,7 @@ pub struct StreamSource {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[allow(dead_code)]
 pub struct SubtitleTrack {
     pub lang: String,
     pub label: String,

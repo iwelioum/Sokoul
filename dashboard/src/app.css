@@ -4,6 +4,7 @@
    ══════════════════════════════════════════════════════════ */
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+@import "tailwindcss";
 
 :root {
 	/* ── Disney+ Dark Blue palette, teinté bleu nuit ── */
@@ -99,27 +100,29 @@ a {
 }
 a:hover { color: rgba(249, 249, 249, 0.8); }
 
-/* ── Buttons ── */
-button {
-	cursor: pointer;
-	border: none;
-	background: var(--accent);
-	color: white;
-	padding: 10px 20px;
-	border-radius: var(--radius-sm);
-	font-size: 14px;
-	font-weight: 600;
-	text-transform: uppercase;
-	letter-spacing: 1.2px;
-	transition: all var(--transition-disney);
-	font-family: inherit;
+/* ── Buttons — in @layer base so Tailwind utilities can override ── */
+@layer base {
+	button {
+		cursor: pointer;
+		border: none;
+		background: var(--accent);
+		color: white;
+		padding: 10px 20px;
+		border-radius: var(--radius-sm);
+		font-size: 14px;
+		font-weight: 600;
+		text-transform: uppercase;
+		letter-spacing: 1.2px;
+		transition: all var(--transition-disney);
+		font-family: inherit;
+	}
+	button:hover {
+		background: var(--accent-hover);
+		transform: translateY(-1px);
+	}
+	button:disabled { opacity: 0.5; cursor: not-allowed; }
+	button:active:not(:disabled) { transform: scale(0.97); }
 }
-button:hover {
-	background: var(--accent-hover);
-	transform: translateY(-1px);
-}
-button:disabled { opacity: 0.5; cursor: not-allowed; }
-button:active:not(:disabled) { transform: scale(0.97); }
 
 /* Button variants */
 .btn-primary {

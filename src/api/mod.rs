@@ -9,7 +9,6 @@ pub mod library;
 pub mod media;
 pub mod media_ref;
 pub mod metrics;
-pub mod middleware;
 pub mod recommendations;
 pub mod search;
 pub mod security;

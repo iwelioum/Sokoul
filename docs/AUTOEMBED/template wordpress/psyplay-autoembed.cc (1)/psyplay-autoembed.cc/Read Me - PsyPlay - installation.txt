@@ -1,0 +1,22 @@
+This is a free full theme PsyPlay 1.2.5 for WordPress. PsyPlay is known thanks to 123movies websites that are built with psyplay theme. If you want to build your own streaming website with no work you can download this PsyPlay 1.2.5 full template with dbmovies auto importer and autoembed.co, All movies and episodes have player with multiple streaming sources!
+
+Installation:
+
+1. Go to wordpress theme installer and upload psyplay.zip or upload the contents of psyplay.zip to wp-content/themes/ directory and activate psyplay theme.
+
+2. Install theme and required plugins.
+
+3. In Appearance – Theme License paste this code 35688787929654990 and Save.
+
+4. In Appearance – PsyPlay Options – TMDB Api – Activate and put your API key.
+
+5. In Custom Fields – Tools – Import upload file ACF-Parameters-1.2.0.json from archive.
+
+6. In Appearance – PsyPlay Options – Advertising – Ads – Fake Player – Enable Fake Player.
+
+7. Go to dbmovies and import movies and tv shows.
+
+8. Now you should see autoembed player on movie and episode detail.
+
+All the best 
+https://autoembed.cc

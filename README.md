@@ -58,13 +58,13 @@ All docs are in [`docs/`](docs/):
 
 | File | Description |
 |------|-------------|
-| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Technical architecture |
-| [CAHIER_DES_CHARGES.md](docs/CAHIER_DES_CHARGES.md) | Project specifications |
-| [STREAMING.md](docs/STREAMING.md) | Streaming module (Consumet) |
-| [API.md](docs/API.md) | API reference |
-| [QUICK_START.md](docs/QUICK_START.md) | Detailed setup guide |
-| [DEPLOYMENT.md](docs/DEPLOYMENT.md) | Production deployment |
-| [TESTING.md](docs/TESTING.md) | Testing guide |
+| [README.md](docs/README.md) | Documentation index |
+| [tmdb-api-reference.md](docs/tmdb-api-reference.md) | TMDB reference |
+| [vidlink-api.md](docs/vidlink-api.md) | VidLink API docs |
+| [vidsrc-to-api.md](docs/vidsrc-to-api.md) | VidSrc.to API docs |
+| [vidsrc-embed-ru-api.md](docs/vidsrc-embed-ru-api.md) | VidSrc-Embed.ru API docs |
+| [autoembed-api.md](docs/autoembed-api.md) | AutoEmbed API docs |
+| [AUTOEMBED/AUTOEMBED.md](docs/AUTOEMBED/AUTOEMBED.md) | AutoEmbed templates notes |
 
 ---
 

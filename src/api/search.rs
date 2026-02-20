@@ -4,18 +4,24 @@ use crate::{
     db,
     events::{self, SearchRequestedPayload},
     models::{ApiSearchPayload, SearchResult},
-    providers::{jackett::JackettProvider, prowlarr::ProwlarrProvider, ProviderRegistry},
+    providers::{
+        jackett::JackettProvider, prowlarr::ProwlarrProvider, ProviderRegistry, SearchProvider,
+    },
     AppState,
 };
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::StatusCode,
-    response::IntoResponse,
+    response::{
+        sse::{Event, Sse},
+        IntoResponse,
+    },
     Json,
 };
+use futures::stream::Stream;
 use serde::Deserialize;
 use serde_json::json;
-use std::sync::Arc;
+use std::{convert::Infallible, sync::Arc, time::Duration};
 use uuid::Uuid;
 
 pub async fn trigger_search_handler(
@@ -135,5 +141,112 @@ pub async fn direct_search_handler(
     Ok((
         StatusCode::OK,
         Json(json!({"results": results, "count": results.len()})),
+    ))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct SseSearchQuery {
+    pub query: String,
+    pub media_id: Uuid,
+}
+
+/// GET /search/stream?query=...&media_id=... — SSE endpoint that streams results as they arrive
+pub async fn stream_search_handler(
+    State(state): State<Arc<AppState>>,
+    Query(params): Query<SseSearchQuery>,
+) -> Result<Sse<impl Stream<Item = Result<Event, Infallible>>>, ApiError> {
+    let query = params.query.trim().to_string();
+    if query.is_empty() {
+        return Err(ApiError::InvalidInput(
+            "Search query cannot be empty.".into(),
+        ));
+    }
+
+    let media_id = params.media_id;
+
+    // Build providers list
+    let mut providers: Vec<(String, Box<dyn SearchProvider>)> = Vec::new();
+
+    if !CONFIG.prowlarr_url.is_empty() && !CONFIG.prowlarr_api_key.is_empty() {
+        providers.push((
+            "Prowlarr".to_string(),
+            Box::new(ProwlarrProvider::new(
+                CONFIG.prowlarr_api_key.clone(),
+                CONFIG.prowlarr_url.clone(),
+                state.flaresolverr_client.clone(),
+            )),
+        ));
+    }
+
+    if !CONFIG.jackett_url.is_empty() && !CONFIG.jackett_api_key.is_empty() {
+        providers.push((
+            "Jackett".to_string(),
+            Box::new(JackettProvider::new(
+                CONFIG.jackett_api_key.clone(),
+                CONFIG.jackett_url.clone(),
+                state.flaresolverr_client.clone(),
+            )),
+        ));
+    }
+
+    let provider_timeout = Duration::from_secs(CONFIG.indexer_search_timeout_secs.max(5));
+
+    let stream = async_stream::stream! {
+        // Emit start event
+        yield Ok(Event::default().event("start").data(
+            json!({"query": &query, "providers": providers.len()}).to_string()
+        ));
+
+        let mut total_results = 0usize;
+
+        for (name, provider) in providers {
+            let search_result = tokio::time::timeout(
+                provider_timeout,
+                provider.search(&query),
+            ).await;
+
+            match search_result {
+                Ok(Ok(mut results)) => {
+                    results.sort_by_key(|s| std::cmp::Reverse(s.seeders.unwrap_or(0)));
+                    results.truncate(100);
+                    let count = results.len();
+                    total_results += count;
+
+                    // Save to DB (best effort)
+                    let _ = db::search_results::create_batch(&state.db_pool, media_id, &results).await;
+
+                    yield Ok(Event::default().event("results").data(
+                        json!({
+                            "provider": &name,
+                            "count": count,
+                            "results": results,
+                        }).to_string()
+                    ));
+                }
+                Ok(Err(e)) => {
+                    tracing::warn!("SSE search provider '{}' error: {}", name, e);
+                    yield Ok(Event::default().event("provider_error").data(
+                        json!({"provider": &name, "error": e.to_string()}).to_string()
+                    ));
+                }
+                Err(_) => {
+                    tracing::warn!("SSE search provider '{}' timed out", name);
+                    yield Ok(Event::default().event("provider_error").data(
+                        json!({"provider": &name, "error": "timeout"}).to_string()
+                    ));
+                }
+            }
+        }
+
+        // Emit done event
+        yield Ok(Event::default().event("done").data(
+            json!({"total": total_results}).to_string()
+        ));
+    };
+
+    Ok(Sse::new(stream).keep_alive(
+        axum::response::sse::KeepAlive::new()
+            .interval(Duration::from_secs(15))
+            .text("ping"),
     ))
 }

@@ -92,7 +92,7 @@ pub async fn list_channels_handler(
 ) -> Result<Json<Vec<db::tv::TvChannel>>, ApiError> {
     let key = "tv:channels:list";
     if let Ok(Some(cached)) =
-        get_from_cache::<Vec<db::tv::TvChannel>>(&state.redis_client, &key).await
+        get_from_cache::<Vec<db::tv::TvChannel>>(&state.redis_client, key).await
     {
         if !cached.is_empty() {
             return Ok(Json(cached));
@@ -111,7 +111,7 @@ pub async fn list_channels_handler(
     }
 
     if !channels.is_empty() {
-        let _ = set_to_cache_with_ttl(&state.redis_client, &key, &channels, 86400).await;
+        let _ = set_to_cache_with_ttl(&state.redis_client, key, &channels, 86400).await;
     }
 
     Ok(Json(channels))
@@ -192,7 +192,7 @@ pub async fn get_programs_now_handler(
 ) -> Result<Json<Vec<db::tv::TvProgram>>, ApiError> {
     let key = "tv:programs:now";
     if let Ok(Some(cached)) =
-        get_from_cache::<Vec<db::tv::TvProgram>>(&state.redis_client, &key).await
+        get_from_cache::<Vec<db::tv::TvProgram>>(&state.redis_client, key).await
     {
         return Ok(Json(cached));
     }
@@ -201,7 +201,7 @@ pub async fn get_programs_now_handler(
         .await
         .map_err(|_| ApiError::InternalServerError)?;
 
-    let _ = set_to_cache_with_ttl(&state.redis_client, &key, &programs, 300).await;
+    let _ = set_to_cache_with_ttl(&state.redis_client, key, &programs, 300).await;
 
     Ok(Json(programs))
 }

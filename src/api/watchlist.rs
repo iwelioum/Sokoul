@@ -80,7 +80,7 @@ pub async fn add_to_watchlist_handler(
         &payload.quality_min,
     )
     .await
-    .map_err(|e| ApiError::Database(e))?;
+    .map_err(ApiError::Database)?;
     Ok(StatusCode::CREATED)
 }
 
@@ -93,7 +93,7 @@ pub async fn remove_from_watchlist_handler(
     let user_id = get_user_id(&headers);
     db::watchlist::remove_from_watchlist(&state.db_pool, user_id, media_id)
         .await
-        .map_err(|e| ApiError::Database(e))?;
+        .map_err(ApiError::Database)?;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -125,7 +125,7 @@ pub async fn list_watchlist_handler(
 
     let total = db::watchlist::count_watchlist(&state.db_pool, user_id)
         .await
-        .map_err(|e| ApiError::Database(e))?;
+        .map_err(ApiError::Database)?;
     let rows = sqlx::query(
         r#"
         SELECT

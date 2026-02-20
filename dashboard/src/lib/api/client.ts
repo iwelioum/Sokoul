@@ -192,52 +192,14 @@ export interface WsEvent {
 	[key: string]: unknown;
 }
 
-export interface StreamSource {
-	name: string;
-	url: string;
-	quality: string;
-	category?: string;
-	language?: string;
-}
-
-export interface FrenchSourceGroup {
-	category: string;
-	sources: StreamSource[];
-}
-
-export interface StreamLinks {
-	title: string;
-	tmdb_id: number;
+export interface VidfastEmbed {
+	embed_url: string;
 	media_type: string;
-	sources: StreamSource[];
+	tmdb_id: number;
+	season: number | null;
+	episode: number | null;
 }
 
-export interface MediaFile {
-	id: string;
-	media_id: string;
-	file_path: string;
-	file_size: number | null;
-	codec_video: string | null;
-	codec_audio: string | null;
-	resolution: string | null;
-	quality_score: number | null;
-	source: string | null;
-	downloaded_at: string | null;
-}
-
-export interface FileInfo {
-	id: string;
-	media_id: string;
-	file_path: string;
-	file_size: number | null;
-	codec_video: string | null;
-	codec_audio: string | null;
-	resolution: string | null;
-	exists: boolean;
-	filename: string;
-	stream_url: string;
-	content_type: string;
-}
 
 // ══════════════════════════════════════════════════
 // TYPES — TMDB
@@ -262,6 +224,22 @@ export interface TmdbGenre {
 	name: string;
 }
 
+export interface BelongsToCollection {
+	id: number;
+	name: string;
+	poster_path: string | null;
+	backdrop_path: string | null;
+}
+
+export interface TmdbCollection {
+	id: number;
+	name: string;
+	overview: string | null;
+	poster_path: string | null;
+	backdrop_path: string | null;
+	parts: TmdbSearchItem[];
+}
+
 export interface TmdbMovieDetail {
 	id: number;
 	title: string;
@@ -279,6 +257,7 @@ export interface TmdbMovieDetail {
 	status: string | null;
 	budget: number | null;
 	revenue: number | null;
+	belongs_to_collection: BelongsToCollection | null;
 }
 
 export interface TmdbTvDetail {
@@ -558,8 +537,29 @@ export function deleteMedia(id: string): Promise<void> {
 // API — TMDB (proxy with cache)
 // ══════════════════════════════════════════════════
 
+// ── Language preference (stored in localStorage) ──────────────────────────
+
+export function getPreferredLang(): string {
+	if (typeof localStorage !== 'undefined') {
+		return localStorage.getItem('sokoul_lang') || 'fr-FR';
+	}
+	return 'fr-FR';
+}
+
+export function setPreferredLang(lang: string) {
+	if (typeof localStorage !== 'undefined') {
+		localStorage.setItem('sokoul_lang', lang);
+	}
+}
+
+function langParam(): string {
+	return `lang=${encodeURIComponent(getPreferredLang())}`;
+}
+
+// ── TMDB API ───────────────────────────────────────────────────────────────
+
 export function tmdbTrending(mediaType: string, timeWindow: string): Promise<TmdbSearchItem[]> {
-	return request(`/tmdb/trending/${mediaType}/${timeWindow}`);
+	return request(`/tmdb/trending/${mediaType}/${timeWindow}?${langParam()}`);
 }
 
 export function tmdbDiscover(
@@ -575,9 +575,13 @@ export function tmdbDiscover(
 		'primary_release_date.lte'?: string;
 		'first_air_date.gte'?: string;
 		'first_air_date.lte'?: string;
+		'vote_average.gte'?: number;
+		'vote_average.lte'?: number;
+		with_original_language?: string;
 	} = {}
 ): Promise<TmdbPaginatedResponse> {
 	const qs = new URLSearchParams();
+	qs.set('lang', getPreferredLang());
 	for (const [k, v] of Object.entries(params)) {
 		if (v !== undefined) qs.set(k, String(v));
 	}
@@ -585,15 +589,15 @@ export function tmdbDiscover(
 }
 
 export function tmdbMovieDetails(id: number): Promise<TmdbMovieDetail> {
-	return request(`/tmdb/movie/${id}`);
+	return request(`/tmdb/movie/${id}?${langParam()}`);
 }
 
 export function tmdbTvDetails(id: number): Promise<TmdbTvDetail> {
-	return request(`/tmdb/tv/${id}`);
+	return request(`/tmdb/tv/${id}?${langParam()}`);
 }
 
 export function tmdbSeasonDetails(tvId: number, seasonNumber: number): Promise<TmdbSeasonDetail> {
-	return request(`/tmdb/tv/${tvId}/season/${seasonNumber}`);
+	return request(`/tmdb/tv/${tvId}/season/${seasonNumber}?${langParam()}`);
 }
 
 export function tmdbCredits(mediaType: string, id: number): Promise<TmdbCreditsResponse> {
@@ -601,7 +605,7 @@ export function tmdbCredits(mediaType: string, id: number): Promise<TmdbCreditsR
 }
 
 export function tmdbVideos(mediaType: string, id: number): Promise<TmdbVideo[]> {
-	return request(`/tmdb/${mediaType}/${id}/videos`);
+	return request(`/tmdb/${mediaType}/${id}/videos?${langParam()}`);
 }
 
 export function tmdbWatchProviders(mediaType: string, id: number): Promise<TmdbWatchProviderCountry | null> {
@@ -609,118 +613,46 @@ export function tmdbWatchProviders(mediaType: string, id: number): Promise<TmdbW
 }
 
 export function tmdbPerson(id: number): Promise<TmdbPersonDetail> {
-	return request(`/tmdb/person/${id}`);
+	return request(`/tmdb/person/${id}?${langParam()}`);
 }
 
 export function tmdbPersonCredits(id: number): Promise<TmdbPersonCredit[]> {
-	return request(`/tmdb/person/${id}/credits`);
+	return request(`/tmdb/person/${id}/credits?${langParam()}`);
 }
 
 export function tmdbSimilar(mediaType: string, id: number): Promise<TmdbSearchItem[]> {
-	return request(`/tmdb/${mediaType}/${id}/similar`);
+	return request(`/tmdb/${mediaType}/${id}/similar?${langParam()}`);
 }
 
 export function tmdbSearch(query: string): Promise<TmdbSearchItem[]> {
-	return request(`/tmdb/search?query=${encodeURIComponent(query)}`);
+	return request(`/tmdb/search?query=${encodeURIComponent(query)}&${langParam()}`);
+}
+
+export function tmdbCollection(id: number): Promise<TmdbCollection> {
+	return request(`/tmdb/collection/${id}?${langParam()}`);
+}
+
+export function tmdbMovieCertification(id: number): Promise<string | null> {
+	return request(`/tmdb/movie/${id}/certification`);
+}
+
+export function tmdbTvCertification(id: number): Promise<string | null> {
+	return request(`/tmdb/tv/${id}/certification`);
 }
 
 // ══════════════════════════════════════════════════
-// API — Streaming
+// API — Streaming (VidFast)
 // ══════════════════════════════════════════════════
 
-export function getStreamLinks(mediaId: string, season?: number, episode?: number): Promise<StreamLinks> {
-	let url = `/media/${mediaId}/stream`;
-	if (season !== undefined) url += `?season=${season}&episode=${episode ?? 1}`;
-	return request(url);
-}
-
-export function getDirectStreamLinks(
+export function getVidfastEmbed(
 	mediaType: string,
 	tmdbId: number,
 	season?: number,
 	episode?: number
-): Promise<StreamLinks> {
-	let url = `/streaming/direct/${mediaType}/${tmdbId}`;
+): Promise<VidfastEmbed> {
+	let url = `/streaming/embed/${mediaType}/${tmdbId}`;
 	if (season !== undefined) url += `?season=${season}&episode=${episode ?? 1}`;
 	return request(url);
-}
-
-// ══════════════════════════════════════════════════
-// Types & API — Custom Player (stream extraction)
-// ══════════════════════════════════════════════════
-
-export interface ExtractedStream {
-	provider: string;
-	url: string;
-	quality: string;
-	audio_lang: string | null;
-	headers: Record<string, string> | null;
-	stream_type: 'Hls' | 'Mp4';
-	category?: string;
-	language?: string;
-}
-
-export interface SubtitleTrack {
-	language: string;
-	label: string;
-	url: string;
-	is_default: boolean;
-}
-
-export interface ExtractionResponse {
-	tmdb_id: number;
-	media_type: string;
-	streams: ExtractedStream[];
-	iframe_fallbacks: StreamSource[];
-	french_groups?: FrenchSourceGroup[];
-	subtitles: SubtitleTrack[];
-}
-
-export function extractStreams(
-	mediaType: string,
-	tmdbId: number,
-	season?: number,
-	episode?: number
-): Promise<ExtractionResponse> {
-	let url = `/streaming/extract/${mediaType}/${tmdbId}`;
-	if (season !== undefined) url += `?season=${season}&episode=${episode ?? 1}`;
-	return request(url);
-}
-
-/**
- * Resolve direct HLS/MP4 streams via the self-hosted Consumet API (FlixHQ).
- * Returns the same ExtractionResponse shape as extractStreams() so CustomPlayer
- * works without changes.
- *
- * Use this as the primary source; fall back to extractStreams() if it fails.
- */
-export function resolveConsumetStreams(
-	mediaType: string,
-	tmdbId: number,
-	season?: number,
-	episode?: number
-): Promise<ExtractionResponse> {
-	let url = `/streaming/consumet/${mediaType}/${tmdbId}`;
-	if (season !== undefined) url += `?season=${season}&episode=${episode ?? 1}`;
-	return request(url);
-}
-
-export function getSubtitles(
-	mediaType: string,
-	tmdbId: number,
-	season?: number,
-	episode?: number,
-	languages: string[] = ['fr', 'en']
-): Promise<SubtitleTrack[]> {
-	let url = `/streaming/subtitles/${mediaType}/${tmdbId}?lang=${languages.join(',')}`;
-	if (season !== undefined) url += `&season=${season}&episode=${episode ?? 1}`;
-	return request(url);
-}
-
-export function getProxyUrl(streamUrl: string, referer?: string): string {
-	const params = new URLSearchParams({ url: streamUrl });
-	if (referer) params.set('referer', referer);
-	return `${API_BASE}/streaming/proxy?${params}`;
 }
 
 // ══════════════════════════════════════════════════
@@ -835,21 +767,6 @@ export function getTask(id: string): Promise<Task> {
 	return request(`/tasks/${id}`);
 }
 
-// ══════════════════════════════════════════════════
-// API — Media Files
-// ══════════════════════════════════════════════════
-
-export function getMediaFiles(mediaId: string): Promise<MediaFile[]> {
-	return request(`/media/${mediaId}/files`);
-}
-
-export function getFileInfo(fileId: string): Promise<FileInfo> {
-	return request(`/files/${fileId}/info`);
-}
-
-export function getFileStreamUrl(fileId: string): string {
-	return `${API_BASE}/files/${fileId}/stream`;
-}
 
 // ══════════════════════════════════════════════════
 // API — Storage

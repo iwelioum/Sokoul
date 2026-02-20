@@ -53,7 +53,7 @@ impl VirusTotalClient {
 
         let client = reqwest::Client::new();
         let response = client
-            .get(&format!("{}/urls/{}", self.base_url, url_id))
+            .get(format!("{}/urls/{}", self.base_url, url_id))
             .header("x-apikey", &self.api_key)
             .timeout(std::time::Duration::from_secs(10))
             .send()
@@ -78,7 +78,7 @@ impl VirusTotalClient {
     pub async fn scan_file(&self, file_hash: &str) -> Result<FileScanResult, Box<dyn Error>> {
         let client = reqwest::Client::new();
         let response = client
-            .get(&format!("{}/files/{}", self.base_url, file_hash))
+            .get(format!("{}/files/{}", self.base_url, file_hash))
             .header("x-apikey", &self.api_key)
             .timeout(std::time::Duration::from_secs(10))
             .send()
@@ -107,7 +107,7 @@ impl VirusTotalClient {
     ) -> Result<DomainReputationResult, Box<dyn Error>> {
         let client = reqwest::Client::new();
         let response = client
-            .get(&format!("{}/domains/{}", self.base_url, domain))
+            .get(format!("{}/domains/{}", self.base_url, domain))
             .header("x-apikey", &self.api_key)
             .timeout(std::time::Duration::from_secs(10))
             .send()

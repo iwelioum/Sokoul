@@ -123,6 +123,7 @@ pub async fn get_collection_items_by_type(
     .await
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn create_collection_item(
     pool: &PgPool,
     collection_id: Uuid,

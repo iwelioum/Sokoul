@@ -51,10 +51,7 @@ impl EmailService {
 
     /// Create SMTP transport
     fn create_transport(&self) -> Result<SmtpTransport, Box<dyn Error>> {
-        let creds = Credentials::new(
-            self.smtp_user.clone().into(),
-            self.smtp_password.clone().into(),
-        );
+        let creds = Credentials::new(self.smtp_user.clone(), self.smtp_password.clone());
 
         let transport = SmtpTransport::relay(&self.smtp_host)?
             .port(self.smtp_port)
@@ -167,7 +164,7 @@ impl EmailService {
         let subject = format!("Security Digest - {} Events", event_count);
 
         let mut events_html = String::new();
-        for (_idx, event) in events.iter().enumerate() {
+        for event in events.iter() {
             let severity_color = match event.severity.to_lowercase().as_str() {
                 "critical" => "#dc3545",
                 "high" => "#fd7e14",

@@ -185,6 +185,7 @@ pub async fn check_url_safety(state: &Arc<AppState>, url: &str) -> SecurityCheck
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn log_security_event(
     state: &Arc<AppState>,
     user_id: Option<Uuid>,

@@ -44,7 +44,7 @@ pub async fn list_collections_handler(
 ) -> Result<Json<Vec<db::collections::Collection>>, ApiError> {
     let key = "collections:list";
     if let Ok(Some(cached)) =
-        get_from_cache::<Vec<db::collections::Collection>>(&state.redis_client, &key).await
+        get_from_cache::<Vec<db::collections::Collection>>(&state.redis_client, key).await
     {
         return Ok(Json(cached));
     }
@@ -53,7 +53,7 @@ pub async fn list_collections_handler(
         .await
         .map_err(|_| ApiError::InternalServerError)?;
 
-    let _ = set_to_cache_with_ttl(&state.redis_client, &key, &collections, 3600).await;
+    let _ = set_to_cache_with_ttl(&state.redis_client, key, &collections, 3600).await;
 
     Ok(Json(collections))
 }

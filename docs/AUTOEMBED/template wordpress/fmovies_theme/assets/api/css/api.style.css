@@ -1,0 +1,167 @@
+#acf-group_603efa100d159 > div.postbox-header {
+    display: none!important
+}
+
+#acf-group_603efa100d159 {
+    border: 1px solid #ccd0d4
+}
+
+#acf-group_603efa100d159 > div.inside.acf-fields {
+    margin-left: 0!important;
+    margin-right: 0!important
+}
+
+#Generator.acf-field input[type="text"] {
+    width: auto!important
+}
+
+#Generator.postbox {
+    border: 0!important
+}
+
+#test {
+    display: none
+}
+
+#Generator.acf-field .acf-label {
+    display: none!important
+}
+
+#meta-box-notification,.rwmb-activate-license {
+    display: none
+}
+
+input#fetchmovie {
+    cursor: pointer;
+    display: inline-block
+}
+
+input#fetchm {
+    text-align: left!important;
+    display: inline-block!important
+}
+
+input#fetchtv {
+    cursor: pointer;
+    display: inline-block!important;
+    width: 57px!important
+}
+
+input#fetcht {
+    text-align: left!important;
+    display: inline-block!important
+}
+
+#term {
+    font-size: 22px
+}
+
+span#api_status {
+    float: right;
+    position: relative;
+    margin-right: 30px
+}
+
+span#TV {
+    margin-right: 10px
+}
+
+span#film {
+    margin-right: 10px
+}
+
+.rotondo {
+    color: #8be71f;
+    margin-right: 10px
+}
+
+.culo {
+    float: left;
+    position: relative;
+    top: 3px
+}
+
+.desc {
+    font-size: 12px;
+    color: #777;
+    margin-top: 10px;
+    background-color: #fff
+}
+
+#Generator > div.inside > h2 {
+    font-weight: 600;
+    padding: 8px 12px;
+    margin-left: -10px;
+    border-bottom: 1px solid #eee
+}
+
+#postexcerpt.postbox .inside>p:last-child {
+    display: none
+}
+
+#filter-by-date,#cat,#post-query-submit {
+    display: none
+}
+
+#Movie\ Player {
+    display: none
+}
+
+#TV {
+    display: none
+}
+
+.generator-message {
+    position: relative;
+    display: block;
+    background: #46b450;
+    border-radius: 3px;
+    margin: 5px 0 15px;
+    padding: 1px 10px;
+    min-height: 0
+}
+
+.generator-message p {
+    font-size: 13px!important;
+    line-height: 1.4;
+    margin: 8px 0;
+    padding: 0;
+    text-shadow: none;
+    color: #fff
+}
+#url_to_image_meta_box{display:none!important;}
+[data-name="down"] {
+    display: none!important
+}
+
+
+
+
+
+#TV {
+    display: inline-block!important
+}
+
+#selector {
+    display: block!important
+}
+
+#selector-description {
+    display: block!important
+}
+
+#test > div.inside > div > div > ul > li.rwmb-tab-tab_4 {
+    display: block
+}
+
+#untitled > div.inside > div > div:nth-child(16) {
+    display: block!important
+}
+
+#untitled > div.inside > div > div:nth-child(17) {
+    display: block!important
+}
+
+#untitled > div.inside > div > div:nth-child(18) {
+    display: block!important
+}

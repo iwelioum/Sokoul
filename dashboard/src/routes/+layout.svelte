@@ -142,6 +142,8 @@
 		currentUser = null;
 		showUserMenu = false;
 	}
+
+	const isPlayerPage = $derived($page.url.pathname.startsWith('/watch/'));
 </script>
 
 <div class="app-layout">
@@ -149,125 +151,127 @@
 	<!-- ══════════════════════════════════════════
 	     TOP NAVBAR
 	     ══════════════════════════════════════════ -->
-	<header class="navbar" class:scrolled={scrolled}>
-		<div class="navbar-container">
-			<!-- LEFT: Logo + Navigation -->
-			<div class="navbar-left">
-				<!-- Logo -->
-				<a href="/" class="navbar-logo" aria-label="SOKOUL">
-					<img src="/Sokoul_Logo.svg" alt="Sokoul" class="logo-img" />
-				</a>
+	{#if !isPlayerPage}
+		<header class="navbar" class:scrolled={scrolled}>
+			<div class="navbar-container">
+				<!-- LEFT: Logo + Navigation -->
+				<div class="navbar-left">
+					<!-- Logo -->
+					<a href="/" class="navbar-logo" aria-label="SOKOUL">
+						<img src="/Sokoul_Logo.svg" alt="Sokoul" class="logo-img" />
+					</a>
 
-				<!-- Desktop nav -->
-				<nav class="navbar-nav" aria-label="Navigation principale">
+					<!-- Desktop nav -->
+					<nav class="navbar-nav" aria-label="Navigation principale">
+						{#each navItems as item}
+							<a
+								href={item.href}
+								class="nav-link"
+								class:active={isActive(item.href)}
+							>
+								<span>{item.label}</span>
+							</a>
+						{/each}
+					</nav>
+				</div>
+
+				<!-- RIGHT: Search + Notifications + User -->
+				<div class="navbar-right">
+					<!-- Search icon only -->
+					<button class="icon-btn" onclick={() => searchOpen = true} aria-label="Rechercher" title="Rechercher (Ctrl+K)">
+						<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+							<path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+						</svg>
+					</button>
+
+					<!-- Notifications (bell icon) -->
+					<button class="icon-btn" onclick={toggleNotifPanel} aria-label="Notifications" title="Notifications">
+						<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+							<path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z"/>
+						</svg>
+						{#if notifCount > 0}
+							<span class="notif-badge">{notifCount > 9 ? '9+' : notifCount}</span>
+						{/if}
+					</button>
+
+					<!-- User menu -->
+					{#if currentUser}
+						<div class="dropdown-wrap">
+							<button class="user-btn" onclick={() => showUserMenu = !showUserMenu} aria-label="Menu utilisateur" title={currentUser.username}>
+								<span class="user-avatar">{currentUser.username.charAt(0).toUpperCase()}</span>
+							</button>
+							{#if showUserMenu}
+								<!-- svelte-ignore a11y_no_static_element_interactions -->
+								<div class="dropdown-overlay" onclick={() => showUserMenu = false} onkeydown={() => {}}></div>
+								<div class="user-dropdown">
+									<div class="user-dropdown-header">
+										<span class="user-avatar-lg">{currentUser.username.charAt(0).toUpperCase()}</span>
+										<div>
+											<p class="user-dropdown-name">{currentUser.username}</p>
+											<p class="user-dropdown-email">{currentUser.email}</p>
+										</div>
+									</div>
+									<div class="user-dropdown-divider"></div>
+									<a href="/settings" class="user-menu-item" onclick={() => showUserMenu = false}>
+										<svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+											<path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
+										</svg>
+										Gérer le profil
+									</a>
+									<a href="/downloads" class="user-menu-item" onclick={() => showUserMenu = false}>
+										<svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+											<path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+										</svg>
+										Téléchargements
+									</a>
+									<a href="/library" class="user-menu-item" onclick={() => showUserMenu = false}>
+										<svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+											<path d="M17 3H7c-1.1 0-1.99.9-1.99 2L5 21l7-3 7 3V5c0-1.1-.9-2-2-2z"/>
+										</svg>
+										Watchlist
+									</a>
+									<div class="user-dropdown-divider"></div>
+									<button class="user-menu-item logout-item" onclick={handleLogout}>
+										<svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+											<path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
+										</svg>
+										Déconnexion
+									</button>
+								</div>
+							{/if}
+						</div>
+					{:else}
+						<a href="/login" class="login-btn">Sign In</a>
+					{/if}
+
+					<!-- Hamburger (mobile only) -->
+					<button class="hamburger icon-btn" onclick={() => mobileMenuOpen = !mobileMenuOpen} aria-label="Menu">
+						<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+							{#if mobileMenuOpen}
+								<path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+							{:else}
+								<path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/>
+							{/if}
+						</svg>
+					</button>
+				</div>
+			</div>
+
+			<!-- Mobile top dropdown -->
+			{#if mobileMenuOpen}
+				<nav class="mobile-menu" aria-label="Menu mobile">
 					{#each navItems as item}
 						<a
 							href={item.href}
-							class="nav-link"
+							class="mobile-nav-link"
 							class:active={isActive(item.href)}
-						>
-							<span>{item.label}</span>
-						</a>
+							onclick={() => mobileMenuOpen = false}
+						>{item.label}</a>
 					{/each}
 				</nav>
-			</div>
-
-			<!-- RIGHT: Search + Notifications + User -->
-			<div class="navbar-right">
-				<!-- Search icon only -->
-				<button class="icon-btn" onclick={() => searchOpen = true} aria-label="Rechercher" title="Rechercher (Ctrl+K)">
-					<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-						<path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
-					</svg>
-				</button>
-
-				<!-- Notifications (bell icon) -->
-				<button class="icon-btn" onclick={toggleNotifPanel} aria-label="Notifications" title="Notifications">
-					<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-						<path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z"/>
-					</svg>
-					{#if notifCount > 0}
-						<span class="notif-badge">{notifCount > 9 ? '9+' : notifCount}</span>
-					{/if}
-				</button>
-
-				<!-- User menu -->
-				{#if currentUser}
-					<div class="dropdown-wrap">
-						<button class="user-btn" onclick={() => showUserMenu = !showUserMenu} aria-label="Menu utilisateur" title={currentUser.username}>
-							<span class="user-avatar">{currentUser.username.charAt(0).toUpperCase()}</span>
-						</button>
-						{#if showUserMenu}
-							<!-- svelte-ignore a11y_no_static_element_interactions -->
-							<div class="dropdown-overlay" onclick={() => showUserMenu = false} onkeydown={() => {}}></div>
-							<div class="user-dropdown">
-								<div class="user-dropdown-header">
-									<span class="user-avatar-lg">{currentUser.username.charAt(0).toUpperCase()}</span>
-									<div>
-										<p class="user-dropdown-name">{currentUser.username}</p>
-										<p class="user-dropdown-email">{currentUser.email}</p>
-									</div>
-								</div>
-								<div class="user-dropdown-divider"></div>
-								<a href="/settings" class="user-menu-item" onclick={() => showUserMenu = false}>
-									<svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
-										<path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
-									</svg>
-									Gérer le profil
-								</a>
-								<a href="/downloads" class="user-menu-item" onclick={() => showUserMenu = false}>
-									<svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
-										<path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
-									</svg>
-									Téléchargements
-								</a>
-								<a href="/library" class="user-menu-item" onclick={() => showUserMenu = false}>
-									<svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
-										<path d="M17 3H7c-1.1 0-1.99.9-1.99 2L5 21l7-3 7 3V5c0-1.1-.9-2-2-2z"/>
-									</svg>
-									Watchlist
-								</a>
-								<div class="user-dropdown-divider"></div>
-								<button class="user-menu-item logout-item" onclick={handleLogout}>
-									<svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
-										<path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
-									</svg>
-									Déconnexion
-								</button>
-							</div>
-						{/if}
-					</div>
-				{:else}
-					<a href="/login" class="login-btn">Sign In</a>
-				{/if}
-
-				<!-- Hamburger (mobile only) -->
-				<button class="hamburger icon-btn" onclick={() => mobileMenuOpen = !mobileMenuOpen} aria-label="Menu">
-					<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-						{#if mobileMenuOpen}
-							<path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-						{:else}
-							<path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/>
-						{/if}
-					</svg>
-				</button>
-			</div>
-		</div>
-
-		<!-- Mobile top dropdown -->
-		{#if mobileMenuOpen}
-			<nav class="mobile-menu" aria-label="Menu mobile">
-				{#each navItems as item}
-					<a
-						href={item.href}
-						class="mobile-nav-link"
-						class:active={isActive(item.href)}
-						onclick={() => mobileMenuOpen = false}
-					>{item.label}</a>
-				{/each}
-			</nav>
-		{/if}
-	</header>
+			{/if}
+		</header>
+	{/if}
 
 	<!-- ══════════════════════════════════════════
 	     CONTENT
@@ -279,32 +283,34 @@
 	<!-- ══════════════════════════════════════════
 	     MOBILE BOTTOM BAR
 	     ══════════════════════════════════════════ -->
-	<nav class="bottom-bar" class:hidden={!bottomBarVisible} aria-label="Navigation mobile">
-		<a href="/" class="bottom-item" class:active={$page.url.pathname === '/'}>
-			<svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22">
-				<path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
-			</svg>
-			<span>Accueil</span>
-		</a>
-		<button class="bottom-item" onclick={() => searchOpen = true}>
-			<svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22">
-				<path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
-			</svg>
-			<span>Recherche</span>
-		</button>
-		<a href="/library" class="bottom-item" class:active={$page.url.pathname.startsWith('/library')}>
-			<svg viewBox="0 0 24 24" fill={$page.url.pathname.startsWith('/library') ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="2" width="22" height="22">
-				<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-			</svg>
-			<span>Ma Liste</span>
-		</a>
-		<a href={currentUser ? "/library" : "/login"} class="bottom-item">
-			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22">
-				<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
-			</svg>
-			<span>{currentUser ? 'Profil' : 'Connexion'}</span>
-		</a>
-	</nav>
+	{#if !isPlayerPage}
+		<nav class="bottom-bar" class:hidden={!bottomBarVisible} aria-label="Navigation mobile">
+			<a href="/" class="bottom-item" class:active={$page.url.pathname === '/'}>
+				<svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22">
+					<path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+				</svg>
+				<span>Accueil</span>
+			</a>
+			<button class="bottom-item" onclick={() => searchOpen = true}>
+				<svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22">
+					<path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+				</svg>
+				<span>Recherche</span>
+			</button>
+			<a href="/library" class="bottom-item" class:active={$page.url.pathname.startsWith('/library')}>
+				<svg viewBox="0 0 24 24" fill={$page.url.pathname.startsWith('/library') ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="2" width="22" height="22">
+					<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+				</svg>
+				<span>Ma Liste</span>
+			</a>
+			<a href={currentUser ? "/library" : "/login"} class="bottom-item">
+				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22">
+					<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+				</svg>
+				<span>{currentUser ? 'Profil' : 'Connexion'}</span>
+			</a>
+		</nav>
+	{/if}
 </div>
 
 <!-- ── Notification panel ── -->

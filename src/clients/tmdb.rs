@@ -86,6 +86,7 @@ pub struct TmdbMovieDetail {
     pub status: Option<String>,
     pub budget: Option<i64>,
     pub revenue: Option<i64>,
+    pub belongs_to_collection: Option<BelongsToCollection>,
 }
 
 // ── TV Details ──
@@ -240,6 +241,55 @@ struct TmdbPersonCreditsResponse {
     cast: Vec<TmdbPersonCredit>,
 }
 
+// ── Collection ──
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct BelongsToCollection {
+    pub id: i32,
+    pub name: String,
+    pub poster_path: Option<String>,
+    pub backdrop_path: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct TmdbCollection {
+    pub id: i32,
+    pub name: String,
+    pub overview: Option<String>,
+    pub poster_path: Option<String>,
+    pub backdrop_path: Option<String>,
+    pub parts: Vec<TmdbSearchResult>,
+}
+
+// ── Certification ──
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct TmdbReleaseDateEntry {
+    pub certification: String,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct TmdbReleaseDateCountry {
+    pub iso_3166_1: String,
+    pub release_dates: Vec<TmdbReleaseDateEntry>,
+}
+
+#[derive(Debug, Deserialize)]
+struct TmdbReleaseDatesResponse {
+    pub results: Vec<TmdbReleaseDateCountry>,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct TmdbContentRatingEntry {
+    pub iso_3166_1: String,
+    pub rating: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct TmdbContentRatingsResponse {
+    pub results: Vec<TmdbContentRatingEntry>,
+}
+
 // ── Discover Params ──
 
 #[derive(Debug, Deserialize, Default)]
@@ -251,6 +301,19 @@ pub struct DiscoverParams {
     pub sort_by: Option<String>,
     pub page: Option<i32>,
     pub watch_region: Option<String>,
+    #[serde(rename = "primary_release_date.gte")]
+    pub primary_release_date_gte: Option<String>,
+    #[serde(rename = "primary_release_date.lte")]
+    pub primary_release_date_lte: Option<String>,
+    #[serde(rename = "first_air_date.gte")]
+    pub first_air_date_gte: Option<String>,
+    #[serde(rename = "first_air_date.lte")]
+    pub first_air_date_lte: Option<String>,
+    #[serde(rename = "vote_average.gte")]
+    pub vote_average_gte: Option<f64>,
+    #[serde(rename = "vote_average.lte")]
+    pub vote_average_lte: Option<f64>,
+    pub with_original_language: Option<String>,
 }
 
 // ── Client ──
@@ -259,6 +322,7 @@ pub struct DiscoverParams {
 pub struct TmdbClient {
     client: Client,
     api_key: String,
+    language: String,
 }
 
 impl TmdbClient {
@@ -266,13 +330,23 @@ impl TmdbClient {
         Self {
             client: Client::new(),
             api_key,
+            language: "fr-FR".to_string(),
+        }
+    }
+
+    /// Return a clone of this client with a different language.
+    pub fn with_language(&self, lang: &str) -> Self {
+        Self {
+            client: self.client.clone(),
+            api_key: self.api_key.clone(),
+            language: lang.to_string(),
         }
     }
 
     fn base_params(&self) -> Vec<(&str, String)> {
         vec![
             ("api_key", self.api_key.clone()),
-            ("language", "fr-FR".to_string()),
+            ("language", self.language.clone()),
         ]
     }
 
@@ -356,6 +430,27 @@ impl TmdbClient {
             query.push(("sort_by", sb.clone()));
         } else {
             query.push(("sort_by", "popularity.desc".to_string()));
+        }
+        if let Some(ref v) = params.primary_release_date_gte {
+            query.push(("primary_release_date.gte", v.clone()));
+        }
+        if let Some(ref v) = params.primary_release_date_lte {
+            query.push(("primary_release_date.lte", v.clone()));
+        }
+        if let Some(ref v) = params.first_air_date_gte {
+            query.push(("first_air_date.gte", v.clone()));
+        }
+        if let Some(ref v) = params.first_air_date_lte {
+            query.push(("first_air_date.lte", v.clone()));
+        }
+        if let Some(v) = params.vote_average_gte {
+            query.push(("vote_average.gte", v.to_string()));
+        }
+        if let Some(v) = params.vote_average_lte {
+            query.push(("vote_average.lte", v.to_string()));
+        }
+        if let Some(ref lang) = params.with_original_language {
+            query.push(("with_original_language", lang.clone()));
         }
         query.push(("page", params.page.unwrap_or(1).to_string()));
 
@@ -538,5 +633,85 @@ impl TmdbClient {
             .json::<TmdbPaginatedResponse>()
             .await?;
         Ok(resp.results)
+    }
+
+    // ── Collection (TMDB franchise/saga) ──
+
+    pub async fn collection(&self, id: i32) -> Result<TmdbCollection, reqwest::Error> {
+        let url = format!("{}/collection/{}", TMDB_API_BASE_URL, id);
+        self.client
+            .get(&url)
+            .query(&self.base_params())
+            .send()
+            .await?
+            .error_for_status()?
+            .json::<TmdbCollection>()
+            .await
+    }
+
+    // ── Certification ──
+
+    /// Fetch the content certification for a movie (prefers FR, falls back to US).
+    pub async fn movie_certification(&self, id: i32) -> Result<Option<String>, reqwest::Error> {
+        let url = format!("{}/movie/{}/release_dates", TMDB_API_BASE_URL, id);
+        let resp = self
+            .client
+            .get(&url)
+            .query(&[("api_key", self.api_key.clone())])
+            .send()
+            .await?
+            .error_for_status()?
+            .json::<TmdbReleaseDatesResponse>()
+            .await?;
+
+        // Priority: FR → US → any non-empty
+        let pick = |code: &str| -> Option<String> {
+            resp.results
+                .iter()
+                .find(|c| c.iso_3166_1 == code)
+                .and_then(|c| {
+                    c.release_dates
+                        .iter()
+                        .find(|r| !r.certification.is_empty())
+                        .map(|r| r.certification.clone())
+                })
+        };
+
+        Ok(pick("FR").or_else(|| pick("US")).or_else(|| {
+            resp.results.iter().find_map(|c| {
+                c.release_dates
+                    .iter()
+                    .find(|r| !r.certification.is_empty())
+                    .map(|r| r.certification.clone())
+            })
+        }))
+    }
+
+    /// Fetch the content rating for a TV show (prefers FR, falls back to US).
+    pub async fn tv_certification(&self, id: i32) -> Result<Option<String>, reqwest::Error> {
+        let url = format!("{}/tv/{}/content_ratings", TMDB_API_BASE_URL, id);
+        let resp = self
+            .client
+            .get(&url)
+            .query(&[("api_key", self.api_key.clone())])
+            .send()
+            .await?
+            .error_for_status()?
+            .json::<TmdbContentRatingsResponse>()
+            .await?;
+
+        let pick = |code: &str| -> Option<String> {
+            resp.results
+                .iter()
+                .find(|c| c.iso_3166_1 == code && !c.rating.is_empty())
+                .map(|c| c.rating.clone())
+        };
+
+        Ok(pick("FR").or_else(|| pick("US")).or_else(|| {
+            resp.results
+                .iter()
+                .find(|c| !c.rating.is_empty())
+                .map(|c| c.rating.clone())
+        }))
     }
 }

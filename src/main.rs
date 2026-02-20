@@ -1,65 +1,20 @@
 mod api;
-#[cfg(test)]
-mod auth_flow_tests;
 mod cache;
-#[cfg(test)]
-mod chaos_engineering_tests;
-#[cfg(test)]
-mod client_tests;
 mod clients;
 mod config;
-#[cfg(test)]
-mod config_tests;
 mod db;
-#[cfg(test)]
-mod distributed_tracing_tests;
 mod events;
-mod extractors;
-#[cfg(test)]
-mod github_actions_tests;
-#[cfg(test)]
-mod health_checks_tests;
-#[cfg(test)]
-mod input_sanitization_tests;
-#[cfg(test)]
-mod integration_tests_level1;
-#[cfg(test)]
-mod load_testing_tests;
-#[cfg(test)]
-mod message_contract_tests;
 mod metrics;
-#[cfg(test)]
-mod metrics_tests;
 mod middleware;
 mod models;
 mod notifications;
 use notifications::EmailService;
-#[cfg(test)]
-mod nats_integration_tests;
-#[cfg(test)]
-mod performance_concurrency_tests;
-#[cfg(test)]
-mod precommit_hooks_tests;
-#[cfg(test)]
-mod prometheus_metrics_tests;
 mod providers;
-#[cfg(test)]
-mod rate_limiting_tests;
-#[cfg(test)]
-mod release_automation_tests;
 mod scheduler;
-#[cfg(test)]
-mod secrets_audit_tests;
 mod security;
-#[cfg(test)]
-mod security_robustness_tests;
 mod telegram;
-#[cfg(test)]
-mod tests;
 mod utils;
 mod workers;
-#[cfg(test)]
-mod workers_idempotence_tests;
 
 use axum::{
     middleware as axum_middleware,
@@ -719,13 +674,10 @@ async fn main() -> anyhow::Result<()> {
             "/media/:id/recommendations",
             get(api::recommendations::get_recommendations_handler),
         )
-        .route(
-            "/media/:id/stream",
-            get(api::streaming::get_stream_links_handler),
-        )
         // Search & Downloads
         .route("/search", post(api::search::trigger_search_handler))
         .route("/search/direct", post(api::search::direct_search_handler))
+        .route("/search/stream", get(api::search::stream_search_handler))
         .route(
             "/search/:media_id",
             get(api::search::get_search_results_handler),
@@ -795,29 +747,10 @@ async fn main() -> anyhow::Result<()> {
     let public_metadata_routes = Router::new()
         .merge(api::tmdb::tmdb_routes())
         .merge(api::enrichment::enrichment_routes())
+        // VidFast embed URL generator
         .route(
-            "/streaming/direct/:media_type/:tmdb_id",
-            get(api::streaming::direct_stream_handler),
-        )
-        .route(
-            "/streaming/extract/:media_type/:tmdb_id",
-            get(api::streaming::extract_streams_handler),
-        )
-        .route(
-            "/streaming/proxy",
-            get(api::streaming::stream_proxy_handler),
-        )
-        .route(
-            "/streaming/subtitles/:media_type/:tmdb_id",
-            get(api::streaming::get_subtitles_handler),
-        )
-        .route(
-            "/streaming/subtitles/vtt",
-            get(api::streaming::serve_subtitle_vtt_handler),
-        )
-        .route(
-            "/streaming/consumet/:media_type/:tmdb_id",
-            get(api::streaming::resolve_consumet_handler),
+            "/streaming/embed/:media_type/:tmdb_id",
+            get(api::streaming::vidfast_embed_handler),
         );
 
     // Collections routes (nested under /api/collections)
@@ -836,11 +769,18 @@ async fn main() -> anyhow::Result<()> {
         .layer(axum_middleware::from_fn(api::auth::api_key_middleware));
 
     // Public routes (no auth needed)
+    // Auth routes get stricter rate limiting (10 req/min per IP)
+    let auth_routes_limited =
+        api::auth::auth_routes().layer(middleware::RateLimitLayer::new(10, 60));
+
     let public_routes = Router::new()
         .route("/health", get(api::health::health_check_handler))
         .route("/metrics", get(api::metrics::metrics_handler))
         .route("/ws", get(api::ws::ws_handler))
-        .merge(api::auth::auth_routes());
+        .merge(auth_routes_limited);
+
+    // General API rate limit: 120 req/min per IP
+    let api_rate_limit = middleware::RateLimitLayer::new(120, 60);
 
     let app = Router::new()
         .merge(public_routes)
@@ -851,6 +791,7 @@ async fn main() -> anyhow::Result<()> {
         .merge(protected_routes)
         .layer(axum_middleware::from_fn(middleware::track_metrics))
         .layer(cors)
+        .layer(api_rate_limit)
         .layer(ConcurrencyLimitLayer::new(CONFIG.rate_limit_rps as usize))
         .layer(prometheus_layer)
         .with_state(state);

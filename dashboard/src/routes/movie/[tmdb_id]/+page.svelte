@@ -5,9 +5,9 @@
 		tmdbMovieDetails, tmdbCredits, tmdbVideos, tmdbSimilar,
 		tmdbImageUrl, addToLibrary, removeFromLibrary,
 		addToWatchlist, removeFromWatchlist, getLibraryStatus, createMedia, triggerSearch, startDownload, getSearchResults,
-		getOmdbByImdbId, getFanartMovie
+		getOmdbByImdbId, getFanartMovie, tmdbCollection, tmdbMovieCertification
 	} from '$lib/api/client';
-	import type { TmdbMovieDetail, TmdbCastMember, TmdbVideo, TmdbSearchItem, LibraryStatus, Media, SearchResult, OmdbResponse, FanartMovieImages } from '$lib/api/client';
+	import type { TmdbMovieDetail, TmdbCastMember, TmdbVideo, TmdbSearchItem, LibraryStatus, Media, SearchResult, OmdbResponse, FanartMovieImages, TmdbCollection } from '$lib/api/client';
 	import MediaRow from '$lib/components/MediaRow.svelte';
 	import Skeleton from '$lib/components/Skeleton.svelte';
 
@@ -24,6 +24,8 @@
 	// Enrichment data
 	let omdbData: OmdbResponse | null = $state(null);
 	let fanartData: FanartMovieImages | null = $state(null);
+	let collection: TmdbCollection | null = $state(null);
+	let certification: string | null = $state(null);
 	// Optimistic UI
 	let libAdding = $state(false);
 
@@ -68,6 +70,12 @@
 			if (movie.imdb_id) {
 				getOmdbByImdbId(movie.imdb_id).then(o => omdbData = o).catch(() => {});
 			}
+			// Collection / franchise
+			if (movie.belongs_to_collection?.id) {
+				tmdbCollection(movie.belongs_to_collection.id).then(c => collection = c).catch(() => {});
+			}
+			// Certification badge
+			tmdbMovieCertification(id).then(c => certification = c).catch(() => {});
 		}
 	}
 
@@ -187,6 +195,9 @@
 				<h1 class="detail-title">{movie.title}</h1>
 
 				<div class="detail-meta">
+					{#if certification}
+						<span class="cert-badge">{certification}</span>
+					{/if}
 					{#if movie.release_date}
 						<span>{movie.release_date.substring(0, 4)}</span>
 					{/if}
@@ -389,6 +400,50 @@
 			<MediaRow title="Films similaires" items={similar} />
 		{/if}
 
+		<!-- Collection / Saga -->
+		{#if collection}
+			<section class="detail-section">
+				<div class="collection-header">
+					{#if collection.backdrop_path}
+						<div class="collection-backdrop" style="background-image: url('{tmdbImageUrl(collection.backdrop_path, 'w1280')}')"></div>
+					{/if}
+					<div class="collection-header-info">
+						{#if collection.poster_path}
+							<img class="collection-poster" src={tmdbImageUrl(collection.poster_path, 'w185')} alt={collection.name} />
+						{/if}
+						<div>
+							<h2 class="section-title" style="margin-bottom: 8px;">Saga : {collection.name}</h2>
+							{#if collection.overview}
+								<p class="collection-overview">{collection.overview}</p>
+							{/if}
+						</div>
+					</div>
+				</div>
+				<div class="collection-parts">
+					{#each collection.parts.sort((a, b) => (a.release_date ?? '').localeCompare(b.release_date ?? '')) as part (part.id)}
+						<a href="/movie/{part.id}" class="collection-card {part.id === tmdbId ? 'current' : ''}">
+							{#if part.poster_path}
+								<img src={tmdbImageUrl(part.poster_path, 'w185')} alt={part.title ?? part.name} loading="lazy" />
+							{:else}
+								<div class="collection-card-no-poster">
+									<svg viewBox="0 0 24 24" fill="currentColor" width="32" height="32"><path d="M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4h-4z"/></svg>
+								</div>
+							{/if}
+							<div class="collection-card-info">
+								<p class="collection-card-title">{part.title ?? part.name}</p>
+								{#if part.release_date}
+									<p class="collection-card-year">{part.release_date.substring(0, 4)}</p>
+								{/if}
+							</div>
+							{#if part.id === tmdbId}
+								<div class="collection-card-current-badge">En cours</div>
+							{/if}
+						</a>
+					{/each}
+				</div>
+			</section>
+		{/if}
+
 	</div>
 {/if}
 
@@ -403,7 +458,7 @@
 		align-items: center;
 		gap: 6px;
 		padding: 8px 16px;
-		background: rgba(0, 0, 0, 0.5);
+		background: transparent;
 		backdrop-filter: blur(8px);
 		color: rgba(249, 249, 249, 0.9);
 		border-radius: 4px;
@@ -764,5 +819,123 @@
 		height: 160px;
 		object-fit: cover;
 		border-radius: 10px;
+	}
+
+	/* ── Certification badge ── */
+	.cert-badge {
+		display: inline-block;
+		padding: 2px 8px;
+		border: 1.5px solid rgba(249, 249, 249, 0.5);
+		border-radius: 3px;
+		font-size: 11px;
+		font-weight: 700;
+		letter-spacing: 0.5px;
+		color: rgba(249, 249, 249, 0.85);
+		text-transform: uppercase;
+	}
+
+	/* ── Collection / Saga ── */
+	.collection-header {
+		position: relative;
+		border-radius: 12px;
+		overflow: hidden;
+		margin-bottom: 20px;
+	}
+	.collection-backdrop {
+		position: absolute;
+		inset: 0;
+		background-size: cover;
+		background-position: center;
+		filter: brightness(0.35);
+	}
+	.collection-header-info {
+		position: relative;
+		display: flex;
+		align-items: flex-start;
+		gap: 20px;
+		padding: 24px;
+	}
+	.collection-poster {
+		width: 80px;
+		border-radius: 6px;
+		flex-shrink: 0;
+	}
+	.collection-overview {
+		font-size: 14px;
+		color: rgba(249, 249, 249, 0.7);
+		line-height: 1.5;
+		margin: 0;
+		display: -webkit-box;
+		-webkit-line-clamp: 3;
+		line-clamp: 3;
+		-webkit-box-orient: vertical;
+		overflow: hidden;
+	}
+	.collection-parts {
+		display: flex;
+		gap: 12px;
+		overflow-x: auto;
+		padding-bottom: 8px;
+		scrollbar-width: thin;
+		scrollbar-color: var(--accent) transparent;
+	}
+	.collection-card {
+		flex-shrink: 0;
+		width: 120px;
+		text-decoration: none;
+		border-radius: 8px;
+		overflow: hidden;
+		background: var(--card-bg);
+		border: 2px solid transparent;
+		transition: border-color 0.2s, transform 0.2s;
+		position: relative;
+	}
+	.collection-card:hover { transform: translateY(-4px); border-color: var(--accent); }
+	.collection-card.current { border-color: var(--accent); }
+	.collection-card img {
+		width: 100%;
+		aspect-ratio: 2/3;
+		object-fit: cover;
+		display: block;
+	}
+	.collection-card-no-poster {
+		width: 100%;
+		aspect-ratio: 2/3;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: rgba(255,255,255,0.06);
+		color: rgba(249,249,249,0.3);
+	}
+	.collection-card-info {
+		padding: 8px;
+	}
+	.collection-card-title {
+		font-size: 11px;
+		font-weight: 600;
+		color: #f9f9f9;
+		margin: 0 0 2px;
+		display: -webkit-box;
+		-webkit-line-clamp: 2;
+		line-clamp: 2;
+		-webkit-box-orient: vertical;
+		overflow: hidden;
+	}
+	.collection-card-year {
+		font-size: 10px;
+		color: rgba(249,249,249,0.5);
+		margin: 0;
+	}
+	.collection-card-current-badge {
+		position: absolute;
+		top: 6px;
+		left: 6px;
+		background: var(--accent);
+		color: #fff;
+		font-size: 9px;
+		font-weight: 700;
+		padding: 2px 6px;
+		border-radius: 3px;
+		text-transform: uppercase;
 	}
 </style>

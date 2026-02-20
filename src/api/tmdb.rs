@@ -13,6 +13,18 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::sync::Arc;
 use tracing::error;
 
+/// Common query param to select TMDB language per request.
+#[derive(Debug, Deserialize, Default)]
+pub(crate) struct LangParam {
+    lang: Option<String>,
+}
+
+impl LangParam {
+    fn as_str(&self) -> &str {
+        self.lang.as_deref().unwrap_or("fr-FR")
+    }
+}
+
 pub fn tmdb_routes() -> Router<Arc<AppState>> {
     Router::new()
         .route(
@@ -39,6 +51,12 @@ pub fn tmdb_routes() -> Router<Arc<AppState>> {
         )
         .route("/tmdb/:media_type/:id/similar", get(similar_handler))
         .route("/tmdb/search", get(search_handler))
+        .route("/tmdb/collection/:id", get(collection_handler))
+        .route(
+            "/tmdb/movie/:id/certification",
+            get(movie_certification_handler),
+        )
+        .route("/tmdb/tv/:id/certification", get(tv_certification_handler))
 }
 
 async fn handle_cache<T: Serialize + DeserializeOwned>(
@@ -70,10 +88,13 @@ async fn handle_cache<T: Serialize + DeserializeOwned>(
 pub async fn trending_handler(
     State(state): State<Arc<AppState>>,
     Path((media_type, time_window)): Path<(String, String)>,
+    Query(lq): Query<LangParam>,
 ) -> Result<Json<Vec<crate::clients::tmdb::TmdbSearchResult>>, ApiError> {
-    let key = format!("tmdb:trending:{}:{}", media_type, time_window);
+    let lang = lq.as_str();
+    let key = format!("tmdb:trending:{}:{}:{}", media_type, time_window, lang);
+    let client = state.tmdb_client.with_language(lang);
     handle_cache(&state, key, 3600, async {
-        state.tmdb_client.trending(&media_type, &time_window).await
+        client.trending(&media_type, &time_window).await
     })
     .await
 }
@@ -82,18 +103,23 @@ pub async fn discover_handler(
     State(state): State<Arc<AppState>>,
     Path(media_type): Path<String>,
     Query(params): Query<DiscoverParams>,
+    Query(lq): Query<LangParam>,
 ) -> Result<Json<crate::clients::tmdb::TmdbPaginatedResponse>, ApiError> {
+    let lang = lq.as_str();
     let key = format!(
-        "tmdb:discover:{}:{}:{}:{}:{}:{}",
+        "tmdb:discover:{}:{}:{}:{}:{}:{}:{}:{}",
         media_type,
-        params.with_watch_providers.as_deref().unwrap_or("none"),
-        params.watch_region.as_deref().unwrap_or("none"),
-        params.with_genres.as_deref().unwrap_or("none"),
-        params.sort_by.as_deref().unwrap_or("none"),
-        params.page.unwrap_or(1)
+        params.with_watch_providers.as_deref().unwrap_or(""),
+        params.watch_region.as_deref().unwrap_or(""),
+        params.with_genres.as_deref().unwrap_or(""),
+        params.sort_by.as_deref().unwrap_or(""),
+        params.page.unwrap_or(1),
+        params.vote_average_gte.unwrap_or(0.0) as u8,
+        lang
     );
+    let client = state.tmdb_client.with_language(lang);
     handle_cache(&state, key, 3600, async {
-        state.tmdb_client.discover(&media_type, &params).await
+        client.discover(&media_type, &params).await
     })
     .await
 }
@@ -101,23 +127,23 @@ pub async fn discover_handler(
 pub async fn movie_details_handler(
     State(state): State<Arc<AppState>>,
     Path(id): Path<i32>,
+    Query(lq): Query<LangParam>,
 ) -> Result<Json<crate::clients::tmdb::TmdbMovieDetail>, ApiError> {
-    let key = format!("tmdb:movie:{}", id);
-    handle_cache(&state, key, 86400, async {
-        state.tmdb_client.movie_details(id).await
-    })
-    .await
+    let lang = lq.as_str();
+    let key = format!("tmdb:movie:{}:{}", id, lang);
+    let client = state.tmdb_client.with_language(lang);
+    handle_cache(&state, key, 86400, async { client.movie_details(id).await }).await
 }
 
 pub async fn tv_details_handler(
     State(state): State<Arc<AppState>>,
     Path(id): Path<i32>,
+    Query(lq): Query<LangParam>,
 ) -> Result<Json<crate::clients::tmdb::TmdbTvDetail>, ApiError> {
-    let key = format!("tmdb:tv:{}", id);
-    handle_cache(&state, key, 86400, async {
-        state.tmdb_client.tv_details(id).await
-    })
-    .await
+    let lang = lq.as_str();
+    let key = format!("tmdb:tv:{}:{}", id, lang);
+    let client = state.tmdb_client.with_language(lang);
+    handle_cache(&state, key, 86400, async { client.tv_details(id).await }).await
 }
 
 pub async fn season_details_handler(
@@ -205,10 +231,46 @@ pub struct SearchQuery {
 pub async fn search_handler(
     State(state): State<Arc<AppState>>,
     Query(query): Query<SearchQuery>,
+    Query(lq): Query<LangParam>,
 ) -> Result<Json<Vec<crate::clients::tmdb::TmdbSearchResult>>, ApiError> {
-    let key = format!("tmdb:search:{}", query.query);
+    let lang = lq.as_str();
+    let key = format!("tmdb:search:{}:{}", query.query, lang);
+    let client = state.tmdb_client.with_language(lang);
     handle_cache(&state, key, 1800, async {
-        state.tmdb_client.search_multi(&query.query).await
+        client.search_multi(&query.query).await
+    })
+    .await
+}
+
+pub async fn collection_handler(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<i32>,
+    Query(lq): Query<LangParam>,
+) -> Result<Json<crate::clients::tmdb::TmdbCollection>, ApiError> {
+    let lang = lq.as_str();
+    let key = format!("tmdb:collection:{}:{}", id, lang);
+    let client = state.tmdb_client.with_language(lang);
+    handle_cache(&state, key, 86400, async { client.collection(id).await }).await
+}
+
+pub async fn movie_certification_handler(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<i32>,
+) -> Result<Json<Option<String>>, ApiError> {
+    let key = format!("tmdb:cert:movie:{}", id);
+    handle_cache(&state, key, 86400, async {
+        state.tmdb_client.movie_certification(id).await
+    })
+    .await
+}
+
+pub async fn tv_certification_handler(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<i32>,
+) -> Result<Json<Option<String>>, ApiError> {
+    let key = format!("tmdb:cert:tv:{}", id);
+    handle_cache(&state, key, 86400, async {
+        state.tmdb_client.tv_certification(id).await
     })
     .await
 }

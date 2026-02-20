@@ -79,7 +79,7 @@ pub async fn add_to_library_handler(
 
     db::favorites::add_favorite(&state.db_pool, user_id, media_id)
         .await
-        .map_err(|e| ApiError::Database(e))?;
+        .map_err(ApiError::Database)?;
     Ok(StatusCode::CREATED)
 }
 
@@ -92,7 +92,7 @@ pub async fn remove_from_library_handler(
     let user_id = get_user_id(&headers);
     db::favorites::remove_favorite(&state.db_pool, user_id, media_id)
         .await
-        .map_err(|e| ApiError::Database(e))?;
+        .map_err(ApiError::Database)?;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -124,7 +124,7 @@ pub async fn list_library_handler(
 
     let total = db::favorites::count_favorites(&state.db_pool, user_id)
         .await
-        .map_err(|e| ApiError::Database(e))?;
+        .map_err(ApiError::Database)?;
     let rows = sqlx::query(
         r#"
         SELECT

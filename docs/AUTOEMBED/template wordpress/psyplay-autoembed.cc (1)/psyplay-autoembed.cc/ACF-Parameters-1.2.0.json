@@ -1,0 +1,891 @@
+
+[
+    {
+        "key": "group_587646d8d7550",
+        "title": "Movies in this Article",
+        "fields": [
+            {
+                "key": "field_587646d90abe9",
+                "label": "",
+                "name": "movarticle",
+                "type": "repeater",
+                "instructions": "<font style=\"font-weight:bold;font-size:13px;color:#00A0D2;\">Title:<\/font><span style=\"font-size:13px;font-weight:normal;\"> Now You See Me 2<\/span> - <font style=\"font-weight:bold;font-size:13px;color:#00A0D2;\">Slug:<\/font> <span style=\"font-size:13px;font-weight:normal;\">http:\/\/yoursite.com\/<span style=\"font-weight:bold;\">now-you-see-me-2<\/span>\/<\/span>",
+                "required": 0,
+                "conditional_logic": 0,
+                "wrapper": {
+                    "width": "",
+                    "class": "",
+                    "id": ""
+                },
+                "min": "",
+                "max": "",
+                "layout": "table",
+                "button_label": "Add movies",
+                "sub_fields": [
+                    {
+                        "key": "field_587646d91ec3e",
+                        "label": "Movie Title",
+                        "name": "movarticle_title",
+                        "type": "text",
+                        "instructions": "",
+                        "required": 1,
+                        "conditional_logic": 0,
+                        "wrapper": {
+                            "width": 30,
+                            "class": "",
+                            "id": ""
+                        },
+                        "default_value": "",
+                        "placeholder": "",
+                        "prepend": "",
+                        "append": "",
+                        "maxlength": "",
+                        "readonly": 0,
+                        "disabled": 0
+                    },
+                    {
+                        "key": "field_587646d91f026",
+                        "label": "Movie Slug",
+                        "name": "movarticle_slug",
+                        "type": "text",
+                        "instructions": "",
+                        "required": 1,
+                        "conditional_logic": 0,
+                        "wrapper": {
+                            "width": 70,
+                            "class": "",
+                            "id": ""
+                        },
+                        "default_value": "",
+                        "placeholder": "",
+                        "prepend": "",
+                        "append": "",
+                        "maxlength": "",
+                        "readonly": 0,
+                        "disabled": 0
+                    }
+                ]
+            }
+        ],
+        "location": [
+            [
+                {
+                    "param": "post_type",
+                    "operator": "==",
+                    "value": "noticias"
+                }
+            ]
+        ],
+        "menu_order": 0,
+        "position": "normal",
+        "style": "default",
+        "label_placement": "top",
+        "instruction_placement": "label",
+        "hide_on_screen": "",
+        "active": 1,
+        "description": ""
+    },
+    {
+        "key": "group_5640cc6fd742e",
+        "title": "Video Player",
+        "fields": [
+            {
+                "key": "field_5640ccb223222",
+                "label": "Player",
+                "name": "player",
+                "type": "repeater",
+                "instructions": "",
+                "required": 0,
+                "conditional_logic": 0,
+                "wrapper": {
+                    "width": "",
+                    "class": "",
+                    "id": ""
+                },
+                "min": "",
+                "max": "",
+                "layout": "table",
+                "button_label": "Add player",
+                "sub_fields": [
+                    {
+                        "key": "field_5a6ae00d1df8f",
+                        "label": "Server Name",
+                        "name": "name_player",
+                        "type": "text",
+                        "instructions": "",
+                        "required": 0,
+                        "conditional_logic": 0,
+                        "wrapper": {
+                            "width": 20,
+                            "class": "",
+                            "id": ""
+                        },
+                        "default_value": "",
+                        "placeholder": "Optional",
+                        "prepend": "",
+                        "append": "",
+                        "maxlength": "",
+                        "readonly": 0,
+                        "disabled": 0
+                    },
+                    {
+                        "key": "field_591fd3cc1c291",
+                        "label": "Type",
+                        "name": "type_player",
+                        "type": "select",
+                        "instructions": "",
+                        "required": 1,
+                        "conditional_logic": 0,
+                        "wrapper": {
+                            "width": 20,
+                            "class": "",
+                            "id": ""
+                        },
+                        "choices": {
+                            "p_embed": "Embed Code",
+                            "p_iframe": "URL IFrame",
+                            "p_mp4": "URL MP4 File"
+                        },
+                        "default_value": [],
+                        "allow_null": 0,
+                        "multiple": 0,
+                        "ui": 0,
+                        "ajax": 0,
+                        "placeholder": "",
+                        "disabled": 0,
+                        "readonly": 0
+                    },
+                    {
+                        "key": "field_5640cc8323220",
+                        "label": "Quality",
+                        "name": "quality_player",
+                        "type": "select",
+                        "instructions": "",
+                        "required": 1,
+                        "conditional_logic": 0,
+                        "wrapper": {
+                            "width": 20,
+                            "class": "",
+                            "id": ""
+                        },
+                        "choices": {
+                            "Cam": "Cam",
+                            "TS-Screener": "TS-Screener",
+                            "TS-Screener HQ": "TS-Screener HQ",
+                            "BR-Screener": "BR-Screener",
+                            "DVD-Screener": "DVD-Screener",
+                            "DVD-Rip": "DVD-Rip",
+                            "VHS-Rip": "VHS-Rip",
+                            "Bluray": "Bluray",
+                            "HD Rip 320": "HD Rip 320",
+                            "HD Rip": "HD Rip",
+                            "HD": "HD",
+                            "HD 720p": "HD 720p",
+                            "HD 1080p": "HD 1080p"
+                        },
+                        "default_value": [],
+                        "allow_null": 0,
+                        "multiple": 0,
+                        "ui": 0,
+                        "ajax": 0,
+                        "placeholder": "",
+                        "disabled": 0,
+                        "readonly": 0
+                    },
+                    {
+                        "key": "field_5640cc9823221",
+                        "label": "URL Source or Embed Code",
+                        "name": "embed_player",
+                        "type": "text",
+                        "instructions": "",
+                        "required": 1,
+                        "conditional_logic": 0,
+                        "wrapper": {
+                            "width": 40,
+                            "class": "",
+                            "id": ""
+                        },
+                        "default_value": "",
+                        "placeholder": "",
+                        "prepend": "",
+                        "append": "",
+                        "maxlength": "",
+                        "readonly": 0,
+                        "disabled": 0
+                    }
+                ]
+            }
+        ],
+        "location": [
+            [
+                {
+                    "param": "post_type",
+                    "operator": "==",
+                    "value": "episodes"
+                }
+            ],
+            [
+                {
+                    "param": "post_type",
+                    "operator": "==",
+                    "value": "post"
+                }
+            ]
+        ],
+        "menu_order": 0,
+        "position": "normal",
+        "style": "default",
+        "label_placement": "top",
+        "instruction_placement": "label",
+        "hide_on_screen": "",
+        "active": 1,
+        "description": ""
+    },
+    {
+        "key": "group_54fa4e7f4db8f",
+        "title": "Add links",
+        "fields": [
+            {
+                "key": "field_54fa5538b5a95",
+                "label": "Add Download Links",
+                "name": "",
+                "type": "tab",
+                "instructions": "",
+                "required": 0,
+                "conditional_logic": 0,
+                "wrapper": {
+                    "width": "",
+                    "class": "",
+                    "id": ""
+                },
+                "placement": "top",
+                "endpoint": 0
+            },
+            {
+                "key": "field_54fa4e8cbca22",
+                "label": "Downloads",
+                "name": "ddw",
+                "type": "repeater",
+                "instructions": "",
+                "required": 0,
+                "conditional_logic": 0,
+                "wrapper": {
+                    "width": "",
+                    "class": "",
+                    "id": ""
+                },
+                "min": "",
+                "max": "",
+                "layout": "table",
+                "button_label": "Add link",
+                "sub_fields": [
+                    {
+                        "key": "field_54fa4ebdbca24",
+                        "label": "URL",
+                        "name": "op1",
+                        "type": "text",
+                        "instructions": "",
+                        "required": 0,
+                        "conditional_logic": 0,
+                        "wrapper": {
+                            "width": "",
+                            "class": "",
+                            "id": ""
+                        },
+                        "default_value": "",
+                        "placeholder": "",
+                        "prepend": "",
+                        "append": "",
+                        "maxlength": "",
+                        "readonly": 0,
+                        "disabled": 0
+                    },
+                    {
+                        "key": "field_54fa4ecebca25",
+                        "label": "Server",
+                        "name": "op2",
+                        "type": "select",
+                        "instructions": "",
+                        "required": 0,
+                        "conditional_logic": 0,
+                        "wrapper": {
+                            "width": "",
+                            "class": "",
+                            "id": ""
+                        },
+                        "choices": {
+                            "allmyvideos.net": "allmyvideos.net",
+                            "cloudtime.to": "cloudtime.to",
+                            "d-h.st": "d-h.st",
+                            "dailymotion.com": "dailymotion.com",
+                            "filehoot.com": "filehoot.com",
+                            "flashx.tv": "flashx.tv",
+                            "gamovideo.com": "gamovideo.com",
+                            "gorillavid.in": "gorillavid.in",
+                            "google.com": "google.com",
+                            "moevideos.net": "moevideos.net",
+                            "mrfile.me": "mrfile.me",
+                            "netu.tv": "netu.tv",
+                            "nosvideo.com": "nosvideo.com",
+                            "nowvideo.sx": "nowvideo.sx",
+                            "novamov.com": "novamov.com",
+                            "openload.co": "openload.co",
+                            "playedto.com": "playedto.com",
+                            "powvideo.net": "powvideo.net",
+                            "realvid.net": "realvid.net",
+                            "rocvideo.tv": "rocvideo.tv",
+                            "streamin.to": "streamin.to",
+                            "thevideo.me": "thevideo.me",
+                            "tumi.tv": "tumi.tv",
+                            "vidbull.com": "vidbull.com",
+                            "videomega.tv": "videomega.tv",
+                            "vidspot.net": "vidspot.net",
+                            "videoweed.es": "videoweed.es",
+                            "vidto.me": "vidto.me",
+                            "vidup.me": "vidup.me",
+                            "vidzi.tv": "vidzi.tv",
+                            "video4you.me": "video4you.me",
+                            "vk.com": "vk.com",
+                            "vodlocker.com": "vodlocker.com",
+                            "youtube.com": "youtube.com"
+                        },
+                        "default_value": [],
+                        "allow_null": 0,
+                        "multiple": 0,
+                        "ui": 0,
+                        "ajax": 0,
+                        "placeholder": "",
+                        "disabled": 0,
+                        "readonly": 0
+                    },
+                    {
+                        "key": "field_54fa4ee0bca26",
+                        "label": "Language \/ Audio",
+                        "name": "op3",
+                        "type": "select",
+                        "instructions": "",
+                        "required": 0,
+                        "conditional_logic": 0,
+                        "wrapper": {
+                            "width": "",
+                            "class": "",
+                            "id": ""
+                        },
+                        "choices": {
+                            "us": "English",
+                            "es": "Spanish",
+                            "ru": "Russian",
+                            "jp": "Japanese",
+                            "cn": "Chinese",
+                            "ph": "Filipino",
+                            "kr": "Korean"
+                        },
+                        "default_value": [],
+                        "allow_null": 0,
+                        "multiple": 0,
+                        "ui": 0,
+                        "ajax": 1,
+                        "placeholder": "",
+                        "disabled": 0,
+                        "readonly": 0
+                    },
+                    {
+                        "key": "field_54fa4efcbca27",
+                        "label": "Quality",
+                        "name": "op4",
+                        "type": "select",
+                        "instructions": "",
+                        "required": 0,
+                        "conditional_logic": 0,
+                        "wrapper": {
+                            "width": "",
+                            "class": "",
+                            "id": ""
+                        },
+                        "choices": {
+                            "Cam": "Cam",
+                            "TS-Screener": "TS-Screener",
+                            "TS-Screener HQ": "TS-Screener HQ",
+                            "BR-Screener": "BR-Screener",
+                            "DVD-Screener": "DVD-Screener",
+                            "DVD-Rip": "DVD-Rip",
+                            "VHS-Rip": "VHS-Rip",
+                            "Bluray": "Bluray",
+                            "HD Rip 320": "HD Rip 320",
+                            "HD Rip": "HD Rip",
+                            "HD": "HD",
+                            "HD 720p": "HD 720p",
+                            "HD 1080p": "HD 1080p"
+                        },
+                        "default_value": [],
+                        "allow_null": 0,
+                        "multiple": 0,
+                        "ui": 0,
+                        "ajax": 1,
+                        "placeholder": "",
+                        "disabled": 0,
+                        "readonly": 0
+                    }
+                ]
+            },
+            {
+                "key": "field_54fa554db5a96",
+                "label": "Add Watch Links",
+                "name": "",
+                "type": "tab",
+                "instructions": "",
+                "required": 0,
+                "conditional_logic": 0,
+                "wrapper": {
+                    "width": "",
+                    "class": "",
+                    "id": ""
+                },
+                "placement": "top",
+                "endpoint": 0
+            },
+            {
+                "key": "field_54fa4f41bca28",
+                "label": "Watch online",
+                "name": "voo",
+                "type": "repeater",
+                "instructions": "",
+                "required": 0,
+                "conditional_logic": 0,
+                "wrapper": {
+                    "width": "",
+                    "class": "",
+                    "id": ""
+                },
+                "min": "",
+                "max": "",
+                "layout": "table",
+                "button_label": "Add link",
+                "sub_fields": [
+                    {
+                        "key": "field_54fa4f41bca29",
+                        "label": "URL",
+                        "name": "op1",
+                        "type": "text",
+                        "instructions": "",
+                        "required": 0,
+                        "conditional_logic": 0,
+                        "wrapper": {
+                            "width": "",
+                            "class": "",
+                            "id": ""
+                        },
+                        "default_value": "",
+                        "placeholder": "",
+                        "prepend": "",
+                        "append": "",
+                        "maxlength": "",
+                        "readonly": 0,
+                        "disabled": 0
+                    },
+                    {
+                        "key": "field_54fa4f41bca2a",
+                        "label": "Server",
+                        "name": "op2",
+                        "type": "select",
+                        "instructions": "",
+                        "required": 0,
+                        "conditional_logic": 0,
+                        "wrapper": {
+                            "width": "",
+                            "class": "",
+                            "id": ""
+                        },
+                        "choices": {
+                            "allmyvideos.net": "allmyvideos.net",
+                            "cloudtime.to": "cloudtime.to",
+                            "d-h.st": "d-h.st",
+                            "dailymotion.com": "dailymotion.com",
+                            "filehoot.com": "filehoot.com",
+                            "flashx.tv": "flashx.tv",
+                            "gamovideo.com": "gamovideo.com",
+                            "gorillavid.in": "gorillavid.in",
+                            "google.com": "google.com",
+                            "moevideos.net": "moevideos.net",
+                            "mrfile.me": "mrfile.me",
+                            "netu.tv": "netu.tv",
+                            "nosvideo.com": "nosvideo.com",
+                            "nowvideo.sx": "nowvideo.sx",
+                            "novamov.com": "novamov.com",
+                            "openload.co": "openload.co",
+                            "playedto.com": "playedto.com",
+                            "powvideo.net": "powvideo.net",
+                            "realvid.net": "realvid.net",
+                            "rocvideo.tv": "rocvideo.tv",
+                            "streamin.to": "streamin.to",
+                            "thevideo.me": "thevideo.me",
+                            "tumi.tv": "tumi.tv",
+                            "vidbull.com": "vidbull.com",
+                            "videomega.tv": "videomega.tv",
+                            "vidspot.net": "vidspot.net",
+                            "videoweed.es": "videoweed.es",
+                            "vidto.me": "vidto.me",
+                            "vidup.me": "vidup.me",
+                            "vidzi.tv": "vidzi.tv",
+                            "video4you.me": "video4you.me",
+                            "vk.com": "vk.com",
+                            "vodlocker.com": "vodlocker.com",
+                            "youtube.com": "youtube.com"
+                        },
+                        "default_value": [],
+                        "allow_null": 0,
+                        "multiple": 0,
+                        "ui": 0,
+                        "ajax": 1,
+                        "placeholder": "",
+                        "disabled": 0,
+                        "readonly": 0
+                    },
+                    {
+                        "key": "field_54fa4f41bca2b",
+                        "label": "Language \/ Audio",
+                        "name": "op3",
+                        "type": "select",
+                        "instructions": "",
+                        "required": 0,
+                        "conditional_logic": 0,
+                        "wrapper": {
+                            "width": "",
+                            "class": "",
+                            "id": ""
+                        },
+                        "choices": {
+                            "us": "English",
+                            "es": "Spanish",
+                            "ru": "Russian",
+                            "jp": "Japanese",
+                            "cn": "Chinese",
+                            "ph": "Filipino",
+                            "kr": "Korean"
+                        },
+                        "default_value": [],
+                        "allow_null": 0,
+                        "multiple": 0,
+                        "ui": 0,
+                        "ajax": 1,
+                        "placeholder": "",
+                        "disabled": 0,
+                        "readonly": 0
+                    },
+                    {
+                        "key": "field_54fa4f41bca2c",
+                        "label": "Quality",
+                        "name": "op4",
+                        "type": "select",
+                        "instructions": "",
+                        "required": 0,
+                        "conditional_logic": 0,
+                        "wrapper": {
+                            "width": "",
+                            "class": "",
+                            "id": ""
+                        },
+                        "choices": {
+                            "Cam": "Cam",
+                            "TS-Screener": "TS-Screener",
+                            "TS-Screener HQ": "TS-Screener HQ",
+                            "BR-Screener": "BR-Screener",
+                            "DVD-Screener": "DVD-Screener",
+                            "DVD-Rip": "DVD-Rip",
+                            "VHS-Rip": "VHS-Rip",
+                            "Bluray": "Bluray",
+                            "HD Rip 320": "HD Rip 320",
+                            "HD Rip": "HD Rip",
+                            "HD": "HD",
+                            "HD 720p": "HD 720p",
+                            "HD 1080p": "HD 1080p"
+                        },
+                        "default_value": [],
+                        "allow_null": 0,
+                        "multiple": 0,
+                        "ui": 0,
+                        "ajax": 1,
+                        "placeholder": "",
+                        "disabled": 0,
+                        "readonly": 0
+                    }
+                ]
+            },
+            {
+                "key": "field_58b525bf24d14",
+                "label": "Add Subtitle Downloads",
+                "name": "add_subtitle_downloads",
+                "type": "tab",
+                "instructions": "",
+                "required": 0,
+                "conditional_logic": 0,
+                "wrapper": {
+                    "width": "",
+                    "class": "",
+                    "id": ""
+                },
+                "placement": "top",
+                "endpoint": 0
+            },
+            {
+                "key": "field_58b5255a24d0f",
+                "label": "Subtitle Links",
+                "name": "subt",
+                "type": "repeater",
+                "instructions": "",
+                "required": 0,
+                "conditional_logic": 0,
+                "wrapper": {
+                    "width": "",
+                    "class": "",
+                    "id": ""
+                },
+                "min": "",
+                "max": "",
+                "layout": "table",
+                "button_label": "Add link",
+                "sub_fields": [
+                    {
+                        "key": "field_58b5255a24d10",
+                        "label": "URL",
+                        "name": "op1",
+                        "type": "text",
+                        "instructions": "",
+                        "required": 1,
+                        "conditional_logic": 0,
+                        "wrapper": {
+                            "width": "",
+                            "class": "",
+                            "id": ""
+                        },
+                        "default_value": "",
+                        "placeholder": "",
+                        "prepend": "",
+                        "append": "",
+                        "maxlength": "",
+                        "readonly": 0,
+                        "disabled": 0
+                    },
+                    {
+                        "key": "field_58b5255a24d11",
+                        "label": "Server",
+                        "name": "op2",
+                        "type": "select",
+                        "instructions": "",
+                        "required": 0,
+                        "conditional_logic": 0,
+                        "wrapper": {
+                            "width": "",
+                            "class": "",
+                            "id": ""
+                        },
+                        "choices": {
+                            "allmyvideos.net": "allmyvideos.net",
+                            "cloudtime.to": "cloudtime.to",
+                            "d-h.st": "d-h.st",
+                            "dailymotion.com": "dailymotion.com",
+                            "filehoot.com": "filehoot.com",
+                            "flashx.tv": "flashx.tv",
+                            "gamovideo.com": "gamovideo.com",
+                            "gorillavid.in": "gorillavid.in",
+                            "google.com": "google.com",
+                            "moevideos.net": "moevideos.net",
+                            "mrfile.me": "mrfile.me",
+                            "netu.tv": "netu.tv",
+                            "nosvideo.com": "nosvideo.com",
+                            "nowvideo.sx": "nowvideo.sx",
+                            "novamov.com": "novamov.com",
+                            "openload.co": "openload.co",
+                            "playedto.com": "playedto.com",
+                            "powvideo.net": "powvideo.net",
+                            "realvid.net": "realvid.net",
+                            "rocvideo.tv": "rocvideo.tv",
+                            "streamin.to": "streamin.to",
+                            "thevideo.me": "thevideo.me",
+                            "tumi.tv": "tumi.tv",
+                            "vidbull.com": "vidbull.com",
+                            "videomega.tv": "videomega.tv",
+                            "vidspot.net": "vidspot.net",
+                            "videoweed.es": "videoweed.es",
+                            "vidto.me": "vidto.me",
+                            "vidup.me": "vidup.me",
+                            "vidzi.tv": "vidzi.tv",
+                            "video4you.me": "video4you.me",
+                            "vk.com": "vk.com",
+                            "vodlocker.com": "vodlocker.com",
+                            "youtube.com": "youtube.com"
+                        },
+                        "default_value": [],
+                        "allow_null": 0,
+                        "multiple": 0,
+                        "ui": 0,
+                        "ajax": 1,
+                        "placeholder": "",
+                        "disabled": 0,
+                        "readonly": 0
+                    },
+                    {
+                        "key": "field_58b5255a24d12",
+                        "label": "Language",
+                        "name": "op3",
+                        "type": "select",
+                        "instructions": "",
+                        "required": 1,
+                        "conditional_logic": 0,
+                        "wrapper": {
+                            "width": "",
+                            "class": "",
+                            "id": ""
+                        },
+                        "choices": {
+                            "us": "English",
+                            "es": "Spanish",
+                            "ru": "Russian",
+                            "jp": "Japanese",
+                            "cn": "Chinese",
+                            "ph": "Filipino",
+                            "kr": "Korean"
+                        },
+                        "default_value": [],
+                        "allow_null": 0,
+                        "multiple": 0,
+                        "ui": 0,
+                        "ajax": 1,
+                        "placeholder": "",
+                        "disabled": 0,
+                        "readonly": 0
+                    }
+                ]
+            }
+        ],
+        "location": [
+            [
+                {
+                    "param": "post_type",
+                    "operator": "==",
+                    "value": "post"
+                }
+            ],
+            [
+                {
+                    "param": "post_type",
+                    "operator": "==",
+                    "value": "episodes"
+                }
+            ]
+        ],
+        "menu_order": 1,
+        "position": "normal",
+        "style": "default",
+        "label_placement": "top",
+        "instruction_placement": "label",
+        "hide_on_screen": "",
+        "active": 1,
+        "description": ""
+    },
+    {
+        "key": "group_58718d67924b2",
+        "title": "Seasons & Episodes",
+        "fields": [
+            {
+                "key": "field_58718d88c2bf9",
+                "label": "Seasons",
+                "name": "temporadas",
+                "type": "repeater",
+                "instructions": "",
+                "required": 0,
+                "conditional_logic": 0,
+                "wrapper": {
+                    "width": "",
+                    "class": "",
+                    "id": ""
+                },
+                "min": "",
+                "max": "",
+                "layout": "table",
+                "button_label": "Add Row",
+                "sub_fields": [
+                    {
+                        "key": "field_58718dabc2bfa",
+                        "label": "Episode",
+                        "name": "episodios",
+                        "type": "repeater",
+                        "instructions": "",
+                        "required": 0,
+                        "conditional_logic": 0,
+                        "wrapper": {
+                            "width": "",
+                            "class": "",
+                            "id": ""
+                        },
+                        "min": "",
+                        "max": "",
+                        "layout": "table",
+                        "button_label": "Add Row",
+                        "sub_fields": [
+                            {
+                                "key": "field_58718dccc2bfb",
+                                "label": "Slug",
+                                "name": "slug",
+                                "type": "text",
+                                "instructions": "",
+                                "required": 0,
+                                "conditional_logic": 0,
+                                "wrapper": {
+                                    "width": "",
+                                    "class": "",
+                                    "id": ""
+                                },
+                                "default_value": "",
+                                "placeholder": "",
+                                "prepend": "",
+                                "append": "",
+                                "maxlength": "",
+                                "readonly": 0,
+                                "disabled": 0
+                            },
+                            {
+                                "key": "field_58718ddac2bfc",
+                                "label": "Episode Title",
+                                "name": "titlee",
+                                "type": "text",
+                                "instructions": "",
+                                "required": 0,
+                                "conditional_logic": 0,
+                                "wrapper": {
+                                    "width": "",
+                                    "class": "",
+                                    "id": ""
+                                },
+                                "default_value": "",
+                                "placeholder": "",
+                                "prepend": "",
+                                "append": "",
+                                "maxlength": "",
+                                "readonly": 0,
+                                "disabled": 0
+                            }
+                        ]
+                    }
+                ]
+            }
+        ],
+        "location": [
+            [
+                {
+                    "param": "post_type",
+                    "operator": "==",
+                    "value": "tvshows"
+                }
+            ]
+        ],
+        "menu_order": 1,
+        "position": "normal",
+        "style": "default",
+        "label_placement": "top",
+        "instruction_placement": "label",
+        "hide_on_screen": "",
+        "active": 1,
+        "description": ""
+    }
+]

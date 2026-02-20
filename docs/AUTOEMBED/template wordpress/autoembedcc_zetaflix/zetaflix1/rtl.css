@@ -1,0 +1,423 @@
+body {
+	direction: rtl;
+	unicode-bidi: bidi-override;
+	text-align: right;
+}
+.tb-left {
+    float: right;
+}
+.tb-right {
+    right: unset;
+    left: 0;
+    float: left;
+}
+.logo {
+    float: right;
+	margin-right: unset;
+	margin-left: 20px;
+}
+.main-menu {
+    float: right;
+}
+.main-menu li {
+    float: right;
+}
+.tb-right div {
+	margin-right: 0;
+	margin-left: 15px;
+}
+.tb-right div:last-child {
+	margin-left: 0;
+}
+.mobile-control {
+	float: right;
+}
+
+.sb-l .sidebar main {
+    padding-right: 0;
+    padding-left: 1.2%
+}
+.module-content .owl-nav .owl-prev {
+    left: unset!important;
+    right: 0!important;
+}
+.module-content .owl-nav .owl-next {
+    right: unset!important;
+    left: 0!important;
+}
+
+.profile-menu .fa-angle-double-left:before, 
+.profile-menu .fa-angles-left:before {
+	content: "\f101";
+}
+
+.profile-info .info-user {
+	padding-left: 0;
+	padding-right: 15px;
+}
+.info-user .user-edit-profile {
+	margin-left: 0;
+	margin-right: 8px;	
+}
+.user-avatar {
+	float: right;
+}
+.user-control .toggle-arrow {
+	margin-left: 0;
+	margin-right: 6px;
+}
+.user-menu {
+	right: unset;
+	left: 0;
+}
+.user-menu li {
+	text-align: right;
+}
+.user-menu li a {
+    display: block;
+    padding: 5px 0 5px 55px;
+}
+.result-item-btn {
+	left: 0;
+	right: 115px;
+}
+.result-item-poster {
+	left: unset;
+	right: 0;
+}
+.result-item-desc {
+	padding-left: 0;
+	padding-right: 115px;
+}
+.module-title.no-title a {
+	text-align: left;
+	float: left;
+}
+.module-title {
+	text-align: right;
+}
+.module-title a {
+	right: unset;
+	left: 0;
+}
+.module-content .owl-nav .owl-next {
+    left: 0;
+    right: unset;
+}
+.module-content .owl-nav .owl-prev  {
+    left: unset;
+    right: 0;
+}
+
+.hz-module-content .owl-nav .owl-prev {
+    left: unset;
+    right: 0;	
+}
+.hz-module-content .owl-nav .owl-next {
+    right: unset;
+    left: 0;	
+}
+.module-content .owl-item:not(.active) + .owl-item.active {
+    transform-origin: right center;
+}
+.module-content .owl-item.lastActiveItem {
+    transform-origin: left center;
+}
+.genre-list li .g-total {
+	right: unset;
+	left: 10px;
+}
+.top-rank {
+	left: unset;
+	right: 0;
+}
+.top-rank:before {
+	left: unset;
+	right: 0;
+}
+.top-list li::before {
+	background: linear-gradient(90deg, rgba(6,6,6,0) 37%, rgba(255,0,0,0.4) 100%);
+}
+.top-item-left {
+	float: right;
+	margin-left: 15px;
+	margin-right: 0;
+}
+.content-col.left {
+	padding-right: 0;
+	padding-left: 20px;
+}
+.content-col > * {
+	text-align: right;
+}
+.info-col {
+	float: right;
+}
+.info-col:first-child {
+	margin-right: 0;
+	margin-left: 2%;
+}
+.fix-w .content-title .title-sep {
+	margin-left: 0;
+	margin-right: 1vw;
+}
+
+.details-rating.v2 .rating-data .data-hover:before {
+	left: unset;
+	right: -0.4em;
+}
+.details-rating.v2 .rating-data .data-hover:before {
+    border-width: 0.3em 0 0.3em 0.4em;
+    border-color: transparent transparent transparent #960509;
+}
+.seasons-list .ep-count {
+	padding-left: unset;
+	padding-right: 5px;
+}
+.ep-thumb {
+	padding-right: unset;
+	padding-left: 1vw;
+}
+.player-qbtn a {
+	margin-right: 0;
+	margin-left: 0.65vw;
+}
+.content-btn a:last-child, 
+.player-qbtn a:last-child {
+	margin-left: 0;
+}
+.player-qbtn a.added span i.seen {
+	left: unset;
+	right: 0.27vw;
+}
+
+.play-lists li a {
+	text-align: right;
+}
+.play-lists li a .play-list-ico {
+	text-align: right;
+}
+.seasons-switch.left .seasons-list {
+	left: unset;
+	right: 0;
+}
+.seasons-select:after {
+	margin-left: unset;
+	margin-right: 2vw;
+}
+.seasons-select .ss-num {
+	padding-left: unset;
+	padding-right: 5px;
+}
+.modal-close {
+	padding: 0;
+}
+#guest-modal .modal-body fieldset.xtras .pteks {
+	right: unset;
+	left: 0;
+}
+.vertical .display-item .item-box img, 
+.horizontal .display-item .item-box img {
+	left: unset;
+	right: 0;
+}
+.item-desc-btn {
+	float: left;
+}
+.links-table {
+	text-align: right;
+}
+.links-table thead tr th {
+	text-align: right;
+}
+.links-table tbody tr td img {
+	float: right;
+	margin-right: 0;
+	margin-left: 10px;
+}
+.profile-page .profile-menu a.back-to-profile {
+	left: unset;
+	right: 0;
+}
+.footer-col.links {
+    padding-left: unset;
+    padding-right: 4vw;
+}
+.footer .footer-underlinks .underlinks-right {
+	float: left;
+}
+.footer .footer-underlinks .underlinks-left {
+	float: right;
+}
+footer .footer-links {
+	margin-right: 0;
+	margin-left: 30px;
+}
+.links-tabs li, .comments-tabs li {
+	margin-right: 0;
+	margin-left: 0.5%;
+}
+.comments-comment .comment-data, 
+.comments-comment .comment-btn, 
+.comments-comment .comment-respond {
+	margin-left: 0;
+	margin-right: 1vw;
+}
+.user-date {
+	padding-left: 0;
+	padding-right: 0.7vw;
+}
+
+.main-content.home .top-imdb-list.tleft .display-item {
+	transform-origin: right center;
+}
+
+.main-content.home .top-imdb-list.tright .display-item {
+	transform-origin: left center;
+}
+
+.top-imdb-list.tleft {
+	margin-right: 0;
+	margin-left: 0.25%;
+}
+.top-imdb-list h3 .view_all {
+	right: unset;
+	left: 0;
+}
+.display-item .item-box.imdb .num {
+	padding-right: 0;
+	padding-left: 10px;
+}
+.display-item .item-box.imdb > *{
+	padding-left: 0;	
+	padding-right: 10px;
+}
+.fix-w .comments-comment .comment-data, 
+.fix-w .comments-comment .comment-btn, 
+.fix-w .comments-comment .comment-respond {
+	margin-left: 0;
+    margin-right: 10px;
+}
+.f-content {
+	float: right;
+}
+.f-side-shade {
+	left: unset;
+	right: 0;
+	background: linear-gradient(90deg, rgba(6,6,6,0) 0%, rgb(0,0,0,0.95) 100%);
+}
+
+.related-item .related-data {
+    left: unset;
+    right: 95px;
+}
+.related-item .related-poster {
+    margin-right: unset;
+}
+.related-content.horizontal .related-item .related-data {
+    left: unset;
+    right: 0;
+}
+.requests .discover .fixbox .box form button.filter {
+	right: unset;
+	left: 0;
+}
+.requests .discover .fixbox .box form button.filter.loading {
+	right: unset;
+	left: 16px;
+}
+.blog-archive .blog-post .post-data {
+	padding-left: unset;
+	padding-right: 1.5vw;
+}
+@media screen and (min-width: 1300px) {
+	.player-qbtn a.added span i.seen {
+		left: unset;
+		right: -3px;
+	}
+}
+@media screen and (max-width: 1857px){
+	.play-list-opt .opt-titl {
+		padding-right: 0;
+		padding-left: 7px;
+	}
+}
+@media screen and (max-width: 999px){
+}
+@media screen and (max-width: 949px){
+	.main-menu li {
+		float: none;
+	}
+	.sub-menu li {
+		width: 50%;
+		float: left;
+		display: block;
+	}
+	.sub-menu li a:before {
+		margin-right: 0;
+		margin-left: 10px;
+	}
+	.logo {
+		margin-left: unset;
+		margin-right: 20px;
+	}
+}
+@media screen and (max-width: 899px) {
+	.footer .footer-underlinks .underlinks-right, 
+	.footer .footer-underlinks .underlinks-left {
+		float: none;
+	}
+}
+@media screen and (max-width: 849px){
+	footer .footer-links:last-child {
+		margin-left: 0;
+	}
+}
+@media screen and (max-width: 469px) {
+	.profile-activity .activity-col-mob:first-child > .activity-col:first-child, 
+	.profile-activity .activity-col-mob:last-child > .activity-col:first-child {
+		border-right: 0;
+		border-left: 2px solid #171717;
+	}
+}
+@media screen and (max-width: 399px) {
+	.logo {
+		left: unset;
+		right: calc(4% + 27.5px);
+	}
+}
+@media screen and (min-width: 1300px){
+	.fix-w .hz-module-content .owl-nav .owl-next {
+		left: unset;
+		right: 0;
+	}
+	.fix-w .hz-module-content .owl-nav .owl-prev {
+		right: unset;
+		left: 0;
+	}
+	
+	.fix-w .sidebar .hz-module-content .owl-nav .owl-next {
+		right: unset;
+		left: 0;
+	}
+	.fix-w .sidebar .hz-module-content .owl-nav .owl-prev {
+		left: unset;
+		right: 0;
+	}
+}
+@media screen and (min-width: 1900px){
+	.hz-module-content .owl-nav .owl-prev {
+		right: unset;
+		left: 0;
+	}
+	.hz-module-content .owl-nav .owl-next {
+		left: unset;
+		right: 0;
+	}
+}
+@media screen and (min-width: 2329px) {
+	.requests .discover .fixbox .box form button.filter.loading {
+			right: unset;
+			left: 18.632px;
+	}
+}

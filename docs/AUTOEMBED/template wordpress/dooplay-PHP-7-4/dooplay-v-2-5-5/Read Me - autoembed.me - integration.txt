@@ -1,0 +1,15 @@
+As many of you, webmasters, use Dooplay theme on Wordpress for your movie websites, we decided to make this very easy guide how to set-up autoembed.me player with Dooplay.
+
+1. Upload the doo_player.php files to /wp-content/themes/dooplay/inc/ and allow to rewrite all files.
+
+2. Upload the episodios.php and peliculas.php file to /wp-content/themes/dooplay/inc/parts/single/ and allow to rewrite all files.
+
+3. Purge all caching systems (WP Cache, Cloudflare...) to see the changes.
+
+
+NOTE:
+- Our integration may also work with latest versions of Dooplay
+- Make sure to set PHP version to 7.4
+
+All the best, autoembed.me Team !
+autoembed.me

@@ -5,7 +5,7 @@
 		tmdbTvDetails, tmdbSeasonDetails, tmdbCredits, tmdbVideos, tmdbSimilar,
 		tmdbImageUrl, addToLibrary, removeFromLibrary,
 		addToWatchlist, removeFromWatchlist, getLibraryStatus, createMedia, triggerSearch, startDownload, getSearchResults,
-		searchOmdb, getFanartMovie
+		searchOmdb, getFanartMovie, tmdbTvCertification
 	} from '$lib/api/client';
 	import type { TmdbTvDetail, TmdbSeasonDetail, TmdbCastMember, TmdbVideo, TmdbSearchItem, LibraryStatus, Media, SearchResult, OmdbResponse, FanartMovieImages } from '$lib/api/client';
 	import MediaRow from '$lib/components/MediaRow.svelte';
@@ -24,6 +24,7 @@
 	// Enrichment data
 	let omdbData: OmdbResponse | null = $state(null);
 	let fanartData: FanartMovieImages | null = $state(null);
+	let certification: string | null = $state(null);
 
 	// Season/episode selector
 	let selectedSeason = $state(1);
@@ -85,6 +86,7 @@
 			getFanartMovie(id).then(f => fanartData = f).catch(() => {});
 			searchOmdb(show.name, show.first_air_date ? parseInt(show.first_air_date.substring(0, 4)) : undefined)
 				.then(o => omdbData = o).catch(() => {});
+			tmdbTvCertification(id).then(c => certification = c).catch(() => {});
 		}
 	}
 
@@ -211,6 +213,9 @@
 				<h1 class="detail-title">{show.name}</h1>
 
 				<div class="detail-meta">
+					{#if certification}
+						<span class="cert-badge">{certification}</span>
+					{/if}
 					{#if show.first_air_date}
 						<span>{show.first_air_date.substring(0, 4)}</span>
 					{/if}
@@ -478,7 +483,7 @@
 		align-items: center;
 		gap: 6px;
 		padding: 8px 16px;
-		background: rgba(0, 0, 0, 0.4);
+		background: transparent;
 		backdrop-filter: blur(8px);
 		color: rgba(255, 255, 255, 0.9);
 		border-radius: 50px;
@@ -900,4 +905,17 @@
 	.fanart-gallery { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
 	.fanart-logo { max-height: 80px; width: auto; object-fit: contain; }
 	.fanart-bg { width: 280px; height: 160px; object-fit: cover; border-radius: 8px; }
+
+	/* ── Certification badge ── */
+	.cert-badge {
+		display: inline-block;
+		padding: 2px 8px;
+		border: 1.5px solid rgba(249, 249, 249, 0.5);
+		border-radius: 3px;
+		font-size: 11px;
+		font-weight: 700;
+		letter-spacing: 0.5px;
+		color: rgba(249, 249, 249, 0.85);
+		text-transform: uppercase;
+	}
 </style>

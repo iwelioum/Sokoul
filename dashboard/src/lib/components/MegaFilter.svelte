@@ -9,6 +9,7 @@
 		selectedSort: string;
 		yearMin: number;
 		yearMax: number;
+		voteMin: number;
 		selectedProvider: string | null;
 		onApply: (filters: FilterState) => void;
 		onClose: () => void;
@@ -20,6 +21,7 @@
 		sort: string;
 		yearMin: number;
 		yearMax: number;
+		voteMin: number;
 		provider: string | null;
 		providerName: string | null;
 	}
@@ -31,6 +33,7 @@
 		selectedSort = $bindable('popularity.desc'),
 		yearMin = $bindable(1980),
 		yearMax = $bindable(new Date().getFullYear()),
+		voteMin = $bindable(0),
 		selectedProvider = $bindable(null),
 		onApply,
 		onClose,
@@ -119,7 +122,8 @@
 		selectedGenres.length +
 		(selectedProvider ? 1 : 0) +
 		(yearMin !== 1980 || yearMax !== currentYear ? 1 : 0) +
-		(selectedSort !== 'popularity.desc' ? 1 : 0)
+		(selectedSort !== 'popularity.desc' ? 1 : 0) +
+		(voteMin > 0 ? 1 : 0)
 	);
 
 	// ── Actions ──
@@ -140,6 +144,7 @@
 		selectedSort = 'popularity.desc';
 		yearMin = 1980;
 		yearMax = currentYear;
+		voteMin = 0;
 		selectedProvider = null;
 	}
 
@@ -154,6 +159,7 @@
 			sort: selectedSort,
 			yearMin,
 			yearMax,
+			voteMin,
 			provider: selectedProvider,
 			providerName: provName,
 		});
@@ -287,6 +293,21 @@
 					<button class="preset-btn" onclick={() => { yearMin = 1980; yearMax = 1989; }}>80s</button>
 					<button class="preset-btn" onclick={() => { yearMin = 1900; yearMax = currentYear; }}>Toutes</button>
 				</div>
+			</div>
+		</section>
+
+		<!-- Note minimum -->
+		<section class="filter-section">
+			<h3 class="section-label">Note minimum ★</h3>
+			<div class="vote-presets">
+				{#each [0, 5, 6, 7, 8] as v}
+					<button
+						class="preset-btn" class:active={voteMin === v}
+						onclick={() => voteMin = v}
+					>
+						{v === 0 ? 'Toutes' : `${v}+`}
+					</button>
+				{/each}
 			</div>
 		</section>
 
@@ -666,6 +687,19 @@
 		background: rgba(0, 114, 210, 0.15);
 		border-color: rgba(0, 114, 210, 0.3);
 		color: #F9F9F9;
+	}
+
+	.preset-btn.active {
+		background: var(--accent, #C9A84C);
+		border-color: var(--accent, #C9A84C);
+		color: #fff;
+		font-weight: 700;
+	}
+
+	.vote-presets {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
 	}
 
 	/* ── Sort grid ── */
