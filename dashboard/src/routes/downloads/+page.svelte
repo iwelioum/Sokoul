@@ -1,971 +1,1146 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import { page } from '$app/stores';
 	import {
 		createMedia,
 		directSearch,
+		streamSearch,
 		startDownload,
-		listDownloads,
 		isLoggedIn,
-		formatBytes
+		formatBytes,
+		tmdbImageUrl,
+		tmdbMovieDetails,
+		tmdbTvDetails
 	} from '$lib/api/client';
-	import type { SearchResult, Task } from '$lib/api/client';
+	import type { SearchResult, TmdbMovieDetail, TmdbTvDetail } from '$lib/api/client';
+	import { downloads, initDownloadsStore } from '$lib/stores/downloadsStore';
 
-	// ── URL params ──────────────────────────────────────
-	let query      = $state('');
-	let tmdbId     = $state<number | null>(null);
-	let mediaType  = $state<'movie' | 'tv'>('movie');
-	let mediaId    = $state<string | null>(null);
+	// ── URL & State ──
+	const query = $derived($page.url.searchParams.get('query') || '');
+	const tmdbId = $derived(Number($page.url.searchParams.get('tmdbId')) || 0);
+	const mediaType = $derived($page.url.searchParams.get('mediaType') === 'tv' ? 'tv' : 'movie');
 
-	// ── Raw results ─────────────────────────────────────
-	let allResults: SearchResult[] = $state([]);
-	let searching       = $state(false);
-	let searchError     = $state('');
-	let selectedTorrent: SearchResult | null = $state(null);
-	let startingDownload = $state(false);
+	let results: SearchResult[] = $state([]);
+	let loading = $state(false);
+	let searchingProviders = $state<string[]>([]);
+	let completedProviders = $state<string[]>([]);
+	let error = $state('');
+	let mediaId = $state<string | null>(null);
+	let startingDownloadId = $state<number | null>(null);
+	let downloadedIds = $state<Set<number>>(new Set());
+	let sidebarOpen = $state(false);
+	let sidebarPulse = $state(false);
+	let selectedFilter = $state<string>('all');
+	let abortStream: (() => void) | null = null;
 
-	// ── Downloads ────────────────────────────────────────
-	let downloads: Task[] = $state([]);
-	let loadingDownloads  = $state(true);
-	let downloadsTimer: ReturnType<typeof setInterval> | null = null;
+	let mediaDetails: TmdbMovieDetail | TmdbTvDetail | null = $state(null);
 
-	let initialized = false;
-
-	// ── Filters state ────────────────────────────────────
-	type QualityKey = 'all' | '4k' | '1080p' | '720p' | 'sd';
-	type SortKey    = 'seeders' | 'score' | 'size_asc' | 'size_desc' | 'ratio';
-	type ProtoKey   = 'all' | 'torrent' | 'magnet';
-
-	let filterQuality  = $state<QualityKey>('all');
-	let filterProtocol = $state<ProtoKey>('all');
-	let filterProvider = $state('all');
-	let filterMinSeed  = $state(0);
-	let sortBy         = $state<SortKey>('seeders');
-	let searchTerm     = $state('');
-
-	// ── Derived: available providers from results ─────────
-	const availableProviders = $derived.by<string[]>(() => {
-		const set = new Set(allResults.map(r => r.provider));
-		return ['all', ...Array.from(set)];
-	});
-
-	// ── Quality detection helper ──────────────────────────
-	function detectQuality(r: SearchResult): QualityKey {
-		const t = (r.quality ?? r.title).toLowerCase();
-		if (t.includes('2160') || t.includes('4k') || t.includes('uhd')) return '4k';
-		if (t.includes('1080'))  return '1080p';
-		if (t.includes('720'))   return '720p';
-		return 'sd';
-	}
-
-	// ── Smart score ──────────────────────────────────────
-	function smartScore(r: SearchResult): number {
-		const qualityBonus: Record<QualityKey, number> = { '4k': 40, '1080p': 30, '720p': 15, 'sd': 0, 'all': 0 };
-		const seedBonus  = Math.min(r.seeders * 0.5, 30);
-		const ratio      = r.leechers > 0 ? r.seeders / r.leechers : r.seeders;
-		const ratioBonus = Math.min(ratio * 3, 20);
-		const aiBonus    = r.ai_validated ? 10 : 0;
-		const scoreBonus = r.score ? r.score * 0.1 : 0;
-		return qualityBonus[detectQuality(r)] + seedBonus + ratioBonus + aiBonus + scoreBonus;
-	}
-
-	// ── Filtered & sorted results ─────────────────────────
-	const filteredResults = $derived.by<SearchResult[]>(() => {
-		let out = allResults.filter(r => {
-			// quality
-			if (filterQuality !== 'all' && detectQuality(r) !== filterQuality) return false;
-			// protocol
-			if (filterProtocol === 'torrent' && !r.url) return false;
-			if (filterProtocol === 'magnet'  && !r.magnet_link) return false;
-			// provider
-			if (filterProvider !== 'all' && r.provider !== filterProvider) return false;
-			// min seeders
-			if (r.seeders < filterMinSeed) return false;
-			// search within results
-			if (searchTerm && !r.title.toLowerCase().includes(searchTerm.toLowerCase())) return false;
-			return true;
-		});
-
-		// sort
-		out.sort((a, b) => {
-			switch (sortBy) {
-				case 'seeders':   return b.seeders - a.seeders;
-				case 'score':     return smartScore(b) - smartScore(a);
-				case 'size_desc': return b.size_bytes - a.size_bytes;
-				case 'size_asc':  return a.size_bytes - b.size_bytes;
-				case 'ratio': {
-					const ra = a.leechers > 0 ? a.seeders / a.leechers : a.seeders;
-					const rb = b.leechers > 0 ? b.seeders / b.leechers : b.seeders;
-					return rb - ra;
-				}
-				default: return 0;
-			}
-		});
-		return out;
-	});
-
-	// ── Quality badge colour ──────────────────────────────
-	const qualityColor: Record<QualityKey, string> = {
-		'4k':    '#a855f7',
-		'1080p': '#3b82f6',
-		'720p':  '#22c55e',
-		'sd':    '#6b7280',
-		'all':   '#6b7280'
-	};
-
-	// ── Init from URL ─────────────────────────────────────
-	$effect(() => {
-		const params = $page.url.searchParams;
-		query     = params.get('query') || '';
-		tmdbId    = params.get('tmdbId') ? Number(params.get('tmdbId')) : null;
-		mediaType = params.get('mediaType') === 'tv' ? 'tv' : 'movie';
-
-		if (query && tmdbId && !initialized) {
-			initialized = true;
-			initializeDownload();
-		}
-	});
-
-	async function initializeDownload() {
-		if (!isLoggedIn()) { searchError = 'Connexion requise.'; return; }
-		searching = true; searchError = ''; allResults = [];
-		try {
-			const media = await createMedia({ title: query, media_type: mediaType, tmdb_id: tmdbId! });
-			mediaId = media.id;
-			const resp = await directSearch(query, mediaId);
-			allResults = resp.results;
-			if (allResults.length === 0) searchError = 'Aucun torrent trouvé.';
-		} catch (e) {
-			searchError = e instanceof Error ? e.message : 'Erreur de recherche';
-		} finally { searching = false; }
-	}
-
-	async function retrySearch() {
-		if (!query || !mediaId) return;
-		searching = true; searchError = ''; allResults = [];
-		try {
-			const resp = await directSearch(query, mediaId);
-			allResults = resp.results;
-			if (allResults.length === 0) searchError = 'Aucun torrent trouvé.';
-		} catch (e) {
-			searchError = e instanceof Error ? e.message : 'Erreur de recherche';
-		} finally { searching = false; }
-	}
-
-	async function loadDownloads() {
-		if (!isLoggedIn()) { downloads = []; loadingDownloads = false; return; }
-		try { downloads = await listDownloads(); } catch { downloads = []; }
-		loadingDownloads = false;
-	}
-
-	async function confirmDownload() {
-		if (!selectedTorrent || !mediaId || startingDownload) return;
-		startingDownload = true;
-		try {
-			await startDownload({ media_id: mediaId, search_result_id: selectedTorrent.id });
-			selectedTorrent = null;
-			await loadDownloads();
-		} catch (e) {
-			alert(`Échec : ${e instanceof Error ? e.message : 'Erreur inconnue'}`);
-		} finally { startingDownload = false; }
-	}
-
-	function resetFilters() {
-		filterQuality = 'all'; filterProtocol = 'all';
-		filterProvider = 'all'; filterMinSeed = 0;
-		sortBy = 'seeders'; searchTerm = '';
-	}
-
-	const seedPresets = [0, 5, 20, 50, 100];
-
+	// ── Init ──
 	onMount(() => {
-		loadDownloads();
-		downloadsTimer = setInterval(loadDownloads, 5000);
-		return () => { if (downloadsTimer) clearInterval(downloadsTimer); };
+		if (isLoggedIn()) {
+			initDownloadsStore();
+			if (query && tmdbId) {
+				runSearch(false);
+				loadDetails();
+			}
+		} else {
+			error = "Vous devez être connecté pour télécharger.";
+		}
+		return () => { abortStream?.(); };
+	});
+
+	// ── Functions ──
+	async function runSearch(force = false) {
+		loading = true;
+		error = '';
+		results = [];
+		searchingProviders = [];
+		completedProviders = [];
+		abortStream?.();
+		try {
+			const media = await createMedia({ title: query, media_type: mediaType, tmdb_id: tmdbId });
+			mediaId = media.id;
+
+			// Try cache first (fast path) unless forcing refresh
+			if (!force) {
+				try {
+					const cached = await directSearch(query, mediaId, false);
+					if (cached.results && cached.results.length > 0) {
+						results = cached.results;
+						loading = false;
+						return;
+					}
+				} catch { /* cache miss, continue to SSE */ }
+			}
+
+			// Use SSE streaming for live results per provider
+			abortStream = streamSearch(query, mediaId, {
+				onStart: (data) => {
+					searchingProviders = Array.from({ length: data.providers }, (_, i) => `Provider ${i + 1}`);
+				},
+				onResults: (data) => {
+					completedProviders = [...completedProviders, data.provider];
+					results = [...results, ...data.results];
+				},
+				onProviderError: (data) => {
+					completedProviders = [...completedProviders, data.provider];
+					console.warn(`Provider ${data.provider} error: ${data.error}`);
+				},
+				onDone: () => {
+					loading = false;
+					searchingProviders = [];
+					if (results.length === 0) error = "Aucun résultat trouvé.";
+				},
+				onError: () => {
+					loading = false;
+					error = "Erreur lors de la recherche.";
+				},
+			});
+		} catch (e: any) {
+			error = "Erreur lors de la recherche.";
+			loading = false;
+		}
+	}
+
+	async function loadDetails() {
+		try {
+			if (mediaType === 'movie') {
+				mediaDetails = await tmdbMovieDetails(tmdbId);
+			} else {
+				mediaDetails = await tmdbTvDetails(tmdbId);
+			}
+		} catch {
+			console.error("Could not load media details for header.");
+		}
+	}
+
+	async function download(result: SearchResult) {
+		if (!mediaId || startingDownloadId) return;
+		startingDownloadId = result.id;
+		try {
+			await startDownload({ media_id: mediaId, search_result_id: result.id });
+			downloadedIds = new Set([...downloadedIds, result.id]);
+			initDownloadsStore();
+			// Open sidebar + pulse
+			sidebarOpen = true;
+			sidebarPulse = true;
+			await tick();
+			setTimeout(() => { sidebarPulse = false; }, 1200);
+		} catch (e: any) {
+			alert("Erreur: " + e.message);
+		} finally {
+			startingDownloadId = null;
+		}
+	}
+
+	function parseTags(title: string): { quality?: string, lang?: string, format?: string } {
+		const t = title.toUpperCase();
+		const tags: { quality?: string, lang?: string, format?: string } = {};
+
+		if (t.includes('2160P') || t.includes('4K')) tags.quality = '4K';
+		else if (t.includes('1080P')) tags.quality = '1080p';
+		else if (t.includes('720P')) tags.quality = '720p';
+		else if (t.includes('DVDRIP')) tags.quality = 'DVDRip';
+
+		if (t.includes('TRUEFRENCH')) tags.lang = 'VFF';
+		else if (t.includes('FRENCH')) tags.lang = 'VF';
+		else if (t.includes('VOSTFR') || t.includes('SUBFRENCH')) tags.lang = 'VOSTFR';
+		else if (t.includes('MULTI')) tags.lang = 'MULTI';
+
+		if (t.includes('BLURAY')) tags.format = 'Blu-Ray';
+		else if (t.includes('WEB-DL') || t.includes('WEBRIP')) tags.format = 'WEB';
+		else if (t.includes('XVID')) tags.format = 'XviD';
+
+		return tags;
+	}
+
+	function seedScore(s: number): string {
+		if (s >= 50) return 'excellent';
+		if (s >= 15) return 'good';
+		if (s >= 3) return 'fair';
+		return 'poor';
+	}
+
+	const activeDownloads = $derived($downloads.filter(t => t.status === 'running' || t.status === 'pending'));
+	const totalActive = $derived(activeDownloads.length);
+
+	const filteredResults = $derived(
+		selectedFilter === 'all'
+			? results
+			: results.filter(r => {
+				const tags = parseTags(r.title);
+				if (selectedFilter === '4K') return tags.quality === '4K';
+				if (selectedFilter === '1080p') return tags.quality === '1080p';
+				if (selectedFilter === '720p') return tags.quality === '720p';
+				if (selectedFilter === 'VF') return tags.lang === 'VF' || tags.lang === 'VFF';
+				if (selectedFilter === 'MULTI') return tags.lang === 'MULTI';
+				if (selectedFilter === 'VOSTFR') return tags.lang === 'VOSTFR';
+				return true;
+			})
+	);
+
+	const availableFilters = $derived(() => {
+		const filters = new Set<string>();
+		for (const r of results) {
+			const tags = parseTags(r.title);
+			if (tags.quality) filters.add(tags.quality);
+			if (tags.lang) filters.add(tags.lang === 'VFF' ? 'VF' : tags.lang);
+		}
+		return ['all', ...Array.from(filters)];
 	});
 </script>
 
 <svelte:head>
-	<title>{query ? `Télécharger "${query}"` : 'Téléchargements'} — Sokoul</title>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+	<title>Télécharger "{query}"</title>
 </svelte:head>
 
 <div class="dl-page">
 
-	<!-- ── Header ──────────────────────────────────────── -->
-	<header class="dl-header">
-		<div class="dl-header-inner">
-			<div class="dl-breadcrumb">
-				<a href="/" class="crumb">Accueil</a>
-				<span class="crumb-sep">/</span>
-				{#if mediaType === 'movie'}
-					<a href="/films" class="crumb">Films</a>
-				{:else}
-					<a href="/series" class="crumb">Séries</a>
-				{/if}
-				<span class="crumb-sep">/</span>
-				<span class="crumb-current">Télécharger</span>
-			</div>
+	<!-- ═══ CUSTOM TOP BAR ═══ -->
+	<nav class="dl-topbar">
+		<button class="dl-topbar__back" onclick={() => history.back()} aria-label="Retour">
+			<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+			<span>Retour</span>
+		</button>
 
-			<div class="dl-title-row">
-				<div class="dl-title-icon">
-					<svg viewBox="0 0 24 24" fill="currentColor" width="28" height="28">
-						<path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
-					</svg>
-				</div>
-				<div>
-					<h1 class="dl-title">{query || 'Téléchargements'}</h1>
-					<p class="dl-subtitle">
-						<span class="type-badge">{mediaType === 'tv' ? '📺 Série' : '🎬 Film'}</span>
-						{#if tmdbId}<span class="tmdb-tag">TMDB {tmdbId}</span>{/if}
-					</p>
-				</div>
+		<button class="dl-topbar__downloads" class:dl-topbar__downloads--active={sidebarOpen} onclick={() => sidebarOpen = !sidebarOpen} aria-label="Téléchargements">
+			<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+			<span>Téléchargements</span>
+			{#if totalActive > 0}
+				<span class="dl-topbar__badge">{totalActive}</span>
+			{/if}
+		</button>
+	</nav>
 
-				{#if !searching && allResults.length > 0}
-					<div class="result-summary">
-						<span class="result-count">{filteredResults.length}</span>
-						<span class="result-label">/ {allResults.length} torrents</span>
+	<!-- ═══ HERO HEADER ═══ -->
+	<header class="dl-hero" style:--backdrop-url="url({tmdbImageUrl(mediaDetails?.backdrop_path, 'original')})">
+		<div class="dl-hero__gradient"></div>
+		<div class="dl-hero__inner">
+			{#if mediaDetails}
+				<div class="dl-hero__media">
+					<img
+						class="dl-hero__poster"
+						src={tmdbImageUrl(mediaDetails.poster_path)}
+						alt="Affiche"
+						loading="eager"
+					/>
+					<div class="dl-hero__info">
+						<span class="dl-hero__type-badge">
+							{mediaType === 'tv' ? 'Série' : 'Film'}
+						</span>
+						<h1 class="dl-hero__title">{'title' in mediaDetails ? mediaDetails.title : mediaDetails.name}</h1>
+						<div class="dl-hero__meta">
+							{#if 'release_date' in mediaDetails && mediaDetails.release_date}
+								<span class="dl-hero__meta-chip">{mediaDetails.release_date.substring(0, 4)}</span>
+							{/if}
+							{#if 'first_air_date' in mediaDetails && mediaDetails.first_air_date}
+								<span class="dl-hero__meta-chip">{mediaDetails.first_air_date.substring(0, 4)}</span>
+							{/if}
+							{#if mediaDetails.genres && mediaDetails.genres.length > 0}
+								{#each mediaDetails.genres.slice(0, 2) as genre}
+									<span class="dl-hero__meta-chip">{genre.name}</span>
+								{/each}
+							{/if}
+							{#if 'runtime' in mediaDetails && mediaDetails.runtime}
+								<span class="dl-hero__meta-chip"><i class="fa-regular fa-clock"></i> {mediaDetails.runtime} min</span>
+							{/if}
+							{#if mediaDetails.vote_average}
+								<span class="dl-hero__meta-chip dl-hero__meta-chip--gold">
+									<i class="fa-solid fa-star"></i> {mediaDetails.vote_average.toFixed(1)}
+								</span>
+							{/if}
+						</div>
+						{#if mediaDetails.overview}
+							<p class="dl-hero__overview">{mediaDetails.overview.substring(0, 200)}{mediaDetails.overview.length > 200 ? '…' : ''}</p>
+						{/if}
+						<div class="dl-hero__result-count">
+							{#if loading && results.length > 0}
+								<span class="dl-hero__searching"><i class="fa-solid fa-spinner fa-spin"></i> Recherche en cours… <strong>{results.length}</strong> sources trouvées</span>
+							{:else if loading}
+								<span class="dl-hero__searching"><i class="fa-solid fa-spinner fa-spin"></i> Recherche en cours…</span>
+							{:else if results.length > 0}
+								<span><strong>{results.length}</strong> sources disponibles</span>
+							{/if}
+						</div>
 					</div>
-				{/if}
-			</div>
+				</div>
+			{:else if loading}
+				<div class="dl-hero__media">
+					<div class="dl-hero__poster skeleton" style="width:140px;height:210px;border-radius:12px;"></div>
+					<div class="dl-hero__info">
+						<div class="skeleton" style="width:200px;height:32px;border-radius:6px;margin-bottom:12px;"></div>
+						<div class="skeleton" style="width:300px;height:20px;border-radius:4px;"></div>
+					</div>
+				</div>
+			{/if}
 		</div>
 	</header>
 
-	<!-- ── Main layout ──────────────────────────────────── -->
+	<!-- ═══ MAIN CONTENT ═══ -->
 	<div class="dl-body">
+		<section class="dl-sources">
+			<!-- Filter chips -->
+			{#if results.length > 0}
+				<div class="dl-filters">
+					{#each availableFilters() as f}
+						<button
+							class="dl-filter-chip"
+							class:active={selectedFilter === f}
+							onclick={() => selectedFilter = f}
+						>
+							{f === 'all' ? 'Tous' : f}
+						</button>
+					{/each}
+				</div>
+			{/if}
 
-		<!-- ── Sidebar Filters ───────────────────────────── -->
-		<aside class="dl-sidebar">
-			<div class="sidebar-inner">
-
-				<!-- Search within results -->
-				{#if allResults.length > 0}
-					<div class="filter-group">
-						<label class="filter-label">Filtrer les titres</label>
-						<div class="search-input-wrap">
-							<svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14" class="search-ico">
-								<path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
-							</svg>
-							<input
-								class="filter-input"
-								type="text"
-								placeholder="ex: BluRay, FRENCH…"
-								bind:value={searchTerm}
-							/>
+			<div class="dl-sources__list">
+				{#if loading}
+					{#each Array(6) as _, i}
+						<div class="dl-card skeleton" style="animation-delay: {i * 0.08}s">
+							<div style="height: 72px;"></div>
 						</div>
-					</div>
-
-					<!-- Qualité -->
-					<div class="filter-group">
-						<label class="filter-label">Qualité</label>
-						<div class="pill-group">
-							{#each (['all', '4k', '1080p', '720p', 'sd'] as QualityKey[]) as q}
-								<button
-									class="pill"
-									class:active={filterQuality === q}
-									onclick={() => filterQuality = q}
-								>
-									{q === 'all' ? 'Toutes' : q === '4k' ? '4K' : q.toUpperCase()}
-								</button>
-							{/each}
+					{/each}
+				{:else if error}
+					<div class="dl-empty">
+						<div class="dl-empty__icon">
+							<i class="fa-solid fa-triangle-exclamation"></i>
 						</div>
+						<p class="dl-empty__text">{error}</p>
+						<button class="dl-empty__retry" onclick={() => runSearch(true)}>
+							<i class="fa-solid fa-rotate-right"></i> Réessayer
+						</button>
 					</div>
-
-					<!-- Provider -->
-					{#if availableProviders.length > 2}
-						<div class="filter-group">
-							<label class="filter-label">Source</label>
-							<div class="pill-group">
-								{#each availableProviders as p}
-									<button
-										class="pill"
-										class:active={filterProvider === p}
-										onclick={() => filterProvider = p}
-									>
-										{p === 'all' ? 'Toutes' : p}
-									</button>
-								{/each}
-							</div>
+				{:else if filteredResults.length === 0 && results.length > 0}
+					<div class="dl-empty">
+						<div class="dl-empty__icon">
+							<i class="fa-solid fa-filter-circle-xmark"></i>
 						</div>
-					{/if}
-
-					<!-- Protocol -->
-					<div class="filter-group">
-						<label class="filter-label">Protocole</label>
-						<div class="pill-group">
-							{#each (['all', 'torrent', 'magnet'] as ProtoKey[]) as p}
-								<button
-									class="pill"
-									class:active={filterProtocol === p}
-									onclick={() => filterProtocol = p}
-								>
-									{p === 'all' ? 'Tous' : p === 'torrent' ? '🗂 Torrent' : '🧲 Magnet'}
-								</button>
-							{/each}
-						</div>
+						<p class="dl-empty__text">Aucun résultat pour ce filtre</p>
+						<button class="dl-empty__retry" onclick={() => selectedFilter = 'all'}>
+							Voir tous les résultats
+						</button>
 					</div>
-
-					<!-- Min seeders -->
-					<div class="filter-group">
-						<label class="filter-label">Seeders minimum</label>
-						<div class="pill-group">
-							{#each seedPresets as s}
-								<button
-									class="pill"
-									class:active={filterMinSeed === s}
-									onclick={() => filterMinSeed = s}
-								>
-									{s === 0 ? 'Tous' : `${s}+`}
-								</button>
-							{/each}
-						</div>
-					</div>
-
-					<!-- Sort -->
-					<div class="filter-group">
-						<label class="filter-label">Trier par</label>
-						<select class="filter-select" bind:value={sortBy}>
-							<option value="seeders">Seeders (↓)</option>
-							<option value="score">Score intelligent (↓)</option>
-							<option value="ratio">Ratio S/L (↓)</option>
-							<option value="size_desc">Taille (↓)</option>
-							<option value="size_asc">Taille (↑)</option>
-						</select>
-					</div>
-
-					<!-- Reset -->
-					<button class="reset-btn" onclick={resetFilters}>
-						<svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
-							<path d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
-						</svg>
-						Réinitialiser les filtres
-					</button>
-				{/if}
-
-				<!-- Downloads section in sidebar -->
-				<div class="filter-group sidebar-downloads">
-					<div class="sidebar-dl-header">
-						<label class="filter-label">Téléchargements actifs</label>
-						{#if downloads.length > 0}
-							<span class="dl-count-badge">{downloads.length}</span>
-						{/if}
-					</div>
-
-					{#if loadingDownloads}
-						<p class="sidebar-dl-empty">Chargement…</p>
-					{:else if downloads.length === 0}
-						<p class="sidebar-dl-empty">Aucun téléchargement.</p>
-					{:else}
-						<div class="sidebar-dl-list">
-							{#each downloads as dl (dl.id)}
-								{@const payload = dl.payload as Record<string, unknown> | null}
-								{@const title = typeof payload?.title === 'string' ? payload.title : `Tâche ${dl.id.slice(0, 6)}`}
-								<div class="sidebar-dl-item">
-									<div class="sidebar-dl-top">
-										<span class="sidebar-dl-title">{title}</span>
-										<span class="status-dot status-{dl.status}"></span>
-									</div>
-									{#if dl.progress !== null && dl.progress !== undefined && dl.status === 'running'}
-										<div class="mini-progress">
-											<div class="mini-progress-fill" style="width:{dl.progress}%"></div>
-										</div>
-									{/if}
-									<div class="sidebar-dl-meta">
-										<span class="status-label status-label-{dl.status}">{dl.status}</span>
-										{#if dl.progress !== null && dl.progress !== undefined}
-											<span class="sidebar-dl-pct">{dl.progress}%</span>
+				{:else}
+					{#each filteredResults as result, idx (result.id)}
+						{@const tags = parseTags(result.title)}
+						{@const isDownloading = startingDownloadId === result.id}
+						{@const isDownloaded = downloadedIds.has(result.id)}
+						{@const health = seedScore(result.seeders)}
+						<div
+							class="dl-card"
+							class:dl-card--downloaded={isDownloaded}
+							style="animation-delay: {idx * 0.04}s"
+						>
+							<div class="dl-card__health dl-card__health--{health}" title="Santé: {health}"></div>
+							<div class="dl-card__body">
+								<div class="dl-card__top">
+									<h3 class="dl-card__title" title={result.title}>{result.title}</h3>
+									<div class="dl-card__tags">
+										{#if tags.quality}
+											<span class="dl-tag dl-tag--quality"
+												class:dl-tag--4k={tags.quality === '4K'}
+											>{tags.quality}</span>
+										{/if}
+										{#if tags.format}
+											<span class="dl-tag dl-tag--format">{tags.format}</span>
+										{/if}
+										{#if tags.lang}
+											<span class="dl-tag dl-tag--lang">{tags.lang}</span>
 										{/if}
 									</div>
 								</div>
-							{/each}
+								<div class="dl-card__bottom">
+									<div class="dl-card__stats">
+										<span class="dl-stat dl-stat--size">
+											<i class="fa-solid fa-hard-drive"></i>
+											{formatBytes(result.size_bytes)}
+										</span>
+										<span class="dl-stat dl-stat--seed">
+											<i class="fa-solid fa-arrow-up"></i>
+											{result.seeders}
+										</span>
+										<span class="dl-stat dl-stat--leech">
+											<i class="fa-solid fa-arrow-down"></i>
+											{result.leechers}
+										</span>
+									</div>
+									<button
+										class="dl-card__btn"
+										class:dl-card__btn--loading={isDownloading}
+										class:dl-card__btn--done={isDownloaded}
+										disabled={isDownloading || isDownloaded}
+										onclick={() => download(result)}
+										title={isDownloaded ? 'Téléchargement lancé' : 'Télécharger'}
+									>
+										{#if isDownloading}
+											<i class="fa-solid fa-spinner fa-spin"></i>
+										{:else if isDownloaded}
+											<i class="fa-solid fa-check"></i>
+										{:else}
+											<i class="fa-solid fa-download"></i>
+											<span class="dl-card__btn-label">Télécharger</span>
+										{/if}
+									</button>
+								</div>
+							</div>
 						</div>
-					{/if}
-				</div>
-
+					{/each}
+				{/if}
 			</div>
-		</aside>
-
-		<!-- ── Results main area ──────────────────────────── -->
-		<main class="dl-main">
-
-			<!-- Error -->
-			{#if searchError}
-				<div class="state-box state-error">
-					<svg viewBox="0 0 24 24" fill="currentColor" width="32" height="32" class="state-icon">
-						<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
-					</svg>
-					<p class="state-msg">{searchError}</p>
-					<button class="action-btn" onclick={retrySearch}>Réessayer</button>
-				</div>
-			{/if}
-
-			<!-- Loading -->
-			{#if searching}
-				<div class="state-box state-loading">
-					<div class="spinner-ring"></div>
-					<p class="state-msg">Interrogation de Prowlarr &amp; Jackett…</p>
-					<p class="state-sub">Ça peut prendre quelques secondes</p>
-				</div>
-			{:else if allResults.length === 0 && !searchError}
-				<div class="state-box state-empty">
-					<svg viewBox="0 0 24 24" fill="currentColor" width="48" height="48" class="state-icon state-icon-lg">
-						<path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
-					</svg>
-					<p class="state-msg">Aucun torrent trouvé</p>
-					{#if mediaId}
-						<button class="action-btn" onclick={retrySearch}>Lancer la recherche</button>
-					{/if}
-				</div>
-			{:else if filteredResults.length === 0 && allResults.length > 0}
-				<div class="state-box state-empty">
-					<p class="state-msg">Aucun résultat pour ces filtres</p>
-					<button class="action-btn secondary" onclick={resetFilters}>Réinitialiser les filtres</button>
-				</div>
-			{:else}
-				<!-- Results table -->
-				<div class="results-table-wrap">
-					<table class="results-table">
-						<thead>
-							<tr>
-								<th class="col-quality">Qualité</th>
-								<th class="col-title">Titre</th>
-								<th class="col-provider">Source</th>
-								<th class="col-size">Taille</th>
-								<th class="col-seeds">Seeds</th>
-								<th class="col-leech">Leech</th>
-								<th class="col-score">Score</th>
-								<th class="col-action"></th>
-							</tr>
-						</thead>
-						<tbody>
-							{#each filteredResults as result (result.id)}
-								{@const q = detectQuality(result)}
-								{@const ss = Math.round(smartScore(result))}
-								<tr
-									class="result-row"
-									class:selected={selectedTorrent?.id === result.id}
-									onclick={() => selectedTorrent = selectedTorrent?.id === result.id ? null : result}
-								>
-									<td class="col-quality">
-										<span class="quality-badge" style="--qc:{qualityColor[q]}">
-											{q === 'all' ? '—' : q === '4k' ? '4K' : q.toUpperCase()}
-										</span>
-									</td>
-									<td class="col-title">
-										<span class="result-title">{result.title}</span>
-										<div class="result-tags">
-											{#if result.magnet_link}
-												<span class="proto-tag">🧲</span>
-											{/if}
-											{#if result.url}
-												<span class="proto-tag">🗂</span>
-											{/if}
-											{#if result.ai_validated}
-												<span class="ai-tag">IA ✓</span>
-											{/if}
-										</div>
-									</td>
-									<td class="col-provider">
-										<span class="provider-tag">{result.provider}</span>
-									</td>
-									<td class="col-size">{formatBytes(result.size_bytes)}</td>
-									<td class="col-seeds">
-										<span class="seed-val" class:seed-high={result.seeders >= 20} class:seed-mid={result.seeders >= 5 && result.seeders < 20} class:seed-low={result.seeders < 5}>
-											↑{result.seeders}
-										</span>
-									</td>
-									<td class="col-leech">
-										<span class="leech-val">↓{result.leechers}</span>
-									</td>
-									<td class="col-score">
-										<div class="score-bar-wrap">
-											<div class="score-bar" style="width:{Math.min(ss, 100)}%"></div>
-											<span class="score-num">{ss}</span>
-										</div>
-									</td>
-									<td class="col-action">
-										<button
-											class="dl-btn"
-											class:dl-btn-active={selectedTorrent?.id === result.id}
-											onclick={(e) => { e.stopPropagation(); selectedTorrent = result; }}
-											title="Sélectionner pour télécharger"
-										>
-											<svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
-												<path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
-											</svg>
-										</button>
-									</td>
-								</tr>
-							{/each}
-						</tbody>
-					</table>
-				</div>
-			{/if}
-
-		</main>
+		</section>
 	</div>
-
-	<!-- ── Confirmation drawer (bottom slide-up) ─────────── -->
-	{#if selectedTorrent}
-		{@const q = detectQuality(selectedTorrent)}
-		<!-- svelte-ignore a11y_click_events_have_key_events -->
-		<!-- svelte-ignore a11y_no_static_element_interactions -->
-		<div class="confirm-overlay" onclick={() => selectedTorrent = null}></div>
-		<div class="confirm-drawer">
-			<div class="confirm-inner">
-				<div class="confirm-left">
-					<div class="confirm-quality-badge" style="--qc:{qualityColor[q]}">
-						{q === '4k' ? '4K' : q.toUpperCase()}
-					</div>
-					<div class="confirm-info">
-						<p class="confirm-title">{selectedTorrent.title}</p>
-						<div class="confirm-meta">
-							<span class="confirm-tag">{selectedTorrent.provider}</span>
-							<span class="confirm-tag">{formatBytes(selectedTorrent.size_bytes)}</span>
-							<span class="confirm-tag seed-tag">↑ {selectedTorrent.seeders} seeders</span>
-							{#if selectedTorrent.magnet_link}<span class="confirm-tag">🧲 Magnet</span>{/if}
-							{#if selectedTorrent.url}<span class="confirm-tag">🗂 Torrent</span>{/if}
-						</div>
-					</div>
-				</div>
-				<div class="confirm-actions">
-					<button class="cancel-btn" onclick={() => selectedTorrent = null}>Annuler</button>
-					<button
-						class="start-btn"
-						onclick={confirmDownload}
-						disabled={startingDownload}
-					>
-						{#if startingDownload}
-							<span class="btn-spinner"></span> Démarrage…
-						{:else}
-							<svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
-								<path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
-							</svg>
-							Télécharger
-						{/if}
-					</button>
-				</div>
-			</div>
-		</div>
-	{/if}
-
 </div>
 
+<!-- ═══ SIDEBAR OVERLAY + PANEL ═══ -->
+{#if sidebarOpen}
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div class="dl-overlay" onclick={() => sidebarOpen = false} onkeydown={() => {}}></div>
+{/if}
+<aside class="dl-sidebar" class:dl-sidebar--open={sidebarOpen} class:dl-sidebar--pulse={sidebarPulse}>
+	<div class="dl-sidebar__header">
+		<div class="dl-sidebar__header-left">
+			<div class="dl-sidebar__header-icon">
+				<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+			</div>
+			<h3 class="dl-sidebar__title">Téléchargements</h3>
+			{#if totalActive > 0}
+				<span class="dl-sidebar__count">{totalActive}</span>
+			{/if}
+		</div>
+		<button class="dl-sidebar__close" onclick={() => sidebarOpen = false} aria-label="Fermer">
+			<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg>
+		</button>
+	</div>
+
+	<div class="dl-sidebar__list">
+		{#if activeDownloads.length === 0}
+			<div class="dl-sidebar__empty">
+				<div class="dl-sidebar__empty-icon">
+					<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.3">
+						<path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+					</svg>
+				</div>
+				<p>Aucun téléchargement en cours</p>
+				<a href="/history" class="dl-sidebar__history-link">
+					<i class="fa-solid fa-clock-rotate-left"></i> Voir l'historique
+				</a>
+			</div>
+		{:else}
+			<div class="dl-sidebar__section-label">En cours</div>
+			{#each activeDownloads as task (task.id)}
+				{@const payload = task.payload as any}
+				{@const pct = Number(task.progress) || 0}
+				<div class="dl-sidebar__item dl-sidebar__item--active">
+					<div class="dl-sidebar__item-icon">
+						{#if task.status === 'running'}
+							<i class="fa-solid fa-circle-notch fa-spin"></i>
+						{:else}
+							<i class="fa-solid fa-clock"></i>
+						{/if}
+					</div>
+					<div class="dl-sidebar__item-body">
+						<span class="dl-sidebar__item-title" title={payload?.title}>{payload?.title || 'Téléchargement…'}</span>
+						<div class="dl-sidebar__progress-row">
+							<div class="dl-sidebar__progress-track">
+								<div
+									class="dl-sidebar__progress-fill"
+									class:dl-sidebar__progress-fill--indeterminate={pct === 0 && task.status === 'running'}
+									style="width: {pct}%"
+								></div>
+							</div>
+							<span class="dl-sidebar__pct">{pct.toFixed(0)}%</span>
+						</div>
+					</div>
+				</div>
+			{/each}
+			<a href="/history" class="dl-sidebar__history-link">
+				<i class="fa-solid fa-clock-rotate-left"></i> Voir l'historique
+			</a>
+		{/if}
+	</div>
+</aside>
+
 <style>
-	/* ── Base ───────────────────────────────────────────── */
-	.dl-page {
-		min-height: 100vh;
-		background: var(--bg-primary);
-		display: flex;
-		flex-direction: column;
-	}
+/* ═══════════════════════════════════════
+   DOWNLOAD PAGE — Premium Streaming UI
+   ═══════════════════════════════════════ */
 
-	/* ── Header ─────────────────────────────────────────── */
-	.dl-header {
-		background: linear-gradient(180deg, rgba(0,0,0,0.6) 0%, transparent 100%),
-		            var(--bg-secondary);
-		border-bottom: 1px solid rgba(255,255,255,0.06);
-		padding: calc(var(--nav-height, 70px) + 1.5rem) 2rem 1.5rem;
-	}
-	.dl-header-inner { max-width: 1600px; margin: 0 auto; }
+.dl-page {
+	display: flex;
+	flex-direction: column;
+	min-height: 100vh;
+	background: var(--bg-primary, #1A1D29);
+}
 
-	.dl-breadcrumb {
-		display: flex; align-items: center; gap: 6px;
-		font-size: 12px; color: var(--text-muted);
-		margin-bottom: 1.2rem;
-	}
-	.crumb { color: var(--text-muted); text-decoration: none; }
-	.crumb:hover { color: var(--text-primary); }
-	.crumb-sep { opacity: 0.4; }
-	.crumb-current { color: var(--text-secondary); }
+/* ═══ CUSTOM TOP BAR ═══ */
+.dl-topbar {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	z-index: 100;
+	height: 60px;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 0 24px;
+	background: rgba(26, 29, 41, 0.85);
+	backdrop-filter: blur(16px);
+	-webkit-backdrop-filter: blur(16px);
+	border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.dl-topbar__back {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	padding: 8px 16px;
+	border-radius: 8px;
+	background: rgba(255,255,255,0.05);
+	border: 1px solid rgba(255,255,255,0.08);
+	color: #F9F9F9;
+	font-size: 14px;
+	font-weight: 600;
+	cursor: pointer;
+	transition: all 250ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+.dl-topbar__back:hover {
+	background: rgba(255,255,255,0.1);
+	border-color: rgba(255,255,255,0.15);
+	transform: translateX(-2px);
+}
 
-	.dl-title-row {
-		display: flex; align-items: center; gap: 1.2rem; flex-wrap: wrap;
-	}
-	.dl-title-icon {
-		width: 52px; height: 52px;
-		background: linear-gradient(135deg, #3b82f6, #1d4ed8);
-		border-radius: 14px;
-		display: flex; align-items: center; justify-content: center;
-		color: white; flex-shrink: 0;
-	}
-	.dl-title {
-		font-size: 1.8rem; font-weight: 700;
-		color: var(--text-primary); margin: 0;
-	}
-	.dl-subtitle {
-		display: flex; align-items: center; gap: 8px;
-		margin: 4px 0 0; font-size: 0.85rem;
-	}
-	.type-badge {
-		background: rgba(59,130,246,0.15);
-		color: #93c5fd;
-		border: 1px solid rgba(59,130,246,0.25);
-		padding: 2px 10px; border-radius: 999px; font-size: 0.78rem;
-	}
-	.tmdb-tag {
-		color: var(--text-muted); font-size: 0.78rem;
-	}
+.dl-topbar__downloads {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	padding: 8px 18px;
+	border-radius: 8px;
+	background: rgba(0,114,210,0.12);
+	border: 1px solid rgba(0,114,210,0.25);
+	color: #60a5fa;
+	font-size: 14px;
+	font-weight: 600;
+	cursor: pointer;
+	transition: all 250ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+	position: relative;
+}
+.dl-topbar__downloads:hover {
+	background: rgba(0,114,210,0.2);
+	border-color: rgba(0,114,210,0.4);
+	color: #93bbfc;
+}
+.dl-topbar__downloads--active {
+	background: rgba(0,114,210,0.25);
+	border-color: rgba(0,114,210,0.5);
+	color: #93bbfc;
+}
+.dl-topbar__badge {
+	min-width: 20px;
+	height: 20px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 10px;
+	background: #0072D2;
+	color: #fff;
+	font-size: 11px;
+	font-weight: 700;
+	padding: 0 5px;
+	animation: pulse 2s ease-in-out infinite;
+}
 
-	.result-summary {
-		margin-left: auto;
-		text-align: right;
-	}
-	.result-count {
-		font-size: 2.5rem; font-weight: 800;
-		color: var(--text-primary); line-height: 1;
-	}
-	.result-label {
-		display: block; font-size: 0.8rem; color: var(--text-muted);
-	}
+/* ── HERO ── */
+.dl-hero {
+	position: relative;
+	min-height: 300px;
+	margin-top: 60px;
+	display: flex;
+	align-items: flex-end;
+	background-image:
+		linear-gradient(to top, var(--bg-primary, #1A1D29) 0%, rgba(26,29,41,0.85) 40%, rgba(26,29,41,0.3) 100%),
+		var(--backdrop-url, none);
+	background-size: cover;
+	background-position: center 25%;
+	overflow: hidden;
+}
+.dl-hero__gradient {
+	position: absolute;
+	inset: 0;
+	background: linear-gradient(to top, var(--bg-primary, #1A1D29) 2%, transparent 60%);
+	pointer-events: none;
+}
+.dl-hero__inner {
+	position: relative;
+	z-index: 2;
+	width: 100%;
+	max-width: 1440px;
+	margin: 0 auto;
+	padding: 0 40px 32px;
+}
+.dl-hero__media {
+	display: flex;
+	align-items: flex-end;
+	gap: 28px;
+}
+.dl-hero__poster {
+	width: 140px;
+	border-radius: 12px;
+	box-shadow: 0 16px 40px rgba(0,0,0,0.6);
+	flex-shrink: 0;
+}
+.dl-hero__info {
+	flex: 1;
+	min-width: 0;
+}
+.dl-hero__type-badge {
+	display: inline-block;
+	padding: 3px 10px;
+	background: rgba(0,114,210,0.25);
+	color: #60a5fa;
+	border-radius: 20px;
+	font-size: 11px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 1px;
+	margin-bottom: 8px;
+}
+.dl-hero__title {
+	font-size: clamp(24px, 4vw, 42px);
+	font-weight: 800;
+	color: #F9F9F9;
+	margin: 0 0 10px;
+	line-height: 1.15;
+	text-shadow: 0 2px 12px rgba(0,0,0,0.4);
+}
+.dl-hero__meta {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	margin-bottom: 12px;
+}
+.dl-hero__meta-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	padding: 4px 12px;
+	background: rgba(255,255,255,0.08);
+	border-radius: 20px;
+	font-size: 12px;
+	font-weight: 500;
+	color: #CACACA;
+}
+.dl-hero__meta-chip--gold {
+	background: rgba(250,204,21,0.15);
+	color: #facc15;
+}
+.dl-hero__overview {
+	font-size: 13px;
+	line-height: 1.7;
+	color: rgba(249,249,249,0.6);
+	max-width: 520px;
+	margin: 0 0 12px;
+}
+.dl-hero__result-count {
+	font-size: 13px;
+	color: rgba(249,249,249,0.5);
+}
+.dl-hero__result-count strong { color: #60a5fa; font-weight: 700; }
+.dl-hero__searching { color: #60a5fa; }
 
-	/* ── Body layout ────────────────────────────────────── */
-	.dl-body {
-		display: flex; flex: 1;
-		max-width: 1600px; width: 100%;
-		margin: 0 auto; padding: 0;
-	}
+/* ── BODY LAYOUT ── */
+.dl-body {
+	flex: 1;
+	max-width: 1440px;
+	width: 100%;
+	margin: 0 auto;
+	padding: 0 20px 40px;
+}
 
-	/* ── Sidebar ─────────────────────────────────────────── */
-	.dl-sidebar {
-		width: 260px; flex-shrink: 0;
-		border-right: 1px solid rgba(255,255,255,0.06);
-	}
-	.sidebar-inner {
-		position: sticky; top: var(--nav-height, 70px);
-		max-height: calc(100vh - var(--nav-height, 70px));
-		overflow-y: auto; padding: 1.5rem 1.2rem;
-		display: flex; flex-direction: column; gap: 1.5rem;
-		scrollbar-width: thin;
-	}
+/* ── FILTERS ── */
+.dl-filters {
+	display: flex;
+	gap: 8px;
+	flex-wrap: wrap;
+	padding: 0 0 16px;
+}
+.dl-filter-chip {
+	padding: 6px 16px;
+	border-radius: 20px;
+	background: rgba(255,255,255,0.05);
+	border: 1px solid rgba(255,255,255,0.08);
+	color: #CACACA;
+	font-size: 12px;
+	font-weight: 600;
+	cursor: pointer;
+	transition: all 200ms ease;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+}
+.dl-filter-chip:hover {
+	background: rgba(255,255,255,0.1);
+	color: #F9F9F9;
+}
+.dl-filter-chip.active {
+	background: rgba(0,114,210,0.2);
+	border-color: rgba(0,114,210,0.5);
+	color: #60a5fa;
+}
 
-	.filter-group { display: flex; flex-direction: column; gap: 8px; }
-	.filter-label {
-		font-size: 0.72rem; font-weight: 700;
-		text-transform: uppercase; letter-spacing: 1px;
-		color: var(--text-muted);
-	}
+/* ── SOURCES LIST ── */
+.dl-sources {
+	min-width: 0;
+}
+.dl-sources__list {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
 
-	.search-input-wrap { position: relative; }
-	.search-ico {
-		position: absolute; left: 10px; top: 50%;
-		transform: translateY(-50%); color: var(--text-muted); pointer-events: none;
-	}
-	.filter-input {
-		width: 100%; padding: 8px 10px 8px 32px;
-		background: var(--bg-card); border: 1px solid rgba(255,255,255,0.1);
-		border-radius: 8px; color: var(--text-primary); font-size: 0.82rem;
-		outline: none; transition: border-color 0.2s;
-	}
-	.filter-input:focus { border-color: #3b82f6; }
+/* ── TORRENT CARD ── */
+.dl-card {
+	position: relative;
+	display: flex;
+	background: linear-gradient(135deg, rgba(37,40,51,0.7) 0%, rgba(30,33,44,0.9) 100%);
+	border: 1px solid rgba(255,255,255,0.06);
+	border-radius: 12px;
+	overflow: hidden;
+	transition: all 250ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+	animation: cardIn 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+@keyframes cardIn {
+	from { opacity: 0; transform: translateY(12px); }
+	to   { opacity: 1; transform: translateY(0); }
+}
+.dl-card:hover {
+	background: linear-gradient(135deg, rgba(45,50,65,0.9) 0%, rgba(37,40,51,1) 100%);
+	border-color: rgba(0,114,210,0.35);
+	transform: translateY(-2px);
+	box-shadow: 0 8px 32px rgba(0,0,0,0.3), 0 0 0 1px rgba(0,114,210,0.15);
+}
+.dl-card--downloaded {
+	opacity: 0.55;
+	border-color: rgba(16,185,129,0.2);
+}
+.dl-card--downloaded:hover { opacity: 0.7; }
 
-	.pill-group { display: flex; flex-wrap: wrap; gap: 5px; }
-	.pill {
-		padding: 4px 10px;
-		background: var(--bg-card); border: 1px solid rgba(255,255,255,0.1);
-		border-radius: 999px; font-size: 0.75rem; color: var(--text-secondary);
-		cursor: pointer; transition: all 0.15s;
-	}
-	.pill:hover { border-color: #3b82f6; color: #93c5fd; }
-	.pill.active {
-		background: rgba(59,130,246,0.2);
-		border-color: #3b82f6; color: #93c5fd; font-weight: 600;
-	}
+.dl-card__health {
+	width: 3px;
+	flex-shrink: 0;
+	border-radius: 3px 0 0 3px;
+}
+.dl-card__health--excellent { background: linear-gradient(to bottom, #10b981, #059669); }
+.dl-card__health--good { background: linear-gradient(to bottom, #3b82f6, #2563eb); }
+.dl-card__health--fair { background: linear-gradient(to bottom, #f59e0b, #d97706); }
+.dl-card__health--poor { background: linear-gradient(to bottom, #ef4444, #b91c1c); }
 
-	.filter-select {
-		width: 100%; padding: 8px 10px;
-		background: var(--bg-card); border: 1px solid rgba(255,255,255,0.1);
-		border-radius: 8px; color: var(--text-primary); font-size: 0.82rem;
-		outline: none; cursor: pointer;
-	}
-	.filter-select:focus { border-color: #3b82f6; }
+.dl-card__body {
+	flex: 1;
+	min-width: 0;
+	padding: 14px 18px;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+.dl-card__top {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+.dl-card__title {
+	margin: 0;
+	font-size: 14px;
+	font-weight: 600;
+	color: #F9F9F9;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	line-height: 1.4;
+}
+.dl-card__tags {
+	display: flex;
+	gap: 6px;
+	flex-wrap: wrap;
+}
 
-	.reset-btn {
-		display: flex; align-items: center; justify-content: center; gap: 6px;
-		padding: 8px; background: rgba(255,255,255,0.04);
-		border: 1px solid rgba(255,255,255,0.1); border-radius: 8px;
-		color: var(--text-muted); font-size: 0.78rem; cursor: pointer;
-		transition: all 0.15s;
-	}
-	.reset-btn:hover { background: rgba(255,255,255,0.08); color: var(--text-secondary); }
+.dl-tag {
+	padding: 2px 8px;
+	border-radius: 4px;
+	font-size: 10px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+}
+.dl-tag--quality {
+	background: rgba(59,130,246,0.2);
+	color: #60a5fa;
+	border: 1px solid rgba(59,130,246,0.3);
+}
+.dl-tag--4k {
+	background: linear-gradient(135deg, rgba(139,92,246,0.3), rgba(236,72,153,0.2));
+	color: #c084fc;
+	border-color: rgba(139,92,246,0.4);
+}
+.dl-tag--format {
+	background: rgba(255,255,255,0.06);
+	color: #94a3b8;
+	border: 1px solid rgba(255,255,255,0.08);
+}
+.dl-tag--lang {
+	background: rgba(16,185,129,0.15);
+	color: #34d399;
+	border: 1px solid rgba(16,185,129,0.25);
+}
 
-	/* Sidebar downloads */
-	.sidebar-downloads { border-top: 1px solid rgba(255,255,255,0.06); padding-top: 1.2rem; }
-	.sidebar-dl-header { display: flex; align-items: center; justify-content: space-between; }
-	.dl-count-badge {
-		width: 20px; height: 20px; border-radius: 50%;
-		background: #3b82f6; color: white; font-size: 0.72rem; font-weight: 700;
-		display: flex; align-items: center; justify-content: center;
-	}
-	.sidebar-dl-empty { font-size: 0.8rem; color: var(--text-muted); }
-	.sidebar-dl-list { display: flex; flex-direction: column; gap: 8px; }
-	.sidebar-dl-item {
-		background: var(--bg-card); border: 1px solid rgba(255,255,255,0.07);
-		border-radius: 10px; padding: 10px 12px;
-		display: flex; flex-direction: column; gap: 5px;
-	}
-	.sidebar-dl-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 6px; }
-	.sidebar-dl-title {
-		font-size: 0.78rem; color: var(--text-secondary);
-		display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2;
-		-webkit-box-orient: vertical; overflow: hidden;
-	}
-	.status-dot {
-		width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 2px;
-	}
-	.status-dot.status-running   { background: #22c55e; animation: pulse 1.5s ease-in-out infinite; }
-	.status-dot.status-completed { background: #4caf7d; }
-	.status-dot.status-failed    { background: #ef4444; }
-	.status-dot.status-pending   { background: #fb923c; }
+.dl-card__bottom {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+}
+.dl-card__stats {
+	display: flex;
+	gap: 16px;
+}
+.dl-stat {
+	display: flex;
+	align-items: center;
+	gap: 5px;
+	font-size: 12px;
+	font-weight: 500;
+}
+.dl-stat i { font-size: 10px; }
+.dl-stat--size { color: #94a3b8; }
+.dl-stat--seed { color: #4ade80; }
+.dl-stat--leech { color: #f87171; }
 
-	.mini-progress {
-		height: 3px; background: rgba(255,255,255,0.1); border-radius: 999px; overflow: hidden;
-	}
-	.mini-progress-fill {
-		height: 100%; background: #3b82f6; border-radius: 999px; transition: width 0.3s;
-	}
-	.sidebar-dl-meta { display: flex; align-items: center; gap: 8px; }
-	.status-label { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; }
-	.status-label-running   { color: #22c55e; }
-	.status-label-completed { color: #4caf7d; }
-	.status-label-failed    { color: #ef4444; }
-	.status-label-pending   { color: #fb923c; }
-	.sidebar-dl-pct { font-size: 0.7rem; color: var(--text-muted); margin-left: auto; }
+.dl-card__btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	padding: 8px 20px;
+	border-radius: 8px;
+	background: rgba(0,114,210,0.15);
+	border: 1px solid rgba(0,114,210,0.3);
+	color: #60a5fa;
+	font-size: 13px;
+	font-weight: 600;
+	cursor: pointer;
+	transition: all 250ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+	white-space: nowrap;
+}
+.dl-card__btn:hover:not(:disabled) {
+	background: var(--accent, #0072D2);
+	border-color: var(--accent, #0072D2);
+	color: #fff;
+	transform: scale(1.04);
+	box-shadow: 0 4px 20px rgba(0,114,210,0.35);
+}
+.dl-card__btn:active:not(:disabled) { transform: scale(0.97); }
+.dl-card__btn--loading {
+	background: rgba(0,114,210,0.1);
+	border-color: rgba(0,114,210,0.2);
+	color: #60a5fa;
+	pointer-events: none;
+}
+.dl-card__btn--done {
+	background: rgba(16,185,129,0.15);
+	border-color: rgba(16,185,129,0.3);
+	color: #34d399;
+	pointer-events: none;
+}
+.dl-card__btn-label { display: inline; }
 
-	/* ── Main area ──────────────────────────────────────── */
-	.dl-main { flex: 1; overflow: hidden; padding: 1.5rem 1.5rem 8rem; min-width: 0; }
+/* ── EMPTY STATE ── */
+.dl-empty {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: 60px 20px;
+	text-align: center;
+}
+.dl-empty__icon {
+	font-size: 40px;
+	color: rgba(249,249,249,0.15);
+	margin-bottom: 16px;
+}
+.dl-empty__text {
+	font-size: 15px;
+	color: #94a3b8;
+	margin-bottom: 20px;
+}
+.dl-empty__retry {
+	padding: 10px 24px;
+	border-radius: 8px;
+	background: rgba(0,114,210,0.15);
+	border: 1px solid rgba(0,114,210,0.3);
+	color: #60a5fa;
+	font-size: 14px;
+	font-weight: 600;
+	cursor: pointer;
+	transition: all 200ms ease;
+}
+.dl-empty__retry:hover {
+	background: var(--accent, #0072D2);
+	color: #fff;
+}
 
-	/* State boxes */
-	.state-box {
-		display: flex; flex-direction: column; align-items: center;
-		justify-content: center; gap: 1rem;
-		padding: 4rem 2rem; border-radius: 16px;
-		text-align: center;
-	}
-	.state-error  { background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); }
-	.state-loading{ background: var(--bg-card); border: 1px solid rgba(255,255,255,0.08); }
-	.state-empty  { background: var(--bg-card); border: 1px solid rgba(255,255,255,0.08); }
-	.state-icon { color: var(--text-muted); }
-	.state-icon-lg { opacity: 0.3; }
-	.state-msg { font-size: 1.1rem; font-weight: 600; color: var(--text-primary); margin: 0; }
-	.state-sub { font-size: 0.85rem; color: var(--text-muted); margin: 0; }
+/* ═══ OVERLAY ═══ */
+.dl-overlay {
+	position: fixed;
+	inset: 0;
+	z-index: 200;
+	background: rgba(0,0,0,0.5);
+	animation: fadeIn 0.25s ease both;
+}
 
-	.action-btn {
-		padding: 10px 24px; border-radius: 8px; font-size: 0.9rem; font-weight: 600;
-		background: #3b82f6; color: white; border: none; cursor: pointer; transition: all 0.2s;
-	}
-	.action-btn:hover { background: #2563eb; transform: translateY(-1px); }
-	.action-btn.secondary {
-		background: var(--bg-secondary); color: var(--text-primary);
-		border: 1px solid rgba(255,255,255,0.1);
-	}
-	.action-btn.secondary:hover { background: var(--bg-hover); }
+/* ═══ SIDEBAR PANEL (slide-in from right) ═══ */
+.dl-sidebar {
+	position: fixed;
+	top: 0;
+	right: 0;
+	bottom: 0;
+	z-index: 210;
+	width: 380px;
+	max-width: 90vw;
+	background: rgba(26, 29, 41, 0.97);
+	backdrop-filter: blur(20px);
+	-webkit-backdrop-filter: blur(20px);
+	border-left: 1px solid rgba(255,255,255,0.08);
+	display: flex;
+	flex-direction: column;
+	transform: translateX(100%);
+	transition: transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+	            box-shadow 0.35s ease;
+	box-shadow: none;
+}
+.dl-sidebar--open {
+	transform: translateX(0);
+	box-shadow: -8px 0 40px rgba(0,0,0,0.4);
+}
+.dl-sidebar--pulse {
+	animation: sidebarGlow 1.2s ease both;
+}
+@keyframes sidebarGlow {
+	0%   { border-left-color: rgba(255,255,255,0.08); }
+	30%  { border-left-color: rgba(0,114,210,0.7); box-shadow: -8px 0 60px rgba(0,114,210,0.2); }
+	100% { border-left-color: rgba(255,255,255,0.08); }
+}
 
-	/* Spinner */
-	.spinner-ring {
-		width: 48px; height: 48px;
-		border: 3px solid rgba(255,255,255,0.1);
-		border-top-color: #3b82f6;
-		border-radius: 50%;
-		animation: spin 0.8s linear infinite;
-	}
-	@keyframes spin { to { transform: rotate(360deg); } }
-	@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+.dl-sidebar__header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 18px 20px;
+	border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.dl-sidebar__header-left {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+.dl-sidebar__header-icon {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 32px;
+	height: 32px;
+	border-radius: 8px;
+	background: rgba(0,114,210,0.15);
+	color: #60a5fa;
+}
+.dl-sidebar__title {
+	font-size: 14px;
+	font-weight: 700;
+	color: #F9F9F9;
+	margin: 0;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+}
+.dl-sidebar__count {
+	min-width: 22px;
+	height: 22px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 11px;
+	background: var(--accent, #0072D2);
+	color: #fff;
+	font-size: 11px;
+	font-weight: 700;
+	padding: 0 6px;
+	animation: pulse 2s ease-in-out infinite;
+}
+.dl-sidebar__close {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 34px;
+	height: 34px;
+	border-radius: 8px;
+	background: rgba(255,255,255,0.05);
+	border: 1px solid rgba(255,255,255,0.08);
+	color: #94a3b8;
+	cursor: pointer;
+	padding: 0;
+	transition: all 200ms ease;
+}
+.dl-sidebar__close:hover {
+	background: rgba(255,255,255,0.1);
+	color: #F9F9F9;
+}
 
-	/* ── Results table ──────────────────────────────────── */
-	.results-table-wrap {
-		border-radius: 14px; overflow: hidden;
-		border: 1px solid rgba(255,255,255,0.07);
-	}
-	.results-table {
-		width: 100%; border-collapse: collapse;
-		font-size: 0.85rem;
-	}
-	.results-table thead tr {
-		background: rgba(255,255,255,0.04);
-		border-bottom: 1px solid rgba(255,255,255,0.07);
-	}
-	.results-table thead th {
-		padding: 12px 14px;
-		text-align: left; font-size: 0.72rem; font-weight: 700;
-		text-transform: uppercase; letter-spacing: 0.8px;
-		color: var(--text-muted); white-space: nowrap;
-	}
-	.result-row {
-		border-bottom: 1px solid rgba(255,255,255,0.04);
-		cursor: pointer; transition: background 0.15s;
-		background: var(--bg-card);
-	}
-	.result-row:last-child { border-bottom: none; }
-	.result-row:hover { background: rgba(59,130,246,0.06); }
-	.result-row.selected { background: rgba(59,130,246,0.12); }
-	.result-row td { padding: 12px 14px; vertical-align: middle; }
+.dl-sidebar__list {
+	flex: 1;
+	overflow-y: auto;
+	padding: 12px;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
 
-	/* Columns */
-	.col-quality  { width: 70px; }
-	.col-title    { min-width: 200px; }
-	.col-provider { width: 90px; }
-	.col-size     { width: 80px; white-space: nowrap; color: var(--text-muted); }
-	.col-seeds    { width: 70px; }
-	.col-leech    { width: 70px; }
-	.col-score    { width: 100px; }
-	.col-action   { width: 50px; }
+.dl-sidebar__section-label {
+	font-size: 10px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 1px;
+	color: #64748b;
+	padding: 8px 8px 4px;
+}
 
-	.quality-badge {
-		display: inline-block;
-		padding: 3px 8px; border-radius: 6px; font-size: 0.7rem; font-weight: 700;
-		background: color-mix(in srgb, var(--qc) 20%, transparent);
-		color: var(--qc);
-		border: 1px solid color-mix(in srgb, var(--qc) 40%, transparent);
-		white-space: nowrap;
-	}
+.dl-sidebar__item {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+	padding: 12px;
+	border-radius: 10px;
+	background: rgba(255,255,255,0.03);
+	border: 1px solid transparent;
+	animation: itemSlideIn 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+@keyframes itemSlideIn {
+	from { opacity: 0; transform: translateX(20px); }
+	to   { opacity: 1; transform: translateX(0); }
+}
+.dl-sidebar__item--active {
+	border-color: rgba(0,114,210,0.15);
+	background: rgba(0,114,210,0.06);
+}
+.dl-sidebar__item--done { opacity: 0.6; }
 
-	.result-title {
-		display: block; color: var(--text-primary);
-		white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-		max-width: 340px;
-	}
-	.result-tags {
-		display: flex; gap: 4px; margin-top: 3px;
-	}
-	.proto-tag {
-		font-size: 0.7rem; opacity: 0.6;
-	}
-	.ai-tag {
-		font-size: 0.65rem; padding: 1px 6px; border-radius: 999px;
-		background: rgba(168,85,247,0.2); color: #c084fc;
-		border: 1px solid rgba(168,85,247,0.3); font-weight: 600;
-	}
+.dl-sidebar__item-icon {
+	width: 28px;
+	height: 28px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 50%;
+	background: rgba(0,114,210,0.15);
+	color: #60a5fa;
+	font-size: 12px;
+	flex-shrink: 0;
+	margin-top: 2px;
+}
+.dl-sidebar__item-icon--done {
+	background: rgba(16,185,129,0.15);
+	color: #34d399;
+}
 
-	.provider-tag {
-		display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 0.72rem;
-		background: rgba(255,255,255,0.06); color: var(--text-muted);
-		border: 1px solid rgba(255,255,255,0.1);
-	}
+.dl-sidebar__item-body {
+	flex: 1;
+	min-width: 0;
+}
+.dl-sidebar__item-title {
+	display: block;
+	font-size: 12px;
+	font-weight: 600;
+	color: #e2e8f0;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	margin-bottom: 6px;
+}
 
-	.seed-val { font-weight: 700; font-size: 0.82rem; }
-	.seed-high { color: #22c55e; }
-	.seed-mid  { color: #fb923c; }
-	.seed-low  { color: #ef4444; }
-	.leech-val { color: var(--text-muted); font-size: 0.82rem; }
+.dl-sidebar__progress-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+.dl-sidebar__progress-track {
+	flex: 1;
+	height: 4px;
+	background: rgba(255,255,255,0.06);
+	border-radius: 2px;
+	overflow: hidden;
+}
+.dl-sidebar__progress-fill {
+	height: 100%;
+	background: linear-gradient(90deg, #0072D2, #3b82f6);
+	border-radius: 2px;
+	transition: width 0.5s ease;
+}
+.dl-sidebar__progress-fill--indeterminate {
+	width: 40% !important;
+	animation: indeterminate 1.5s ease-in-out infinite;
+}
+@keyframes indeterminate {
+	0%   { transform: translateX(-100%); }
+	100% { transform: translateX(350%); }
+}
+.dl-sidebar__pct {
+	font-size: 11px;
+	font-weight: 700;
+	color: #60a5fa;
+	min-width: 32px;
+	text-align: right;
+}
 
-	/* Score bar */
-	.score-bar-wrap {
-		display: flex; align-items: center; gap: 6px;
-	}
-	.score-bar {
-		height: 4px; background: linear-gradient(90deg, #3b82f6, #a855f7);
-		border-radius: 999px; flex: 1; max-width: 60px; transition: width 0.3s;
-	}
-	.score-num { font-size: 0.75rem; color: var(--text-muted); white-space: nowrap; }
+.dl-sidebar__empty {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: 40px 20px;
+	text-align: center;
+}
+.dl-sidebar__empty-icon { margin-bottom: 12px; color: rgba(255,255,255,0.15); }
+.dl-sidebar__empty p {
+	font-size: 12px;
+	color: #64748b;
+	line-height: 1.6;
+	margin: 0;
+}
+.dl-sidebar__history-link {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	margin-top: 16px;
+	padding: 8px 16px;
+	font-size: 12px;
+	font-weight: 600;
+	color: #60a5fa;
+	text-decoration: none;
+	background: rgba(0,114,210,0.1);
+	border-radius: 8px;
+	transition: all 200ms ease;
+}
+.dl-sidebar__history-link:hover {
+	background: rgba(0,114,210,0.2);
+	color: #93bbfc;
+}
 
-	/* Download button in row */
-	.dl-btn {
-		width: 32px; height: 32px; border-radius: 8px;
-		background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.2);
-		color: #93c5fd; cursor: pointer; transition: all 0.15s;
-		display: flex; align-items: center; justify-content: center;
-	}
-	.dl-btn:hover { background: rgba(59,130,246,0.25); transform: scale(1.08); }
-	.dl-btn.dl-btn-active {
-		background: #3b82f6; color: white; border-color: #3b82f6;
-	}
-
-	/* ── Confirmation drawer ────────────────────────────── */
-	.confirm-overlay {
-		position: fixed; inset: 0; z-index: 49;
-		background: rgba(0,0,0,0.4);
-		backdrop-filter: blur(2px);
-		animation: fadeIn 0.2s ease;
-	}
-	.confirm-drawer {
-		position: fixed; bottom: 0; left: 0; right: 0; z-index: 50;
-		background: rgba(26,29,41,0.97);
-		backdrop-filter: blur(20px);
-		border-top: 1px solid rgba(59,130,246,0.4);
-		box-shadow: 0 -20px 60px rgba(0,0,0,0.6);
-		animation: slideUp 0.25s cubic-bezier(0.4,0,0.2,1) both;
-	}
-	@keyframes slideUp {
-		from { transform: translateY(100%); opacity: 0; }
-		to   { transform: translateY(0);    opacity: 1; }
-	}
-	@keyframes fadeIn {
-		from { opacity: 0; } to { opacity: 1; }
-	}
-
-	.confirm-inner {
-		max-width: 1600px; margin: 0 auto;
-		display: flex; align-items: center; gap: 1.5rem;
-		padding: 1.2rem 2rem; flex-wrap: wrap;
-	}
-	.confirm-left { display: flex; align-items: center; gap: 1rem; flex: 1; min-width: 0; }
-	.confirm-quality-badge {
-		width: 56px; height: 56px; border-radius: 12px; flex-shrink: 0;
-		background: color-mix(in srgb, var(--qc) 20%, transparent);
-		color: var(--qc);
-		border: 2px solid color-mix(in srgb, var(--qc) 50%, transparent);
-		display: flex; align-items: center; justify-content: center;
-		font-size: 0.8rem; font-weight: 800;
-	}
-	.confirm-info { min-width: 0; }
-	.confirm-title {
-		font-size: 0.95rem; font-weight: 600; color: var(--text-primary);
-		white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-		margin-bottom: 6px;
-	}
-	.confirm-meta { display: flex; flex-wrap: wrap; gap: 6px; }
-	.confirm-tag {
-		padding: 2px 10px; border-radius: 999px; font-size: 0.75rem;
-		background: rgba(255,255,255,0.08); color: var(--text-muted);
-		border: 1px solid rgba(255,255,255,0.12);
-	}
-	.seed-tag { color: #4ade80; border-color: rgba(74,222,128,0.3); background: rgba(74,222,128,0.08); }
-
-	.confirm-actions { display: flex; gap: 10px; flex-shrink: 0; }
-	.cancel-btn {
-		padding: 10px 20px; border-radius: 8px; font-size: 0.9rem; font-weight: 600;
-		background: rgba(255,255,255,0.08); color: var(--text-secondary);
-		border: 1px solid rgba(255,255,255,0.12); cursor: pointer; transition: all 0.15s;
-	}
-	.cancel-btn:hover { background: rgba(255,255,255,0.12); }
-	.start-btn {
-		display: flex; align-items: center; gap: 8px;
-		padding: 10px 24px; border-radius: 8px; font-size: 0.9rem; font-weight: 700;
-		background: linear-gradient(135deg, #3b82f6, #1d4ed8);
-		color: white; border: none; cursor: pointer; transition: all 0.2s;
-	}
-	.start-btn:hover:not(:disabled) { filter: brightness(1.1); transform: translateY(-1px); }
-	.start-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-	.btn-spinner {
-		width: 14px; height: 14px; border-radius: 50%;
-		border: 2px solid rgba(255,255,255,0.3); border-top-color: white;
-		animation: spin 0.7s linear infinite; display: inline-block;
-	}
-
-	/* ── Responsive ─────────────────────────────────────── */
-	@media (max-width: 900px) {
-		.dl-body { flex-direction: column; }
-		.dl-sidebar {
-			width: 100%; border-right: none;
-			border-bottom: 1px solid rgba(255,255,255,0.06);
-		}
-		.sidebar-inner {
-			position: static; max-height: none;
-			flex-direction: row; flex-wrap: wrap;
-			padding: 1rem; gap: 1rem;
-		}
-		.filter-group { min-width: 160px; flex: 1; }
-		.sidebar-downloads { width: 100%; flex: unset; border-top: none; padding-top: 0; }
-		.result-title { max-width: 180px; }
-		.col-leech, .col-score { display: none; }
-	}
-
-	@media (max-width: 600px) {
-		.dl-header { padding: calc(var(--nav-height, 70px) + 1rem) 1rem 1rem; }
-		.dl-main { padding: 1rem 1rem 8rem; }
-		.results-table { font-size: 0.78rem; }
-		.result-title { max-width: 120px; }
-		.col-provider { display: none; }
-		.confirm-inner { padding: 1rem; }
-	}
+/* ═══ RESPONSIVE ═══ */
+@media (max-width: 768px) {
+	.dl-topbar { padding: 0 16px; }
+	.dl-topbar__back span,
+	.dl-topbar__downloads span { display: none; }
+	.dl-body { padding: 0 16px 100px; }
+	.dl-hero__inner { padding: 0 20px 24px; }
+	.dl-hero__poster { width: 100px; }
+	.dl-hero__title { font-size: 22px; }
+	.dl-hero__overview { display: none; }
+	.dl-card__btn-label { display: none; }
+	.dl-sidebar { width: 100vw; max-width: 100vw; }
+}
 </style>

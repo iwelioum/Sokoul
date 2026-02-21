@@ -119,6 +119,15 @@ export interface Media {
 	updated_at: string;
 }
 
+export interface SeriesTracking {
+	id: string;
+	series_id: string;
+	last_checked: string | null;
+	next_episode: number | null;
+	next_season: number | null;
+	active: boolean | null;
+}
+
 export interface SearchResult {
 	id: number;
 	media_id: string;
@@ -534,6 +543,22 @@ export function deleteMedia(id: string): Promise<void> {
 }
 
 // ══════════════════════════════════════════════════
+// API — Series Tracking (Auto-Download)
+// ══════════════════════════════════════════════════
+
+export function enableSeriesTracking(seriesId: string): Promise<SeriesTracking> {
+	return request(`/media/${seriesId}/tracking`, { method: 'POST' });
+}
+
+export function disableSeriesTracking(seriesId: string): Promise<SeriesTracking> {
+	return request(`/media/${seriesId}/tracking`, { method: 'DELETE' });
+}
+
+export function getSeriesTracking(seriesId: string): Promise<SeriesTracking | null> {
+	return request(`/media/${seriesId}/tracking`);
+}
+
+// ══════════════════════════════════════════════════
 // API — TMDB (proxy with cache)
 // ══════════════════════════════════════════════════
 
@@ -732,8 +757,98 @@ export function triggerSearch(query: string): Promise<{ message: string }> {
 	return request('/search', { method: 'POST', body: JSON.stringify({ query }) });
 }
 
-export function directSearch(query: string, mediaId: string): Promise<{ results: SearchResult[]; count: number }> {
-	return request('/search/direct', { method: 'POST', body: JSON.stringify({ query, media_id: mediaId }) });
+export function directSearch(query: string, mediaId: string, forceRefresh = false): Promise<{ results: SearchResult[]; count: number }> {
+	return request('/search/direct', {
+		method: 'POST',
+		body: JSON.stringify({ query, media_id: mediaId, force_refresh: forceRefresh })
+	});
+}
+
+export interface StreamSearchCallbacks {
+	onStart?: (data: { query: string; providers: number }) => void;
+	onResults?: (data: { provider: string; count: number; results: SearchResult[] }) => void;
+	onProviderError?: (data: { provider: string; error: string }) => void;
+	onDone?: (data: { total: number }) => void;
+	onError?: (error: Error) => void;
+}
+
+/**
+ * Stream search results via SSE — results arrive per-provider as they are found.
+ * Returns an abort function to cancel the stream.
+ */
+export function streamSearch(query: string, mediaId: string, callbacks: StreamSearchCallbacks): () => void {
+	const token = getAuthToken();
+	const params = new URLSearchParams({ query, media_id: mediaId });
+	const url = `${API_BASE}/search/stream?${params.toString()}`;
+
+	const controller = new AbortController();
+
+	(async () => {
+		try {
+			const res = await fetch(url, {
+				headers: {
+					...(token ? { Authorization: `Bearer ${token}` } : {}),
+					Accept: 'text/event-stream',
+				},
+				signal: controller.signal,
+			});
+
+			if (!res.ok || !res.body) {
+				callbacks.onError?.(new Error(`SSE request failed: ${res.status}`));
+				return;
+			}
+
+			const reader = res.body.getReader();
+			const decoder = new TextDecoder();
+			let buffer = '';
+
+			while (true) {
+				const { done, value } = await reader.read();
+				if (done) break;
+
+				buffer += decoder.decode(value, { stream: true });
+				const lines = buffer.split('\n');
+				buffer = lines.pop() || '';
+
+				let currentEvent = '';
+				let currentData = '';
+
+				for (const line of lines) {
+					if (line.startsWith('event:')) {
+						currentEvent = line.slice(6).trim();
+					} else if (line.startsWith('data:')) {
+						currentData = line.slice(5).trim();
+					} else if (line === '' && currentEvent && currentData) {
+						try {
+							const parsed = JSON.parse(currentData);
+							switch (currentEvent) {
+								case 'start':
+									callbacks.onStart?.(parsed);
+									break;
+								case 'results':
+									callbacks.onResults?.(parsed);
+									break;
+								case 'provider_error':
+									callbacks.onProviderError?.(parsed);
+									break;
+								case 'done':
+									callbacks.onDone?.(parsed);
+									break;
+							}
+						} catch { /* ignore malformed SSE data */ }
+						currentEvent = '';
+						currentData = '';
+					}
+				}
+			}
+		} catch (err: any) {
+			if (err.name !== 'AbortError') {
+				callbacks.onError?.(err);
+			}
+		}
+	})();
+
+	return () => controller.abort();
 }
 
 export function getSearchResults(mediaId: string): Promise<SearchResult[]> {
@@ -753,6 +868,18 @@ export function startDownload(data: {
 
 export function listDownloads(): Promise<Task[]> {
 	return request('/downloads');
+}
+
+export function listDownloadHistory(params?: {
+	page?: number;
+	per_page?: number;
+	status?: string;
+}): Promise<{ tasks: Task[]; total: number; page: number; per_page: number }> {
+	const qs = new URLSearchParams();
+	if (params?.page) qs.set('page', String(params.page));
+	if (params?.per_page) qs.set('per_page', String(params.per_page));
+	if (params?.status) qs.set('status', params.status);
+	return request(`/downloads/history?${qs.toString()}`);
 }
 
 // ══════════════════════════════════════════════════

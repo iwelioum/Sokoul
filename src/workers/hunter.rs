@@ -11,10 +11,12 @@ use crate::{
 use futures::StreamExt;
 use librqbit::{AddTorrent, Session};
 use reqwest::header::LOCATION;
+use rust_decimal::Decimal;
 use std::path::PathBuf;
 use std::sync::Arc;
-use tokio::sync::Semaphore;
+use tokio::sync::{broadcast, Semaphore};
 use url::Url;
+use uuid::Uuid;
 
 pub async fn hunter_worker(state: Arc<AppState>) -> anyhow::Result<()> {
     tracing::info!("Hunter worker starting...");
@@ -132,6 +134,7 @@ pub async fn hunter_worker(state: Arc<AppState>) -> anyhow::Result<()> {
                 WsEvent::DownloadStarted {
                     media_id: media_id.to_string(),
                     title: payload.title.clone(),
+                    task_id: task_id.map(|t| t.to_string()),
                 }
                 .to_json(),
             );
@@ -145,13 +148,32 @@ pub async fn hunter_worker(state: Arc<AppState>) -> anyhow::Result<()> {
             };
 
             let magnet = payload.magnet_or_url.clone();
+            let title_for_progress = payload.title.clone();
+            let event_tx_for_progress = event_tx.clone();
+            let db_pool_for_progress = db_pool.clone();
             let result = retry::retry_with_backoff(
                 &retry_config,
                 &format!("download '{}'", payload.title),
                 || {
                     let session_ref = session_clone.clone();
                     let magnet_ref = magnet.clone();
-                    async move { download_torrent(&session_ref, &magnet_ref).await }
+                    let title_ref = title_for_progress.clone();
+                    let media_id_ref = media_id.to_string();
+                    let tx = event_tx_for_progress.clone();
+                    let pool = db_pool_for_progress.clone();
+                    let tid = task_id;
+                    async move {
+                        download_torrent_with_progress(
+                            &session_ref,
+                            &magnet_ref,
+                            &title_ref,
+                            &media_id_ref,
+                            tid,
+                            &tx,
+                            &pool,
+                        )
+                        .await
+                    }
                 },
             )
             .await;
@@ -166,9 +188,17 @@ pub async fn hunter_worker(state: Arc<AppState>) -> anyhow::Result<()> {
 
                     let _ = db::media_files::create_media_file(
                         &db_pool,
-                        media_id,
-                        &output_name,
-                        "torrent",
+                        &crate::models::CreateMediaFilePayload {
+                            media_id,
+                            file_path: output_name.clone(),
+                            source: Some("torrent".to_string()),
+                            file_size: None,
+                            codec_video: None,
+                            codec_audio: None,
+                            resolution: None,
+                            quality_score: None,
+                            hash_info: None,
+                        },
                     )
                     .await;
 
@@ -186,6 +216,7 @@ pub async fn hunter_worker(state: Arc<AppState>) -> anyhow::Result<()> {
                             media_id: media_id.to_string(),
                             title: payload.title.clone(),
                             file_path: output_name,
+                            task_id: task_id.map(|t| t.to_string()),
                         }
                         .to_json(),
                     );
@@ -208,6 +239,7 @@ pub async fn hunter_worker(state: Arc<AppState>) -> anyhow::Result<()> {
                             media_id: media_id.to_string(),
                             title: payload.title.clone(),
                             error: e.to_string(),
+                            task_id: task_id.map(|t| t.to_string()),
                         }
                         .to_json(),
                     );
@@ -224,7 +256,7 @@ pub async fn hunter_worker(state: Arc<AppState>) -> anyhow::Result<()> {
     Ok(())
 }
 
-async fn download_torrent(session: &Arc<Session>, magnet_or_url: &str) -> anyhow::Result<String> {
+async fn resolve_magnet_or_url(magnet_or_url: &str) -> anyhow::Result<String> {
     let mut current = magnet_or_url.to_string();
 
     // Prowlarr/Jackett download URLs may redirect (301/302) to a magnet link.
@@ -248,7 +280,6 @@ async fn download_torrent(session: &Arc<Session>, magnet_or_url: &str) -> anyhow
                         .and_then(|v| v.to_str().ok())
                         .ok_or_else(|| anyhow::anyhow!("Redirect without Location: {}", current))?;
 
-                    // Location can be a magnet:? or a relative/absolute URL.
                     current = parsed
                         .join(loc)
                         .map(|u| u.to_string())
@@ -274,13 +305,69 @@ async fn download_torrent(session: &Arc<Session>, magnet_or_url: &str) -> anyhow
     let _ = Url::parse(&current)
         .map_err(|e| anyhow::anyhow!("Invalid URL/magnet: {}: {}", e, current))?;
 
+    Ok(current)
+}
+
+/// Add torrent and poll stats() every 2s, emitting DownloadProgress via WS
+async fn download_torrent_with_progress(
+    session: &Arc<Session>,
+    magnet_or_url: &str,
+    title: &str,
+    media_id: &str,
+    task_id: Option<Uuid>,
+    event_tx: &broadcast::Sender<String>,
+    db_pool: &sqlx::PgPool,
+) -> anyhow::Result<String> {
+    let current = resolve_magnet_or_url(magnet_or_url).await?;
+
     let handle = session
         .add_torrent(AddTorrent::from_url(&current), None)
         .await?
         .into_handle()
         .ok_or_else(|| anyhow::anyhow!("Torrent already managed or failed to add: {}", current))?;
 
-    handle.wait_until_completed().await?;
+    // Poll progress every 2 seconds instead of blocking on wait_until_completed
+    let mut interval = tokio::time::interval(std::time::Duration::from_secs(2));
+    loop {
+        interval.tick().await;
+
+        let stats = handle.stats();
+
+        let progress_pct = if stats.total_bytes > 0 {
+            (stats.progress_bytes as f64 / stats.total_bytes as f64 * 100.0).min(100.0)
+        } else {
+            0.0
+        };
+
+        // Update DB progress
+        if let Some(tid) = task_id {
+            let _ = db::tasks::update_progress(
+                db_pool,
+                tid,
+                Decimal::from_f64_retain(progress_pct).unwrap_or_default(),
+            )
+            .await;
+        }
+
+        // Emit WS event
+        let _ = event_tx.send(
+            WsEvent::DownloadProgress {
+                media_id: media_id.to_string(),
+                title: title.to_string(),
+                progress: (progress_pct * 100.0).round() / 100.0, // 2 decimal places
+                task_id: task_id.map(|t| t.to_string()),
+            }
+            .to_json(),
+        );
+
+        if stats.finished {
+            break;
+        }
+
+        if let Some(ref err) = stats.error {
+            return Err(anyhow::anyhow!("Torrent error: {}", err));
+        }
+    }
 
     Ok(current)
 }

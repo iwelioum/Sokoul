@@ -144,6 +144,8 @@
 	}
 
 	const isPlayerPage = $derived($page.url.pathname.startsWith('/watch/'));
+	const isDownloadPage = $derived($page.url.pathname.startsWith('/downloads'));
+	const hideShell = $derived(isPlayerPage || isDownloadPage);
 </script>
 
 <div class="app-layout">
@@ -151,7 +153,7 @@
 	<!-- ══════════════════════════════════════════
 	     TOP NAVBAR
 	     ══════════════════════════════════════════ -->
-	{#if !isPlayerPage}
+	{#if !hideShell}
 		<header class="navbar" class:scrolled={scrolled}>
 			<div class="navbar-container">
 				<!-- LEFT: Logo + Navigation -->
@@ -224,6 +226,12 @@
 										</svg>
 										Téléchargements
 									</a>
+									<a href="/history" class="user-menu-item" onclick={() => showUserMenu = false}>
+										<svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+											<path d="M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42A8.954 8.954 0 0 0 13 21a9 9 0 0 0 0-18zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/>
+									</svg>
+									Historique
+									</a>
 									<a href="/library" class="user-menu-item" onclick={() => showUserMenu = false}>
 										<svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
 											<path d="M17 3H7c-1.1 0-1.99.9-1.99 2L5 21l7-3 7 3V5c0-1.1-.9-2-2-2z"/>
@@ -283,7 +291,7 @@
 	<!-- ══════════════════════════════════════════
 	     MOBILE BOTTOM BAR
 	     ══════════════════════════════════════════ -->
-	{#if !isPlayerPage}
+	{#if !hideShell}
 		<nav class="bottom-bar" class:hidden={!bottomBarVisible} aria-label="Navigation mobile">
 			<a href="/" class="bottom-item" class:active={$page.url.pathname === '/'}>
 				<svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22">

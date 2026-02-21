@@ -59,29 +59,35 @@ pub struct AppState {
 }
 
 async fn ensure_critical_schema(pool: &sqlx::PgPool) -> anyhow::Result<()> {
+    // Extensions
     sqlx::query(r#"CREATE EXTENSION IF NOT EXISTS "pgcrypto""#)
         .execute(pool)
         .await?;
+    // Required by db/media.rs similarity() search
+    sqlx::query(r#"CREATE EXTENSION IF NOT EXISTS "pg_trgm""#)
+        .execute(pool)
+        .await?;
 
+    // users
     sqlx::query(
         r#"
         CREATE TABLE IF NOT EXISTS users (
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            username TEXT NOT NULL UNIQUE,
-            email TEXT NOT NULL UNIQUE,
-            password_hash TEXT NOT NULL,
-            role TEXT NOT NULL DEFAULT 'user',
-            avatar_url TEXT,
-            is_active BOOLEAN NOT NULL DEFAULT TRUE,
-            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            id            UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+            username      TEXT        NOT NULL UNIQUE,
+            email         TEXT        NOT NULL UNIQUE,
+            password_hash TEXT        NOT NULL,
+            role          TEXT        NOT NULL DEFAULT 'user',
+            avatar_url    TEXT,
+            is_active     BOOLEAN     NOT NULL DEFAULT TRUE,
+            created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
         )
         "#,
     )
     .execute(pool)
     .await?;
 
-    // System user for API key fallback (no JWT).
+    // System user for API key fallback (no JWT)
     sqlx::query(
         r#"
         INSERT INTO users (id, username, email, password_hash, role, is_active)
@@ -99,28 +105,29 @@ async fn ensure_critical_schema(pool: &sqlx::PgPool) -> anyhow::Result<()> {
     .execute(pool)
     .await?;
 
+    // media
     sqlx::query(
         r#"
         CREATE TABLE IF NOT EXISTS media (
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            media_type TEXT NOT NULL,
-            title TEXT NOT NULL,
-            original_title TEXT,
-            year INTEGER,
-            tmdb_id INTEGER,
-            imdb_id TEXT,
-            overview TEXT,
-            poster_url TEXT,
-            backdrop_url TEXT,
-            genres TEXT[],
-            rating DECIMAL(3,1),
+            id              UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+            media_type      TEXT        NOT NULL,
+            title           TEXT        NOT NULL,
+            original_title  TEXT,
+            year            INTEGER,
+            tmdb_id         INTEGER,
+            imdb_id         TEXT,
+            overview        TEXT,
+            poster_url      TEXT,
+            backdrop_url    TEXT,
+            genres          TEXT[],
+            rating          DECIMAL(3,1),
             runtime_minutes INTEGER,
-            status TEXT DEFAULT 'unknown',
-            parent_id UUID REFERENCES media(id) ON DELETE CASCADE,
-            season_number INTEGER,
-            episode_number INTEGER,
-            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            status          TEXT        DEFAULT 'unknown',
+            parent_id       UUID        REFERENCES media(id) ON DELETE CASCADE,
+            season_number   INTEGER,
+            episode_number  INTEGER,
+            created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
             UNIQUE (tmdb_id, media_type)
         )
         "#,
@@ -128,16 +135,86 @@ async fn ensure_critical_schema(pool: &sqlx::PgPool) -> anyhow::Result<()> {
     .execute(pool)
     .await?;
 
+    // media_files (models.rs::MediaFile)
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS media_files (
+            id            UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+            media_id      UUID        NOT NULL REFERENCES media(id) ON DELETE CASCADE,
+            file_path     TEXT        NOT NULL UNIQUE,
+            file_size     BIGINT,
+            codec_video   TEXT,
+            codec_audio   TEXT,
+            resolution    TEXT,
+            quality_score INTEGER,
+            hash_info     TEXT,
+            source        TEXT,
+            downloaded_at TIMESTAMPTZ DEFAULT NOW()
+        )
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    // search_results (models.rs::SearchResult — id is SERIAL i32)
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS search_results (
+            id           SERIAL      PRIMARY KEY,
+            media_id     UUID        NOT NULL REFERENCES media(id) ON DELETE CASCADE,
+            provider     TEXT        NOT NULL,
+            title        TEXT        NOT NULL,
+            guid         TEXT        NOT NULL,
+            url          TEXT,
+            magnet_link  TEXT,
+            info_hash    TEXT,
+            protocol     TEXT        NOT NULL DEFAULT 'torrent',
+            quality      TEXT,
+            size_bytes   BIGINT      NOT NULL DEFAULT 0,
+            seeders      INTEGER     NOT NULL DEFAULT 0,
+            leechers     INTEGER     NOT NULL DEFAULT 0,
+            score        INTEGER,
+            ai_validated BOOLEAN,
+            created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            expires_at   TIMESTAMPTZ DEFAULT (NOW() + INTERVAL '24 hours'),
+            UNIQUE (media_id, guid)
+        )
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    // tasks (models.rs::Task)
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS tasks (
+            id           UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+            task_type    TEXT         NOT NULL,
+            status       TEXT         NOT NULL DEFAULT 'pending',
+            payload      JSONB,
+            result       JSONB,
+            progress     DECIMAL(5,2) DEFAULT 0,
+            error        TEXT,
+            created_at   TIMESTAMPTZ  DEFAULT NOW(),
+            started_at   TIMESTAMPTZ,
+            completed_at TIMESTAMPTZ
+        )
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    // watch_history
     sqlx::query(
         r#"
         CREATE TABLE IF NOT EXISTS watch_history (
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            media_id UUID NOT NULL REFERENCES media(id) ON DELETE CASCADE,
-            user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-            watched_at TIMESTAMPTZ DEFAULT NOW(),
-            progress_seconds INTEGER DEFAULT 0,
-            total_seconds INTEGER DEFAULT 0,
-            completed BOOLEAN DEFAULT FALSE,
+            id               UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+            media_id         UUID        NOT NULL REFERENCES media(id) ON DELETE CASCADE,
+            user_id          UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            watched_at       TIMESTAMPTZ DEFAULT NOW(),
+            progress_seconds INTEGER     DEFAULT 0,
+            total_seconds    INTEGER     DEFAULT 0,
+            completed        BOOLEAN     DEFAULT FALSE,
             UNIQUE (media_id, user_id)
         )
         "#,
@@ -145,12 +222,13 @@ async fn ensure_critical_schema(pool: &sqlx::PgPool) -> anyhow::Result<()> {
     .execute(pool)
     .await?;
 
+    // favorites
     sqlx::query(
         r#"
         CREATE TABLE IF NOT EXISTS favorites (
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-            media_id UUID NOT NULL REFERENCES media(id) ON DELETE CASCADE,
+            id       UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+            user_id  UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            media_id UUID        NOT NULL REFERENCES media(id) ON DELETE CASCADE,
             added_at TIMESTAMPTZ DEFAULT NOW(),
             UNIQUE (user_id, media_id)
         )
@@ -159,15 +237,16 @@ async fn ensure_critical_schema(pool: &sqlx::PgPool) -> anyhow::Result<()> {
     .execute(pool)
     .await?;
 
+    // watchlist
     sqlx::query(
         r#"
         CREATE TABLE IF NOT EXISTS watchlist (
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-            media_id UUID NOT NULL REFERENCES media(id) ON DELETE CASCADE,
-            auto_download BOOLEAN DEFAULT FALSE,
-            quality_min TEXT DEFAULT '1080p',
-            added_at TIMESTAMPTZ DEFAULT NOW(),
+            id            UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+            user_id       UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            media_id      UUID        NOT NULL REFERENCES media(id) ON DELETE CASCADE,
+            auto_download BOOLEAN     DEFAULT FALSE,
+            quality_min   TEXT        DEFAULT '1080p',
+            added_at      TIMESTAMPTZ DEFAULT NOW(),
             UNIQUE (user_id, media_id)
         )
         "#,
@@ -175,18 +254,57 @@ async fn ensure_critical_schema(pool: &sqlx::PgPool) -> anyhow::Result<()> {
     .execute(pool)
     .await?;
 
-    // TV channels table
+    // collections — thematic (GoT, Breaking Bad…), NOT user playlists
+    // Schema matches db/collections.rs::Collection exactly
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS collections (
+            id              UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+            name            TEXT        NOT NULL,
+            description     TEXT,
+            category        TEXT        NOT NULL,
+            api_source      TEXT        NOT NULL DEFAULT 'internal',
+            cover_image_url TEXT,
+            backdrop_url    TEXT,
+            created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    // collection_items — reference external IDs (tmdb_id), not local media UUIDs
+    // Schema matches db/collections.rs::CollectionItem exactly
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS collection_items (
+            id            UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+            collection_id UUID        NOT NULL REFERENCES collections(id) ON DELETE CASCADE,
+            external_id   TEXT,
+            name          TEXT        NOT NULL,
+            description   TEXT,
+            image_url     TEXT,
+            item_type     TEXT,
+            data_json     JSONB,
+            created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    // tv_channels
     sqlx::query(
         r#"
         CREATE TABLE IF NOT EXISTS tv_channels (
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            name TEXT NOT NULL,
-            code TEXT NOT NULL UNIQUE,
-            country TEXT,
-            logo_url TEXT,
-            category TEXT,
-            is_free BOOLEAN DEFAULT TRUE,
-            is_active BOOLEAN DEFAULT TRUE,
+            id         UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+            name       TEXT        NOT NULL,
+            code       TEXT        NOT NULL UNIQUE,
+            country    TEXT,
+            logo_url   TEXT,
+            category   TEXT,
+            is_free    BOOLEAN     DEFAULT TRUE,
+            is_active  BOOLEAN     DEFAULT TRUE,
             stream_url TEXT,
             created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         )
@@ -195,37 +313,78 @@ async fn ensure_critical_schema(pool: &sqlx::PgPool) -> anyhow::Result<()> {
     .execute(pool)
     .await?;
 
-    // TV programs table (EPG)
+    // tv_programs (EPG)
     sqlx::query(
         r#"
         CREATE TABLE IF NOT EXISTS tv_programs (
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            channel_id UUID NOT NULL REFERENCES tv_channels(id) ON DELETE CASCADE,
-            title TEXT NOT NULL,
+            id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+            channel_id  UUID        NOT NULL REFERENCES tv_channels(id) ON DELETE CASCADE,
+            title       TEXT        NOT NULL,
             description TEXT,
-            start_time TIMESTAMPTZ NOT NULL,
-            end_time TIMESTAMPTZ NOT NULL,
-            genre TEXT,
-            image_url TEXT,
-            rating DECIMAL(3,1),
+            start_time  TIMESTAMPTZ NOT NULL,
+            end_time    TIMESTAMPTZ NOT NULL,
+            genre       TEXT,
+            image_url   TEXT,
+            rating      DECIMAL(3,1),
             external_id TEXT,
-            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
         )
         "#,
     )
     .execute(pool)
     .await?;
 
-    // Collections table
-
+    // audit_logs (db/security.rs::AuditLog)
     sqlx::query(
         r#"
-        CREATE TABLE IF NOT EXISTS collections (
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-            name TEXT NOT NULL,
-            description TEXT,
-            is_public BOOLEAN DEFAULT FALSE,
+        CREATE TABLE IF NOT EXISTS audit_logs (
+            id            UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+            user_id       UUID        REFERENCES users(id) ON DELETE SET NULL,
+            action        TEXT        NOT NULL,
+            resource_type TEXT,
+            resource_id   TEXT,
+            url           TEXT,
+            ip_address    TEXT,
+            user_agent    TEXT,
+            risk_level    TEXT        NOT NULL DEFAULT 'low',
+            status        TEXT        NOT NULL DEFAULT 'success',
+            metadata      JSONB,
+            created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    // url_reputation (db/security.rs::UrlReputation)
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS url_reputation (
+            id                UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+            url               TEXT        NOT NULL UNIQUE,
+            domain            TEXT,
+            risk_level        TEXT        NOT NULL DEFAULT 'unknown',
+            virustotal_result JSONB,
+            urlhaus_result    JSONB,
+            malicious_count   INTEGER     NOT NULL DEFAULT 0,
+            last_checked      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            expires_at        TIMESTAMPTZ NOT NULL DEFAULT (NOW() + INTERVAL '24 hours'),
+            created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    // domain_whitelist (db/security.rs::DomainWhitelist)
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS domain_whitelist (
+            id         UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+            domain     TEXT        NOT NULL UNIQUE,
+            added_by   UUID        REFERENCES users(id) ON DELETE SET NULL,
+            reason     TEXT,
+            is_active  BOOLEAN     NOT NULL DEFAULT TRUE,
             created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
             updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         )
@@ -234,21 +393,51 @@ async fn ensure_critical_schema(pool: &sqlx::PgPool) -> anyhow::Result<()> {
     .execute(pool)
     .await?;
 
-    // Collection items
+    // domain_blacklist (db/security.rs::DomainBlacklist)
     sqlx::query(
         r#"
-        CREATE TABLE IF NOT EXISTS collection_items (
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            collection_id UUID NOT NULL REFERENCES collections(id) ON DELETE CASCADE,
-            media_id UUID NOT NULL REFERENCES media(id) ON DELETE CASCADE,
-            added_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            UNIQUE (collection_id, media_id)
+        CREATE TABLE IF NOT EXISTS domain_blacklist (
+            id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+            domain      TEXT        NOT NULL UNIQUE,
+            risk_level  TEXT        NOT NULL DEFAULT 'high',
+            threat_type TEXT,
+            added_by    UUID        REFERENCES users(id) ON DELETE SET NULL,
+            reason      TEXT,
+            is_active   BOOLEAN     NOT NULL DEFAULT TRUE,
+            created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
         )
         "#,
     )
     .execute(pool)
     .await?;
 
+    // Indexes
+    sqlx::query("CREATE INDEX IF NOT EXISTS idx_media_tmdb ON media(tmdb_id, media_type)")
+        .execute(pool)
+        .await?;
+    sqlx::query("CREATE INDEX IF NOT EXISTS idx_media_type ON media(media_type)")
+        .execute(pool)
+        .await?;
+    sqlx::query(
+        "CREATE INDEX IF NOT EXISTS idx_media_title_trgm ON media USING gin(title gin_trgm_ops)",
+    )
+    .execute(pool)
+    .await?;
+    sqlx::query("CREATE INDEX IF NOT EXISTS idx_media_files_media ON media_files(media_id)")
+        .execute(pool)
+        .await?;
+    sqlx::query("CREATE INDEX IF NOT EXISTS idx_search_results_media ON search_results(media_id)")
+        .execute(pool)
+        .await?;
+    sqlx::query(
+        "CREATE INDEX IF NOT EXISTS idx_search_results_expires ON search_results(expires_at)",
+    )
+    .execute(pool)
+    .await?;
+    sqlx::query("CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status)")
+        .execute(pool)
+        .await?;
     sqlx::query("CREATE INDEX IF NOT EXISTS idx_watch_history_user ON watch_history(user_id)")
         .execute(pool)
         .await?;
@@ -261,6 +450,11 @@ async fn ensure_critical_schema(pool: &sqlx::PgPool) -> anyhow::Result<()> {
     sqlx::query("CREATE INDEX IF NOT EXISTS idx_watchlist_user ON watchlist(user_id)")
         .execute(pool)
         .await?;
+    sqlx::query("CREATE INDEX IF NOT EXISTS idx_collections_category ON collections(category)")
+        .execute(pool)
+        .await?;
+    sqlx::query("CREATE INDEX IF NOT EXISTS idx_collection_items_collection ON collection_items(collection_id)")
+        .execute(pool).await?;
     sqlx::query("CREATE INDEX IF NOT EXISTS idx_tv_channels_country ON tv_channels(country)")
         .execute(pool)
         .await?;
@@ -273,24 +467,46 @@ async fn ensure_critical_schema(pool: &sqlx::PgPool) -> anyhow::Result<()> {
     sqlx::query("CREATE INDEX IF NOT EXISTS idx_tv_programs_start_time ON tv_programs(start_time)")
         .execute(pool)
         .await?;
-    sqlx::query("CREATE INDEX IF NOT EXISTS idx_collection_items_collection ON collection_items(collection_id)")
+    sqlx::query("CREATE INDEX IF NOT EXISTS idx_audit_logs_user ON audit_logs(user_id)")
         .execute(pool)
         .await?;
-
-    // Fail-fast verification: ensure expected columns exist.
+    sqlx::query("CREATE INDEX IF NOT EXISTS idx_audit_logs_risk ON audit_logs(risk_level)")
+        .execute(pool)
+        .await?;
+    sqlx::query("CREATE INDEX IF NOT EXISTS idx_audit_logs_created ON audit_logs(created_at)")
+        .execute(pool)
+        .await?;
+    sqlx::query("CREATE INDEX IF NOT EXISTS idx_url_reputation_domain ON url_reputation(domain)")
+        .execute(pool)
+        .await?;
     sqlx::query(
-        "SELECT media_id, user_id, progress_seconds, completed, watched_at FROM watch_history LIMIT 1",
+        "CREATE INDEX IF NOT EXISTS idx_domain_whitelist_domain ON domain_whitelist(domain)",
     )
-    .fetch_optional(pool)
+    .execute(pool)
     .await?;
+    sqlx::query(
+        "CREATE INDEX IF NOT EXISTS idx_domain_blacklist_domain ON domain_blacklist(domain)",
+    )
+    .execute(pool)
+    .await?;
+
+    // Fail-fast verification: key columns expected by db/*.rs
+    sqlx::query("SELECT media_id, user_id, progress_seconds, completed, watched_at FROM watch_history LIMIT 1")
+        .fetch_optional(pool).await?;
     sqlx::query("SELECT media_id, user_id, added_at FROM favorites LIMIT 1")
         .fetch_optional(pool)
         .await?;
     sqlx::query("SELECT media_id, user_id, added_at FROM watchlist LIMIT 1")
         .fetch_optional(pool)
         .await?;
+    sqlx::query("SELECT category, api_source, cover_image_url FROM collections LIMIT 1")
+        .fetch_optional(pool)
+        .await?;
+    sqlx::query("SELECT external_id, name, item_type, data_json FROM collection_items LIMIT 1")
+        .fetch_optional(pool)
+        .await?;
 
-    tracing::info!("✅ Critical schema verified (library/watchlist/watch_history)");
+    tracing::info!("Schema ready: 16 tables, 26 indexes");
     Ok(())
 }
 
@@ -373,22 +589,21 @@ async fn main() -> anyhow::Result<()> {
         })
     };
 
-    // Run migrations (toggle via RUN_MIGRATIONS env var; default: disabled to avoid migration mismatches)
-    let run_migrations =
-        std::env::var("RUN_MIGRATIONS").unwrap_or_else(|_| "false".to_string()) == "true";
-    if run_migrations {
+    // Run migrations (default: enabled — migrations/ is now the source of truth)
+    let skip_migrations =
+        std::env::var("SKIP_MIGRATIONS").unwrap_or_else(|_| "false".to_string()) == "true";
+    if !skip_migrations {
         tracing::info!("Running SQL migrations...");
         match sqlx::migrate!("./migrations").run(&db_pool).await {
             Ok(_) => {
-                tracing::info!("✅ SQL migrations completed successfully");
+                tracing::info!("SQL migrations completed");
             }
             Err(e) => {
-                tracing::warn!("⚠️ SQL migrations failed (non-blocking): {}", e);
-                tracing::warn!("Server will start anyway, but tables may not exist");
+                tracing::warn!("SQL migrations failed (non-blocking): {}", e);
             }
         }
     } else {
-        tracing::info!("RUN_MIGRATIONS not set to 'true' => skipping SQL migrations to avoid known mismatches.");
+        tracing::info!("SKIP_MIGRATIONS=true — skipping migrations");
     }
 
     ensure_critical_schema(&db_pool).await?;
@@ -687,6 +902,10 @@ async fn main() -> anyhow::Result<()> {
             post(api::downloads::start_download_handler)
                 .get(api::downloads::list_downloads_handler),
         )
+        .route(
+            "/downloads/history",
+            get(api::downloads::download_history_handler),
+        )
         // Tasks
         .route(
             "/tasks",
@@ -740,6 +959,13 @@ async fn main() -> anyhow::Result<()> {
         .route(
             "/watch-history/continue",
             get(api::watch_history::continue_watching_handler),
+        )
+        // Series Tracking
+        .route(
+            "/media/:id/tracking",
+            post(api::tracking::enable_tracking_handler)
+                .delete(api::tracking::disable_tracking_handler)
+                .get(api::tracking::get_tracking_handler),
         )
         .layer(axum_middleware::from_fn(api::auth::api_key_middleware));
 

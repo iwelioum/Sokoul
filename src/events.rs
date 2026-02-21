@@ -10,6 +10,10 @@ pub const SEARCH_RESULTS_FOUND_SUBJECT: &str = "sokoul.search.results_found";
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SearchRequestedPayload {
     pub query: String,
+    pub media_id: Option<Uuid>,
+    pub tmdb_id: Option<i32>,
+    pub season: Option<i32>,
+    pub episode: Option<i32>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -40,21 +44,29 @@ pub enum WsEvent {
     DownloadStarted {
         media_id: String,
         title: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        task_id: Option<String>,
     },
     DownloadProgress {
         media_id: String,
         title: String,
         progress: f64,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        task_id: Option<String>,
     },
     DownloadCompleted {
         media_id: String,
         title: String,
         file_path: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        task_id: Option<String>,
     },
     DownloadFailed {
         media_id: String,
         title: String,
         error: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        task_id: Option<String>,
     },
     OracleValidated {
         media_id: String,

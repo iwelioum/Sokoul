@@ -5,7 +5,7 @@ use crate::{
     security, AppState,
 };
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::StatusCode,
     Json,
 };
@@ -144,6 +144,73 @@ pub async fn list_downloads_handler(
     .await?;
 
     Ok(Json(all_tasks))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct HistoryQuery {
+    pub page: Option<i64>,
+    pub per_page: Option<i64>,
+    pub status: Option<String>,
+}
+
+/// GET /downloads/history - Paginated download history (completed/failed/cancelled)
+pub async fn download_history_handler(
+    State(state): State<Arc<AppState>>,
+    Query(params): Query<HistoryQuery>,
+) -> Result<Json<serde_json::Value>, ApiError> {
+    let page = params.page.unwrap_or(1).max(1);
+    let per_page = params.per_page.unwrap_or(20).clamp(1, 100);
+    let offset = (page - 1) * per_page;
+
+    let valid_statuses = ["completed", "failed", "cancelled", "running", "pending"];
+
+    let (tasks, total): (Vec<crate::models::Task>, i64) = if let Some(ref status) = params.status {
+        if !valid_statuses.contains(&status.as_str()) {
+            return Err(ApiError::InvalidInput(format!(
+                "Invalid status filter: {}",
+                status
+            )));
+        }
+        let tasks = sqlx::query_as::<_, crate::models::Task>(
+            "SELECT * FROM tasks WHERE task_type = 'download' AND status = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3",
+        )
+        .bind(status)
+        .bind(per_page)
+        .bind(offset)
+        .fetch_all(&state.db_pool)
+        .await?;
+
+        let count: (i64,) = sqlx::query_as(
+            "SELECT COUNT(*) FROM tasks WHERE task_type = 'download' AND status = $1",
+        )
+        .bind(status)
+        .fetch_one(&state.db_pool)
+        .await?;
+
+        (tasks, count.0)
+    } else {
+        let tasks = sqlx::query_as::<_, crate::models::Task>(
+            "SELECT * FROM tasks WHERE task_type = 'download' ORDER BY created_at DESC LIMIT $1 OFFSET $2",
+        )
+        .bind(per_page)
+        .bind(offset)
+        .fetch_all(&state.db_pool)
+        .await?;
+
+        let count: (i64,) =
+            sqlx::query_as("SELECT COUNT(*) FROM tasks WHERE task_type = 'download'")
+                .fetch_one(&state.db_pool)
+                .await?;
+
+        (tasks, count.0)
+    };
+
+    Ok(Json(serde_json::json!({
+        "tasks": tasks,
+        "total": total,
+        "page": page,
+        "per_page": per_page,
+    })))
 }
 
 /// GET /media/:id/files - List downloaded files for a media
