@@ -91,6 +91,10 @@ async fn handle_search(
     // Publish search event to NATS
     let payload = SearchRequestedPayload {
         query: query.clone(),
+        media_id: None,
+        tmdb_id: None,
+        season: None,
+        episode: None,
     };
     let event_data = serde_json::to_vec(&payload).unwrap();
 

@@ -16,6 +16,7 @@ pub mod storage;
 pub mod streaming;
 pub mod tasks;
 pub mod tmdb;
+pub mod tracking;
 pub mod tv;
 pub mod watch_history;
 pub mod watchlist;

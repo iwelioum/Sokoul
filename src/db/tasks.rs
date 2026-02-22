@@ -53,6 +53,27 @@ pub async fn update_task_status(
     Ok(task)
 }
 
+pub async fn update_task_progress(
+    pool: &PgPool,
+    id: Uuid,
+    progress: rust_decimal::Decimal,
+) -> Result<Task, sqlx::Error> {
+    let task = sqlx::query_as::<_, Task>(
+        r#"
+        UPDATE tasks
+        SET progress = $1, updated_at = NOW()
+        WHERE id = $2
+        RETURNING *
+        "#,
+    )
+    .bind(progress)
+    .bind(id)
+    .fetch_one(pool)
+    .await?;
+
+    Ok(task)
+}
+
 pub async fn list_recent(pool: &PgPool, limit: i64) -> Result<Vec<Task>, sqlx::Error> {
     let tasks = sqlx::query_as::<_, Task>("SELECT * FROM tasks ORDER BY created_at DESC LIMIT $1")
         .bind(limit)

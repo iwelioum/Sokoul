@@ -188,17 +188,9 @@ pub async fn hunter_worker(state: Arc<AppState>) -> anyhow::Result<()> {
 
                     let _ = db::media_files::create_media_file(
                         &db_pool,
-                        &crate::models::CreateMediaFilePayload {
-                            media_id,
-                            file_path: output_name.clone(),
-                            source: Some("torrent".to_string()),
-                            file_size: None,
-                            codec_video: None,
-                            codec_audio: None,
-                            resolution: None,
-                            quality_score: None,
-                            hash_info: None,
-                        },
+                        media_id,
+                        &output_name,
+                        "torrent",
                     )
                     .await;
 
@@ -341,7 +333,7 @@ async fn download_torrent_with_progress(
 
         // Update DB progress
         if let Some(tid) = task_id {
-            let _ = db::tasks::update_progress(
+            let _ = db::tasks::update_task_progress(
                 db_pool,
                 tid,
                 Decimal::from_f64_retain(progress_pct).unwrap_or_default(),

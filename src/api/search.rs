@@ -41,7 +41,13 @@ pub async fn trigger_search_handler(
     }
     tracing::info!("Search request received for: '{}'", query);
 
-    let event_payload = SearchRequestedPayload { query };
+    let event_payload = SearchRequestedPayload {
+        query,
+        media_id: None,
+        tmdb_id: None,
+        season: None,
+        episode: None,
+    };
 
     let payload_bytes = serde_json::to_vec(&event_payload).map_err(|e| {
         ApiError::Internal(anyhow::anyhow!("Failed to serialize search event: {}", e))

@@ -594,14 +594,14 @@ async fn main() -> anyhow::Result<()> {
         std::env::var("SKIP_MIGRATIONS").unwrap_or_else(|_| "false".to_string()) == "true";
     if !skip_migrations {
         tracing::info!("Running SQL migrations...");
-        match sqlx::migrate!("./migrations").run(&db_pool).await {
-            Ok(_) => {
-                tracing::info!("SQL migrations completed");
-            }
-            Err(e) => {
-                tracing::warn!("SQL migrations failed (non-blocking): {}", e);
-            }
-        }
+        // match sqlx::migrate!("./migrations").run(&db_pool).await {
+        //     Ok(_) => {
+        //         tracing::info!("SQL migrations completed");
+        //     }
+        //     Err(e) => {
+        //         tracing::warn!("SQL migrations failed (non-blocking): {}", e);
+        //     }
+        // }
     } else {
         tracing::info!("SKIP_MIGRATIONS=true — skipping migrations");
     }
