@@ -1219,7 +1219,7 @@ class PlaybackTest {
     fun real_debrid_codes_become_causes() {
         assertEquals(PlayFailure.KeyRefused, DebridTransfers.failureOf(RdException(401, "x")))
         assertEquals(PlayFailure.DebridLimit, DebridTransfers.failureOf(RdException(403, "x", 21)))
-        assertEquals(PlayFailure.DeadLink, DebridTransfers.failureOf(RdException(403, "x", 35)))
+        assertEquals(PlayFailure.Copyright, DebridTransfers.failureOf(RdException(403, "x", 35)))
     }
 
     @Test

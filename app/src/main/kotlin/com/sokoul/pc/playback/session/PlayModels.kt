@@ -104,6 +104,8 @@ fun sizeLabel(bytes: Long?): String? = bytes?.takeIf { it > 0 }?.let {
 sealed interface PlayFailure {
     /** The link no longer exists. */
     data object DeadLink : PlayFailure
+    /** Real-Debrid took the file down for copyright (code 35): it will not come back tomorrow. */
+    data object Copyright : PlayFailure
     data class Refused(val code: Int) : PlayFailure
     /** Every IPTV connection is in use, on this account. */
     data class ConnectionsFull(val active: Int, val max: Int) : PlayFailure

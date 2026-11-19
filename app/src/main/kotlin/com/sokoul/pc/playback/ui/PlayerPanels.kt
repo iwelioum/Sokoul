@@ -66,6 +66,7 @@ import com.sokoul.pc.ui.tvFocusable
 /** The sentence for each cause of failure. */
 fun failureText(f: PlayFailure): String = when (f) {
     PlayFailure.DeadLink -> tr(Text.FailDeadLink)
+    PlayFailure.Copyright -> com.sokoul.pc.data.L("Real-Debrid removed this file for copyright.", "Real-Debrid a retiré ce fichier pour droits d'auteur.").text()
     is PlayFailure.Refused -> tr(Text.FailRefused, f.code)
     is PlayFailure.ConnectionsFull -> tr(Text.FailConnectionsFull, f.active, f.max)
     is PlayFailure.Cooldown -> tr(Text.FailCooldown, f.seconds)

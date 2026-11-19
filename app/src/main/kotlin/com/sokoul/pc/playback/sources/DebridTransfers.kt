@@ -248,7 +248,8 @@ class DebridTransfers(
         fun failureOf(e: RdException): PlayFailure = when {
             e.code == 401 || e.apiCode == 8 || e.apiCode == 9 -> PlayFailure.KeyRefused
             e.apiCode == 21 || e.apiCode == 23 || e.apiCode == 36 || e.apiCode == 18 -> PlayFailure.DebridLimit
-            e.apiCode == 35 || e.apiCode == 28 || e.apiCode == 24 -> PlayFailure.DeadLink
+            e.apiCode == 35 -> PlayFailure.Copyright
+            e.apiCode == 28 || e.apiCode == 24 -> PlayFailure.DeadLink
             // Still "too many requests" after the API's own retries: Real-Debrid is to be left alone for now. Taken as a passing
             // network error, it had the player ask for every version in turn for three minutes (2026-11-08).
             e.code == 429 || e.apiCode == 34 -> PlayFailure.DebridLimit

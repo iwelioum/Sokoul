@@ -40,6 +40,7 @@ object SourceRules {
     /** How long a failure counts against a version: what is in the file stays true, what comes from a server passes. */
     fun memoryMs(f: PlayFailure): Long = when (f) {
         PlayFailure.FakeFile, PlayFailure.WrongLanguage -> 30 * DAY
+        PlayFailure.Copyright -> 7 * DAY
         PlayFailure.DeadLink, is PlayFailure.Refused -> DAY
         // "Unknown": the player could not open the file itself (a codec the TV lacks): 7 s lost at each start otherwise.
         PlayFailure.Cut, PlayFailure.TimedOut, PlayFailure.Unknown -> 6 * 3_600_000L
@@ -110,7 +111,10 @@ object SourceRules {
     }
 
     /** A failure of the link itself says the service is the problem: the next attempt comes from another one. */
-    fun blamesHost(f: PlayFailure) = f === PlayFailure.FakeFile || f === PlayFailure.DeadLink || f is PlayFailure.Refused
+    fun blamesHost(f: PlayFailure) = f === PlayFailure.FakeFile || dead(f) || f is PlayFailure.Refused
+
+    /** A link that is gone leaves the list of versions while it is remembered: it can come back, so it is hidden, not dropped. */
+    fun dead(f: PlayFailure?) = f === PlayFailure.DeadLink || f === PlayFailure.Copyright
 }
 
 /** What is known of each version from one launch to the next. A version that lied or broke does not get to do it twice. */
@@ -149,12 +153,22 @@ class SourceMemory(private val read: () -> String?, private val write: (String) 
         save()
     }
 
-    /** A fresh search clears temporary link trouble while keeping proven audio/quality and stable content errors. */
-    fun clearTransientFailures(prefix: String) {
+    /**
+     * A fresh search clears temporary link trouble while keeping proven audio/quality and stable content errors.
+     * Dead links keep their own day of memory: they stay hidden until then, or until [clearDeadLinks].
+     */
+    fun clearTransientFailures(prefix: String) = clear(prefix) {
+        it != PlayFailure.FakeFile && it != PlayFailure.WrongLanguage && !SourceRules.dead(it)
+    }
+
+    /** The viewer asks to try the dead links of a title again. */
+    fun clearDeadLinks(prefix: String) = clear(prefix, SourceRules::dead)
+
+    private fun clear(prefix: String, which: (PlayFailure) -> Boolean) {
         load()
         var changed = false
         facts.entries.toList().filter { it.key.startsWith(prefix) }.forEach { (key, fact) ->
-            if (fact.failure != null && fact.failure != PlayFailure.FakeFile && fact.failure != PlayFailure.WrongLanguage) {
+            if (fact.failure != null && which(fact.failure)) {
                 facts[key] = fact.copy(failure = null, until = 0)
                 changed = true
             }
@@ -190,6 +204,7 @@ class SourceMemory(private val read: () -> String?, private val write: (String) 
         PlayFailure.FakeFile -> "fake"
         PlayFailure.WrongLanguage -> "lang"
         PlayFailure.DeadLink -> "dead"
+        PlayFailure.Copyright -> "copy"
         PlayFailure.Cut -> "cut"
         PlayFailure.TimedOut -> "time"
         PlayFailure.Unknown -> "unknown"
@@ -201,6 +216,7 @@ class SourceMemory(private val read: () -> String?, private val write: (String) 
         c == "fake" -> PlayFailure.FakeFile
         c == "lang" -> PlayFailure.WrongLanguage
         c == "dead" -> PlayFailure.DeadLink
+        c == "copy" -> PlayFailure.Copyright
         c == "cut" -> PlayFailure.Cut
         c == "time" -> PlayFailure.TimedOut
         c == "unknown" -> PlayFailure.Unknown

@@ -714,6 +714,19 @@ class PlaybackSession(
         restart(again)
     }
 
+    /** A dead link is out of the list of versions; the viewer can still open them all again. */
+    fun deadLink(version: PlayVersion): Boolean = SourceRules.dead(failures[version.key])
+
+    /** Puts every dead link of this title back in the list and in the running. */
+    fun retryDeadLinks() {
+        val target = request ?: return
+        memory?.clearDeadLinks("${target.resumeKey}|")
+        failures.filterValues(SourceRules::dead).keys.toList().forEach { key ->
+            failures.remove(key)
+            failed -= key
+        }
+    }
+
     /** Searches again without what was remembered. A film that is playing goes on. */
     fun refresh() {
         if (live != null) return

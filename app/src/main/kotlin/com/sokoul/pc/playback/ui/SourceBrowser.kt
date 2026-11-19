@@ -44,8 +44,13 @@ internal enum class SourceLanguageFilter(val audio: AudioLanguage?) {
 }
 
 internal enum class SourceEligibility {
-    Compatible, Excluded;
-    fun keeps(version: PlayVersion) = (version.rejected != null) == (this == Excluded)
+    Compatible, Excluded, Dead;
+    /** A dead link shows only among the dead ones, whatever else is said of it. */
+    fun keeps(version: PlayVersion, dead: Boolean = false) = when (this) {
+        Dead -> dead
+        Excluded -> !dead && version.rejected != null
+        Compatible -> !dead && version.rejected == null
+    }
 }
 
 internal fun sourceName(name: String): String = name.replace(Regex("https?://\\S+"), "")
@@ -80,6 +85,7 @@ internal fun SourceBrowser(session: PlaybackSession, modifier: Modifier = Modifi
         languageOf = session::sourceLanguage, verified = session::sourceLanguageVerified,
         wanted = session::holdsWantedLanguage,
         stateOf = { stateText(session, it) }, onRefresh = session::refresh,
+        dead = session::deadLink, onRetryDead = session::retryDeadLinks,
         onChoose = { session.choose(it); onPicked() })
 }
 
@@ -96,6 +102,7 @@ internal fun SourceBrowserContent(
     wanted: (PlayVersion) -> Boolean = { true },
     stateOf: (PlayVersion) -> String = { sourceOriginLabel(it.origin) },
     onRefresh: () -> Unit = {}, onChoose: (PlayVersion) -> Unit = {},
+    dead: (PlayVersion) -> Boolean = { false }, onRetryDead: () -> Unit = {},
 ) {
     var origin by remember(searchRevision) { mutableStateOf<VersionOrigin?>(null) }
     var language by remember(searchRevision) { mutableStateOf(SourceLanguageFilter.All) }
@@ -110,9 +117,15 @@ internal fun SourceBrowserContent(
     val languages = remember(versions, currentKey) { identityMap(versions, languageOf) }
     val wantedOf = remember(versions, currentKey) { identityMap(versions, wanted) }
     val isWanted = { v: PlayVersion -> wantedOf[v] ?: wanted(v) }
+    // Read at each recomposition: a link found dead while the panel is open leaves the list at once. One map lookup each.
+    val deadKeys = versions.mapNotNullTo(HashSet()) { v -> v.key.takeIf { dead(v) } }
+    val deadCount = deadKeys.size
+    val liveCount = versions.size - deadCount
+    // The last dead link tried again: nothing left to show here.
+    LaunchedEffect(deadCount) { if (deadCount == 0 && eligibility == SourceEligibility.Dead) eligibility = SourceEligibility.Compatible }
     val accountReady = ::isAccountReady
-    val eligible = remember(versions, eligibility) { versions.filter(eligibility::keeps) }
-    val excludedCount = remember(versions) { versions.count { it.rejected != null } }
+    val eligible = remember(versions, eligibility, deadKeys) { versions.filter { eligibility.keeps(it, it.key in deadKeys) } }
+    val excludedCount = remember(versions, deadKeys) { versions.count { it.rejected != null && it.key !in deadKeys } }
     val byOrigin = remember(eligible, origin, readyOnly) { eligible.filter { (origin == null || it.origin == origin) && (!readyOnly || accountReady(it)) } }
     val visible = remember(byOrigin, wantedOnly, language, audioCode, languages) {
         byOrigin.filter { (!wantedOnly || isWanted(it)) && language.keeps(languages[it]) && (audioCode == null || audioCode in it.announcedAudio) }
@@ -130,9 +143,14 @@ internal fun SourceBrowserContent(
     val state = rememberLazyListState()
     LaunchedEffect(Unit) { withFrameNanos { }; withFrameNanos { }; runCatching { first.requestFocus() } }
     LaunchedEffect(searchRevision, origin, language, audioCode, readyOnly, wantedOnly, eligibility) { state.scrollToItem(0) }
-    TvPanel(if (eligibility == SourceEligibility.Compatible) L("Playback sources", "Sources de lecture").text() else L("Excluded sources", "Sources écartées").text(),
-        L("${visible.size} of ${versions.size} versions · ${if (searching) "Searching…" else "Search complete"}",
-            "${visible.size} sur ${versions.size} versions · ${if (searching) "Recherche en cours…" else "Recherche terminée"}").text(),
+    val total = if (eligibility == SourceEligibility.Dead) deadCount else liveCount
+    TvPanel(when (eligibility) {
+            SourceEligibility.Compatible -> L("Playback sources", "Sources de lecture")
+            SourceEligibility.Excluded -> L("Excluded sources", "Sources écartées")
+            SourceEligibility.Dead -> L("Dead links", "Liens morts")
+        }.text(),
+        L("${visible.size} of $total versions · ${if (searching) "Searching…" else "Search complete"}",
+            "${visible.size} sur $total versions · ${if (searching) "Recherche en cours…" else "Recherche terminée"}").text(),
         modifier.testTag("player-versions"), width = 860.dp, height = 1000.dp) {
         notices.forEach { notice ->
             TvPanelNotice(when (notice) {
@@ -143,14 +161,32 @@ internal fun SourceBrowserContent(
         // Actions and filters as capsules on the panel's text edge; the list below keeps all the height it can.
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = PanelMetrics.RowPad, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             PanelChip(L("Refresh", "Actualiser").text(), requester = first, icon = Icons.Filled.Refresh, onClick = onRefresh)
-            if (excludedCount > 0) {
-                PanelChip(if (eligibility == SourceEligibility.Compatible) L("Excluded · $excludedCount", "Écartées · $excludedCount").text()
-                    else L("Compatible · ${versions.size - excludedCount}", "Compatibles · ${versions.size - excludedCount}").text(), icon = Icons.Filled.FilterList) {
-                    eligibility = if (eligibility == SourceEligibility.Compatible) SourceEligibility.Excluded else SourceEligibility.Compatible
+            if (eligibility != SourceEligibility.Compatible) {
+                PanelChip(L("Compatible · ${liveCount - excludedCount}", "Compatibles · ${liveCount - excludedCount}").text(), Modifier.testTag("versions-compatible"), icon = Icons.Filled.FilterList) {
+                    eligibility = SourceEligibility.Compatible
+                }
+            }
+            if (eligibility == SourceEligibility.Dead) {
+                PanelChip(L("Retry · $deadCount", "Réessayer · $deadCount").text(), Modifier.testTag("versions-retry-dead"), icon = Icons.Filled.Replay) {
+                    onRetryDead()
+                    eligibility = SourceEligibility.Compatible
+                }
+            }
+            if (excludedCount > 0 && eligibility != SourceEligibility.Excluded) {
+                PanelChip(L("Excluded · $excludedCount", "Écartées · $excludedCount").text(), Modifier.testTag("versions-excluded"), icon = Icons.Filled.FilterList) {
+                    eligibility = SourceEligibility.Excluded
                     readyOnly = false
                 }
             }
-            if (origin != null || language != SourceLanguageFilter.All || audioCode != null || readyOnly || wantedOnly || eligibility == SourceEligibility.Excluded) {
+            // Hidden, not dropped: a link dead a minute ago can play now.
+            if (deadCount > 0 && eligibility != SourceEligibility.Dead) {
+                PanelChip(if (deadCount == 1) L("1 dead link", "1 lien mort").text() else L("$deadCount dead links", "$deadCount liens morts").text(),
+                    Modifier.testTag("versions-dead"), icon = Icons.Filled.LinkOff) {
+                    eligibility = SourceEligibility.Dead
+                    readyOnly = false
+                }
+            }
+            if (origin != null || language != SourceLanguageFilter.All || audioCode != null || readyOnly || wantedOnly || eligibility != SourceEligibility.Compatible) {
                 PanelChip(L("Reset filters", "Réinitialiser").text(), icon = Icons.Filled.Close) { origin = null; language = SourceLanguageFilter.All; audioCode = null; readyOnly = false; wantedOnly = false; eligibility = SourceEligibility.Compatible }
             }
             SourceChip(L("All providers", "Tous fournisseurs").text() + " · ${eligible.size}", origin == null, "versions-filter-all") { origin = null }
