@@ -49,7 +49,9 @@ val prepareCurlImpersonate = tasks.register<Exec>("prepareCurlImpersonate") {
     val root = curlRoot.get().asFile
     outputs.dir(root)
     onlyIf { curlAbis.any { !File(root, "$it/libcurl-impersonate.so").isFile } }
-    commandLine("python", rootProject.file("tools/prepare-curl-impersonate.py").absolutePath, root.absolutePath)
+    // macOS and Linux only ship "python3"; Windows' installer names it "python".
+    val python = if (System.getProperty("os.name").startsWith("Windows")) "python" else "python3"
+    commandLine(python, rootProject.file("tools/prepare-curl-impersonate.py").absolutePath, root.absolutePath)
 }
 // Only the shared library goes into the APK, beside libsokoulcurl; the headers stay for CMake.
 val curlNatives = layout.buildDirectory.dir("curlNatives")
