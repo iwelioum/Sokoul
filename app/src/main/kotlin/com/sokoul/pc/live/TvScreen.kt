@@ -388,7 +388,7 @@ fun TvScreen(
     val barShown = com.sokoul.pc.shell.LocalNavBarVisible.current
     val topSpace by androidx.compose.animation.core.animateDpAsState(
         if (barShown && !com.sokoul.pc.ui.Form.isPortrait) 118.dp else 24.dp, tween(220), label = "tv-top")
-    BoxWithConstraints(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(FormulerGuideStyle.header, FormulerGuideStyle.background))).testTag("tv")) {
+    BoxWithConstraints(Modifier.fillMaxSize().background(FormulerGuideStyle.background).testTag("tv")) {
         val portrait = com.sokoul.pc.ui.Form.tabletPortrait || com.sokoul.pc.ui.Form.isPortrait
         val drawerWidth = if (portrait) (maxWidth - 48.dp).coerceAtLeast(0.dp) else minOf(TV_COLUMN_WIDTH, maxWidth)
         val drawerTop = topSpace + 12.dp
@@ -553,7 +553,9 @@ fun TvScreen(
                 }
             }
         }
-        if ((drawer.value > 0f || drawerOpen) && !watchlistOpen && !workspaceOpen) {
+        // Read through a derived state: read directly, the slide's value recomposed the whole page at each of its frames.
+        val drawerShown by androidx.compose.runtime.remember { androidx.compose.runtime.derivedStateOf { drawer.value > 0f } }
+        if ((drawerShown || drawerOpen) && !watchlistOpen && !workspaceOpen) {
             TvGroupColumn(
                 groups, group,
                 Modifier.padding(start = if (portrait) 24.dp else 16.dp, top = drawerTop, bottom = 20.dp)
@@ -565,7 +567,7 @@ fun TvScreen(
                 onClose = { drawerOpen = false },
             )
         }
-        if ((drawer.value > 0f || drawerOpen) && watchlistOpen) {
+        if ((drawerShown || drawerOpen) && watchlistOpen) {
             WatchlistDrawer(
                 reminders = watchlist,
                 modifier = Modifier.padding(start = 16.dp, top = drawerTop, bottom = 20.dp).width(drawerWidth).graphicsLayer {

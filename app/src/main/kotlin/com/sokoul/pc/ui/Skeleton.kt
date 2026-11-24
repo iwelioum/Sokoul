@@ -26,6 +26,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.Dp
@@ -56,7 +57,16 @@ private const val PULSE_MS = 1_100
 
 @Composable
 private fun Bar(width: Dp, height: Dp, pulse: State<Float>, modifier: Modifier = Modifier) {
-    Box(modifier.width(width).height(height).clip(RoundedCornerShape(height / 2)).alpha(pulse.value).background(Palette.PillFill))
+    Box(modifier.width(width).height(height).pulsing(pulse, height / 2))
+}
+
+/**
+ * The fill drawn at the pulse's alpha, read when drawing: an alpha read in composition recomposed every skeleton at each
+ * frame and made each bar and card one more offscreen layer while Home loaded (2026-11-24).
+ */
+private fun Modifier.pulsing(pulse: State<Float>, corner: Dp) = drawBehind {
+    val r = corner.toPx()
+    drawRoundRect(Palette.PillFill.copy(alpha = Palette.PillFill.alpha * pulse.value), cornerRadius = androidx.compose.ui.geometry.CornerRadius(r, r))
 }
 
 /** A row still loading: the heading bar, then cards of the size the row will have. */
@@ -76,7 +86,7 @@ fun SkeletonRow(landscape: Boolean, modifier: Modifier = Modifier, cards: Int = 
             horizontalArrangement = Arrangement.spacedBy(CardMetrics.Gap),
         ) {
             repeat(cards) {
-                Box(Modifier.size(width, height).clip(RoundedCornerShape(CardMetrics.Corner)).alpha(pulse.value).background(Palette.PillFill))
+                Box(Modifier.size(width, height).pulsing(pulse, CardMetrics.Corner))
             }
         }
     }

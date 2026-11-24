@@ -153,7 +153,10 @@ fun NavShell(
     LaunchedEffect(barFocused, bottomBarFocused) {
         if (homeNavRequested && !barFocused && !bottomBarFocused) homeNavRequested = false
     }
-    val visibility by animateFloatAsState(if (barVisible) 1f else 0f, tween(220))
+    val visibilityState = animateFloatAsState(if (barVisible) 1f else 0f, tween(220))
+    val visibility by visibilityState
+    // Whether the bar is drawn at all changes twice per animation; read as the float, the shell recomposed at each frame.
+    val barDrawn by androidx.compose.runtime.remember { androidx.compose.runtime.derivedStateOf { visibilityState.value > 0.01f } }
     val requesters = remember { HashMap<String, FocusRequester>() }
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     fun requester(id: String) = requesters.getOrPut(id) { FocusRequester() }
@@ -211,7 +214,7 @@ fun NavShell(
                 LocalReportHomeHeroAtTop provides reportHomeHeroAtTop,
             ) { content() }
         }
-        if (visibility > 0.01f || barVisible) {
+        if (barDrawn || barVisible) {
             val onBarFocus: (FocusState) -> Unit = {
                 barFocused = it.hasFocus
                 if (it.hasFocus) timedBarVisible = true

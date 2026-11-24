@@ -35,6 +35,7 @@ import java.util.concurrent.ConcurrentHashMap
 object ChannelLogos {
     /** A playlist logo at least this wide is sharp enough: iptv-org is not asked. */
     private const val SHARP_ENOUGH = 200
+    private const val LOGO_DECODE_WIDTH = 256
     private const val PLATE_PAD = 0.14f
     private const val MAX_SHAPED_PIXELS = 4096L * 4096
     private val PLATE = Color(0xFFF2F2F7)
@@ -82,7 +83,9 @@ object ChannelLogos {
     internal fun allowed(url: String) = url.startsWith("https://", ignoreCase = true) || url.startsWith("http://", ignoreCase = true)
 
     private suspend fun load(url: String): ImageBitmap? = if (!allowed(url)) null else try {
-        ImageLoader.load(url)
+        // At the size it is shown (112 dp at most, 200 px is sharp enough): a playlist's logo was decoded whole, up to
+        // 1920 px, and uploaded at full size with each new row of the list or the guide (2026-11-24).
+        ImageLoader.load(url, LOGO_DECODE_WIDTH)
     } catch (e: CancellationException) {
         throw e
     } catch (_: Exception) {
