@@ -553,7 +553,9 @@ internal fun HeroLayer(
 
     Box(Modifier.fillMaxSize().graphicsLayer {
         val px = scrollPx()
-        alpha = (1f - px / 700f).coerceIn(0f, 1f)
+        // Gone (alpha 0, skipped by the render thread) before the rows reach the top: in pixels, 700 was never reached at
+        // 720p, and the full-screen hero stayed drawn at 1 % under the rows while they scrolled (2026-11-24).
+        alpha = (1f - px / (HeroAreaHeight.toPx() * 0.7f)).coerceIn(0f, 1f)
         compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.ModulateAlpha
         translationX = slide()
         translationY = -px.toFloat()

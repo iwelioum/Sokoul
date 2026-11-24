@@ -123,9 +123,16 @@ object Platform {
             // A JPEG has no transparency: 16 bits halve its memory with no visible loss on a TV. Logos (PNG, WebP) keep it.
             if (bounds.outMimeType == "image/jpeg") inPreferredConfig = android.graphics.Bitmap.Config.RGB_565
         }
+        // Sampling only halves: a w500 poster shown 173 px wide stayed 500 px. Scaled to the width asked, it uploads and
+        // samples a third of the pixels while rows scroll in (2026-11-24).
+        val decoded = BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options) ?: return null
+        val fitted = if (maxWidth in 1 until decoded.width) {
+            android.graphics.Bitmap.createScaledBitmap(decoded, maxWidth, maxOf(1, decoded.height * maxWidth / decoded.width), true)
+                .also { if (it !== decoded) decoded.recycle() }
+        } else decoded
         // Sent to the graphics chip now, off the interface thread: done at its first draw, a 1280-wide backdrop cost that
         // frame 63 ms on the Google TV Streamer when a title page opened (2026-11-24).
-        return BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)?.also { it.prepareToDraw() }?.asImageBitmap()
+        return fitted.also { it.prepareToDraw() }.asImageBitmap()
     }
 
     private const val MAX_IMAGE_SIDE = 1920

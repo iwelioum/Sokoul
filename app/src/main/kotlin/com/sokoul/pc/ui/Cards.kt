@@ -103,16 +103,16 @@ fun FocusCard(
     Box(
         modifier
             .size(width, height)
-            .graphicsLayer { scaleX = scale; scaleY = scale; translationX = nudge.x.value; translationY = nudge.y.value }
-            // The shadow only under the focused card: a 6 dp shadow under every card, hardly seen on the dark page, was
-            // drawn for each card on screen at every frame, more than the TV's GPU could take (2026-11-08).
-            .shadow(if (focused) 24.dp else 0.dp, shape, clip = false)
-            // A card at rest is rendered once into a layer and drawn in one pass. The focused one is drawn directly, so that
-            // its 10 % zoom stays sharp.
+            // One layer per card: zoom, nudge, the outline clip and the focused card's shadow. No offscreen texture: every
+            // card at rest was rendered into its own one, and as images arrived and faded in while a title page scrolled,
+            // each changed card cost one more render pass before the frame (68–86 % janky frames on the Google TV
+            // Streamer, 2026-11-24; jetpack-compose-performance audit). The shadow only under the focused card, as before.
             .graphicsLayer {
+                scaleX = scale; scaleY = scale
+                translationX = nudge.x.value; translationY = nudge.y.value
+                shadowElevation = if (focused) 24.dp.toPx() else 0f
                 this.shape = shape
                 clip = true
-                compositingStrategy = if (focused) CompositingStrategy.Auto else CompositingStrategy.Offscreen
             }
             .onPlaced { place[0] = it }
             .let { if (tag != null) it.testTag(tag) else it }

@@ -21,6 +21,7 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
@@ -57,26 +58,14 @@ fun Art(
         if (image != null && reveal.value < 1f) reveal.animateTo(1f, tween(REVEAL_MILLIS))
     }
     val bitmap = image
-    // The reveal is read when drawing: read here, it recomposed each card at every frame of its 450 ms.
-    val painter = remember(bitmap) { bitmap?.let { RevealPainter(androidx.compose.ui.graphics.painter.BitmapPainter(it), reveal) } }
+    val painter = remember(bitmap) { bitmap?.let { androidx.compose.ui.graphics.painter.BitmapPainter(it) } }
     // The waiting color is drawn only until the image is fully there: under an opaque image it was one more fill.
     Box(
         modifier.onSizeChanged { width = it.width }.drawBehind { if (painter == null || reveal.value < 1f) drawRect(placeholder) },
     ) {
-        if (painter != null) Image(painter, null, Modifier.fillMaxSize(), alignment, scale)
-    }
-}
-
-/** Draws an image desaturated and faint, then in its real colors, as [reveal] goes from 0 to 1, at draw time only. */
-private class RevealPainter(
-    private val inner: androidx.compose.ui.graphics.painter.Painter,
-    private val reveal: Animatable<Float, *>,
-) : androidx.compose.ui.graphics.painter.Painter() {
-    override val intrinsicSize get() = inner.intrinsicSize
-
-    override fun androidx.compose.ui.graphics.drawscope.DrawScope.onDraw() {
-        val r = reveal.value
-        with(inner) { draw(size, r, if (r < 1f) ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(r) }) else null) }
+        // The image fades in as a layer property, read when drawing: nothing is recorded again. A colour filter rebuilt
+        // at every frame of the reveal redrew each card (and its layer) while rows scrolled in (2026-11-24).
+        if (painter != null) Image(painter, null, Modifier.fillMaxSize().graphicsLayer { alpha = reveal.value }, alignment, scale)
     }
 }
 
