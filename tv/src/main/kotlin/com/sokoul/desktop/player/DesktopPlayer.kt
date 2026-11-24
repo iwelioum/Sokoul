@@ -125,8 +125,24 @@ class DesktopPlayer private constructor() {
         return listOfNotNull(name ?: f.label ?: (fallback + " " + (index + 1)), code?.let { "[$it]" }, channels).joinToString(" · ")
     }
 
+    /**
+     * Of the tracks in the language picked, the fullest: an Apple trailer lists its French sound twelve times, from
+     * HE-AAC at 32 kb/s (first, and taken) to AAC at 160 kb/s and Dolby Digital 5.1 (2026-11-24). More channels, then
+     * plain AAC or Dolby over the HE profiles made for weak lines, then bitrate.
+     */
+    private fun richest(picked: Int, formats: Map<Int, Format>): Int {
+        // Same language and same name only: a film's VFF and VFQ, or a commentary, share a language but not a name.
+        val chosen = formats[picked] ?: return picked
+        return formats.filter { it.value.language == chosen.language && it.value.label == chosen.label }
+            .maxWithOrNull(compareBy<Map.Entry<Int, Format>>({ it.value.channelCount }, { if (isHighEfficiency(it.value)) 0 else 1 }, { maxOf(it.value.bitrate, it.value.averageBitrate) }))
+            ?.key ?: picked
+    }
+
+    private fun isHighEfficiency(f: Format) = f.codecs.orEmpty().let { "mp4a.40.5" in it || "mp4a.40.29" in it }
+
     private fun refreshTracks(tracks: Tracks) {
         val audio = mutableListOf<Pair<Int, String>>()
+        val audioFormats = HashMap<Int, Format>()
         val subs = mutableListOf(-1 to "Désactivés")
         var audioId = -1
         var subId = -1
@@ -136,6 +152,7 @@ class DesktopPlayer private constructor() {
                 when (group.type) {
                     C.TRACK_TYPE_AUDIO -> {
                         audio += id to language(group.getTrackFormat(i), audio.size, "Piste")
+                        audioFormats[id] = group.getTrackFormat(i)
                         if (group.isTrackSelected(i)) audioId = id
                     }
                     C.TRACK_TYPE_TEXT -> {
@@ -150,6 +167,7 @@ class DesktopPlayer private constructor() {
             audioPicked = true
             val p = prefs()
             val pick = com.sokoul.pc.playback.sources.AudioMatch.pickTrack(audio, p.audioLanguages, current?.originalLanguage)
+                ?.let { richest(it, audioFormats) }
             pick?.takeIf { it != audioId }?.let { id -> choose(C.TRACK_TYPE_AUDIO, id) }
             // Off, a chosen language, or "auto": the interface language when the audio heard is another one.
             val heard = audio.firstOrNull { it.first == (pick ?: audioId) }?.second
@@ -207,6 +225,11 @@ class DesktopPlayer private constructor() {
             .setPreferredTextLanguage(null)
             // Text stays off until the rule picks a track (or the viewer does).
             .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
+            // A film or trailer offered at several sizes plays at its best, not at the screen's: on the 720p Google TV
+            // Streamer an Apple trailer started at 1320x694 with mono 22 kHz sound, the lowest of its audio (2026-11-24).
+            // Live channels keep adapting to the line.
+            .setForceHighestSupportedBitrate(!req.live)
+            .apply { if (!req.live) clearViewportSizeConstraints() }
             .build()
         exo.setMediaSource(source(req), at.coerceAtLeast(0))
         exo.prepare()
