@@ -225,7 +225,9 @@ fun NavShell(
             Box(
                 Modifier.fillMaxWidth().height(NavMetrics.ScrimHeight)
                     .graphicsLayer { alpha = visibility * backdrop }
-                    .background(Brush.verticalGradient(0f to Color(0xF2000000), 0.7f to Color(0xCC000000), 1f to Color.Transparent)),
+                    // Opaque down to under the icons, then fading: the hero's text showed through the lighter veil
+                    // behind the menu icon when the page was not at its top (PC, 2026-11-24).
+                    .background(Brush.verticalGradient(0f to Color.Black, 0.72f to Color(0xF5000000), 1f to Color.Transparent)),
             )
             if (!portrait) Box(
                 Modifier
