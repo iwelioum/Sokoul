@@ -102,6 +102,8 @@ class AppDeps(
     engine: PlayerEngine?,
     val sources: SourceFinder,
     val resolveTrailer: suspend (List<String>) -> TrailerStream?,
+    /** Trailers beyond TMDB's YouTube keys, listed on the title page. Null in tests and renders. */
+    val trailerSources: com.sokoul.pc.data.TrailerSources? = null,
     val sourceLabels: () -> List<String>,
     /** When each step of the last search for versions ended, for the tools. */
     val sourceTimeline: () -> List<String> = { emptyList() },
@@ -666,6 +668,14 @@ private fun MainInterface(deps: AppDeps, controller: SetupController, onProfiles
         }
     }
 
+    /** A trailer whose link is already known (the title page's other sources): played as it is, nothing to resolve. */
+    fun playTrailerStream(title: String, stream: TrailerStream) {
+        deps.trailer.stop()
+        trailerJob?.cancel()
+        overlays.add(Overlay.Player(title, null, null))
+        deps.playback.playTrailer(title, stream)
+    }
+
     val currentSection = rememberUpdatedState(section)
     deps.bridge.navigation = remember {
         object : com.sokoul.pc.control.AppNavigation {
@@ -891,6 +901,7 @@ private fun MainInterface(deps: AppDeps, controller: SetupController, onProfiles
                             onClose = ::close,
                             onPlay = ::play,
                             onPlayTrailer = ::playTrailer,
+                            onPlayTrailerStream = ::playTrailerStream,
                             onOpenSimilar = ::openTitle,
                             onOpenPerson = ::openPerson,
                             onOpenSaga = ::openSaga,

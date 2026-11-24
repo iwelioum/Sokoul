@@ -16,6 +16,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -29,6 +30,9 @@ import com.sokoul.iptv.data.net.TmdbInfo
 import com.sokoul.iptv.data.net.TmdbItem
 import com.sokoul.iptv.data.net.TmdbVideo
 import com.sokoul.pc.data.L
+import com.sokoul.pc.data.TrailerOption
+import com.sokoul.pc.data.TrailerSource
+import com.sokoul.pc.data.trailerVideos
 import com.sokoul.pc.data.kind
 import com.sokoul.pc.i18n.durationLabel
 import com.sokoul.pc.theme.CardMetrics
@@ -76,6 +80,67 @@ internal fun BonusRow(info: TmdbInfo?, onPlay: (String) -> Unit) {
         }
     }
 }
+
+/**
+ * The trailers row (the user, 2026-11-24: every source found, in French where there is a French one): the other
+ * sources' trailers, sharpest first, then TMDB's YouTube ones. No source is named: each card says its quality and its
+ * language. A direct link plays as it is; a YouTube key goes through the usual resolver.
+ */
+@Composable
+internal fun TrailersRow(
+    deps: com.sokoul.pc.AppDeps,
+    kind: String,
+    info: TmdbInfo?,
+    backdrop: String?,
+    onPlayKey: (String) -> Unit,
+    onPlayStream: (com.sokoul.pc.data.TrailerStream) -> Unit,
+) {
+    val found by produceState(emptyList<TrailerOption>(), kind, info?.imdbId, info?.title) {
+        value = emptyList()
+        val i = info ?: return@produceState
+        value = deps.trailerSources?.let { s -> runCatching { s.options(kind, i) }.getOrNull() }.orEmpty()
+    }
+    val options = remember(found, info) { (found + youtubeOptions(info)).distinctBy { it.url ?: it.youtubeKey }.take(TRAILERS_MAX) }
+    if (options.isEmpty()) return
+    CardRow(L("Trailers", "Bandes-annonces").text(), options, key = { it.url ?: it.youtubeKey ?: it.title }, testTag = "row-trailers") { i, o ->
+        FocusCard(BONUS_W, BONUS_H, { o.youtubeKey?.let(onPlayKey) ?: o.stream()?.let(onPlayStream) }, tag = "trailer-$i") {
+            Art(o.image ?: backdrop, Modifier.fillMaxSize())
+            Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.45f to Color.Transparent, 1f to Color(0xD9000000))))
+            Column(Modifier.align(Alignment.BottomStart).padding(horizontal = 22.dp, vertical = 18.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                trailerCaption(o)?.let { Label(it, Type.Body, Palette.Secondary, maxLines = 1) }
+                Label(o.title.ifBlank { L("Trailer", "Bande-annonce").text() }, Type.Meta, Palette.OnBackground, maxLines = 2)
+            }
+        }
+    }
+}
+
+/** TMDB's YouTube trailers as row cards. Their announced size can be wrong, so no quality is shown for them. */
+internal fun youtubeOptions(info: TmdbInfo?): List<TrailerOption> {
+    val i = info ?: return emptyList()
+    val original = i.originalLanguage?.take(2)?.lowercase()
+    return i.trailerVideos().map { v ->
+        val language = when {
+            v.language?.lowercase() == "fr" && original != "fr" -> "VF"
+            v.language != null -> "VO"
+            else -> null
+        }
+        TrailerOption(v.name, TrailerSource.YOUTUBE, language, youtubeKey = v.key, image = "https://i.ytimg.com/vi/${v.key}/hqdefault.jpg")
+    }
+}
+
+/** "1080P · VF": the quality when it was measured, then the language. */
+internal fun trailerCaption(o: TrailerOption): String? {
+    val s = o.sharpness
+    val quality = when {
+        s >= 2160 -> "4K"
+        s >= 1440 -> "1440p"
+        s > 0 -> "${s}p"
+        else -> null
+    }
+    return listOfNotNull(quality, o.language).joinToString(" · ").takeIf { it.isNotEmpty() }
+}
+
+private const val TRAILERS_MAX = 12
 
 private val BONUS_W = 448.dp
 private val BONUS_H = 252.dp

@@ -101,6 +101,7 @@ import com.sokoul.pc.collections.SagaLandscapeTile
 import com.sokoul.pc.data.SagaTile
 import com.sokoul.pc.data.kind
 import com.sokoul.pc.ui.PillButton
+import com.sokoul.pc.data.autoplayKeys
 import com.sokoul.pc.data.trailerKeys
 import com.sokoul.pc.data.trailerVideos
 import com.sokoul.pc.home.MetaLine
@@ -182,6 +183,8 @@ fun TitleScreen(
     onClose: () -> Unit,
     onPlay: (PlayRequest) -> Unit,
     onPlayTrailer: (title: String, youtubeKey: String) -> Unit,
+    /** A trailer from another source, its link already known. */
+    onPlayTrailerStream: (title: String, stream: com.sokoul.pc.data.TrailerStream) -> Unit = { _, _ -> },
     onOpenSimilar: (List<TmdbItem>, Int, CardOrigin?) -> Unit,
     onOpenPerson: (TmdbPerson, CardOrigin) -> Unit,
     onOpenSaga: (SagaTile, CardOrigin?) -> Unit,
@@ -266,7 +269,7 @@ fun TitleScreen(
     LaunchedEffect(silent) { deps.player?.setMutedSafely(silent) }
     DisposableEffect(Unit) { onDispose { deps.player?.setMutedSafely(false) } }
     LaunchedEffect(identity, info, trailerAllowed, rowsFocused, modalOpen, trailersOpen, onTop) {
-        if (onTop && trailerAllowed && !rowsFocused && !modalOpen && !trailersOpen) trailer.prepare(info?.trailerKeys().orEmpty(), item.title, trailerOwner) else trailer.release(trailerOwner)
+        if (onTop && trailerAllowed && !rowsFocused && !modalOpen && !trailersOpen) trailer.prepare(info?.autoplayKeys(item.kind()).orEmpty(), item.title, trailerOwner) else trailer.release(trailerOwner)
     }
     LaunchedEffect(rowsFocused) {
         if (rowsFocused && scroll.value < heroScrollPx) scroll.animateScrollTo(heroScrollPx)
@@ -427,6 +430,7 @@ fun TitleScreen(
                         onRowsFocused = { rowsFocused = it },
                         onPlay = onPlay,
                         onPlayTrailer = { onPlayTrailer(item.title, it) },
+                        onPlayStream = { onPlayTrailerStream(item.title, it) },
                         onOpenSimilar = onOpenSimilar,
                         onOpenPerson = onOpenPerson,
                         onAbout = { modalOpen = true },
@@ -809,6 +813,7 @@ private fun Sections(
     onRowsFocused: (Boolean) -> Unit,
     onPlay: (PlayRequest) -> Unit,
     onPlayTrailer: (String) -> Unit,
+    onPlayStream: (com.sokoul.pc.data.TrailerStream) -> Unit,
     onOpenSimilar: (List<TmdbItem>, Int, CardOrigin?) -> Unit,
     onOpenPerson: (TmdbPerson, CardOrigin) -> Unit,
     onAbout: () -> Unit,
@@ -851,6 +856,8 @@ private fun Sections(
         } else if (item.kind() == "tv") {
             Episodes(deps, item, info, onPlay)
         }
+        // After the episodes and before the cast, where Apple TV puts its trailers.
+        TrailersRow(deps, item.kind(), info, info?.backdrop ?: item.backdrop, onPlayTrailer, onPlayStream)
         val cast = info?.cast.orEmpty()
         if (cast.isNotEmpty()) {
             CardRow(tr(Text.RowCast), cast, key = { "${it.id}-${it.name}" }, testTag = "row-cast") { _, p -> PersonCard(p, onOpenPerson) }

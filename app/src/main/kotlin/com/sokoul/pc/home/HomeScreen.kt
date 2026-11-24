@@ -99,6 +99,7 @@ import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import com.sokoul.pc.data.RowStyle
 import com.sokoul.pc.data.kind
+import com.sokoul.pc.data.autoplayKeys
 import com.sokoul.pc.data.trailerKeys
 import com.sokoul.pc.i18n.Text
 import com.sokoul.pc.i18n.durationLabel
@@ -537,7 +538,7 @@ private fun Hero(
     val inFront by com.sokoul.pc.ui.AppFocus.active.collectAsState()
     LaunchedEffect(hero.item.id, focused, active, stoppedFor, inFront) {
         // TrailerController waits a few seconds of steady focus before it opens anything: crossing the hero starts nothing.
-        if (focused && active && inFront && stoppedFor != hero.item.id) trailer.prepare(heroInfo?.trailerKeys().orEmpty(), hero.item.title, trailerOwner) else trailer.release(trailerOwner)
+        if (focused && active && inFront && stoppedFor != hero.item.id) trailer.prepare(heroInfo?.autoplayKeys(hero.item.kind()).orEmpty(), hero.item.title, trailerOwner) else trailer.release(trailerOwner)
     }
     // Silent until the viewer asks for sound, as behind a title page. Whatever plays next finds the sound as it was.
     val silent = active && trailer.playing && !heroSound
@@ -548,7 +549,8 @@ private fun Hero(
         if (kind == PageKind.Anime && !com.sokoul.pc.Platform.IS_TV) {
             deps.warmKeys(heroInfo?.trailerKeys().orEmpty())
         } else {
-            items.forEach { h -> deps.warmKeys(h.info?.trailerKeys().orEmpty()) }
+            // Apple's page only for the slide shown: each one weighs half a megabyte.
+            items.forEach { h -> deps.warmKeys((if (h === hero) heroInfo?.autoplayKeys(h.item.kind()) else h.info?.trailerKeys()).orEmpty()) }
         }
     }
     // Next slide when the trailer ends, or after a while when there is none.

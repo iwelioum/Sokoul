@@ -78,6 +78,7 @@ fun realDeps(db: DesktopDb, player: CompletableFuture<DesktopPlayer?>, loaded: (
     val pcCatalog = TmdbCatalog(db, catalog) { StartupRoute.state(db) == SetupState.Done }
     val debrid = DesktopDebrid(db, catalog)
     val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    val trailerSources = com.sokoul.pc.data.TrailerSources(http)
     val trailers = TrailerResolver(catalog.http, { ProviderConfig.key(db, "realdebrid") }, store = DbTrailerStore(db))
     val prefs = DesktopPrefs(db)
     val profiles = com.sokoul.pc.data.Profiles(db)
@@ -156,7 +157,9 @@ fun realDeps(db: DesktopDb, player: CompletableFuture<DesktopPlayer?>, loaded: (
         connectionUse = realSources::connectionUse,
         shortGuide = realSources::shortGuide,
         subtitleSource = subtitleSource,
-        resolveTrailer = { if (Platform.IS_TV) Platform.resolveTrailer(it) else trailers.best(it) },
+        // Apple's trailer first when it is full HD (French sound, no DRM), else YouTube's as before (2026-11-24).
+        resolveTrailer = { keys -> trailerSources.resolve(keys) { if (Platform.IS_TV) Platform.resolveTrailer(it) else trailers.best(it) } },
+        trailerSources = trailerSources,
         sourceTimeline = realSources::timeline,
         sourceLabels = {
             listOfNotNull(
