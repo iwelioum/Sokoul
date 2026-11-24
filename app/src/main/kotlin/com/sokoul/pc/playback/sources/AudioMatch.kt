@@ -105,6 +105,8 @@ object AudioMatch {
     private val commentary = Regex("""(?i)\b(comment\w*|description|descriptive|audiodescription|ad)\b""")
     private val originalLabel = Regex("""\b(original|originale|VO|VOST)\b""", RegexOption.IGNORE_CASE)
 
+    private val quebec = Regex("""fr[-_]ca\b|\bvfq\b|qu[ée]b[ée]c|canad""", RegexOption.IGNORE_CASE)
+
     private fun main(tracks: List<Pair<Int, String>>) = tracks.filterNot { commentary.containsMatchIn(it.second) }.ifEmpty { tracks }
 
     /** The language of a track's label (ISO 639-1), or null when the label names none. */
@@ -121,7 +123,10 @@ object AudioMatch {
         val firstLanguage = wanted.firstOrNull { it != ORIGINAL }
         for (entry in wanted) {
             if (entry != ORIGINAL) {
-                main.firstOrNull { AudioChoice.matches(entry, it.second) }?.let { return it.first }
+                val inLanguage = main.filter { AudioChoice.matches(entry, it.second) }
+                // France's French before Quebec's when both are there: Apple lists fr-CA first in an Apple TV+ trailer,
+                // and it was the one heard (2026-11-24). A VFQ alone is still taken.
+                (inLanguage.firstOrNull { !quebec.containsMatchIn(it.second) } ?: inLanguage.firstOrNull())?.let { return it.first }
                 continue
             }
             // The work's own language first: an "Original" label on another language contradicts the catalog.

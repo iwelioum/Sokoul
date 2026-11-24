@@ -95,12 +95,16 @@ internal fun TrailersRow(
     onPlayKey: (String) -> Unit,
     onPlayStream: (com.sokoul.pc.data.TrailerStream) -> Unit,
 ) {
-    val found by produceState(emptyList<TrailerOption>(), kind, info?.imdbId, info?.title) {
-        value = emptyList()
+    // Null while the other sources are asked: the row waits for them (a few seconds at most) rather than showing
+    // YouTube's cards and then adding the sharper ones in front, off screen to the left, under the viewer's focus
+    // (Oppenheimer on the Google TV, 2026-11-24). Past the wait, YouTube's alone; the next visit finds the rest cached.
+    val found by produceState<List<TrailerOption>?>(null, kind, info?.imdbId, info?.title) {
+        value = null
         val i = info ?: return@produceState
-        value = deps.trailerSources?.let { s -> runCatching { s.options(kind, i) }.getOrNull() }.orEmpty()
+        value = deps.trailerSources?.let { s -> kotlinx.coroutines.withTimeoutOrNull(OTHER_SOURCES_WAIT_MS) { runCatching { s.options(kind, i) }.getOrNull() } }.orEmpty()
     }
-    val options = remember(found, info) { (found + youtubeOptions(info)).distinctBy { it.url ?: it.youtubeKey }.take(TRAILERS_MAX) }
+    val ready = found ?: return
+    val options = remember(ready, info) { (ready + youtubeOptions(info)).distinctBy { it.url ?: it.youtubeKey }.take(TRAILERS_MAX) }
     if (options.isEmpty()) return
     CardRow(L("Trailers", "Bandes-annonces").text(), options, key = { it.url ?: it.youtubeKey ?: it.title }, testTag = "row-trailers") { i, o ->
         FocusCard(BONUS_W, BONUS_H, { o.youtubeKey?.let(onPlayKey) ?: o.stream()?.let(onPlayStream) }, tag = "trailer-$i") {
@@ -141,6 +145,7 @@ internal fun trailerCaption(o: TrailerOption): String? {
 }
 
 private const val TRAILERS_MAX = 12
+private const val OTHER_SOURCES_WAIT_MS = 8_000L
 
 private val BONUS_W = 448.dp
 private val BONUS_H = 252.dp

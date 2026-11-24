@@ -83,10 +83,10 @@ v2.m3u8
         assertNull(TrailerParse.hlsMaster(master1080.replace("#EXT-X-VERSION:7", "#EXT-X-SESSION-KEY:METHOD=SAMPLE-AES,URI=\"skd://x\"")))
         assertNull(TrailerParse.hlsMaster("<html>"))
         assertFalse(TrailerParse.hlsMaster(master1080.replace("fr-FR", "en"))!!.french)
-        // French listed, English played first: that is no French trailer.
+        // French listed though English is the default: the player picks the viewer's French, so it counts.
         val english = master1080.replace("#EXT-X-VERSION:7", "#EXT-X-VERSION:7\n#EXT-X-MEDIA:TYPE=AUDIO,LANGUAGE=\"en\",GROUP-ID=\"audio\",DEFAULT=YES,URI=\"e.m3u8\"")
             .replace("Français\",DEFAULT=YES", "Français\",DEFAULT=NO")
-        assertFalse(TrailerParse.hlsMaster(english)!!.french)
+        assertTrue(TrailerParse.hlsMaster(english)!!.french)
     }
 
     @Test fun `the windows app keeps the sdr variants only`() {

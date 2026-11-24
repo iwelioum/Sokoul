@@ -43,6 +43,12 @@ class AudioMatchTest {
         assertEquals(2, AudioMatch.pickTrack(tracks, listOf("fr", original), "en"))
     }
 
+    @Test fun franceFrenchBeforeQuebecFrenchWhenBothAreThere() {
+        val tracks = listOf(1 to "English · [en] · 5.1", 2 to "Français · [fr-ca] · 5.1", 3 to "Français · [fr-fr] · 5.1")
+        assertEquals(3, AudioMatch.pickTrack(tracks, listOf("fr", original), "en"))
+        assertEquals(2, AudioMatch.pickTrack(listOf(1 to "English [en]", 2 to "Français VFQ"), listOf("fr", original), "en"))
+    }
+
     @Test fun italianPreferredOnAnyInterfacePicksTheItalianTrack() {
         val tracks = listOf(1 to "English [en] (default)", 2 to "Français [fr]", 3 to "Italiano [it]")
         assertEquals(3, AudioMatch.pickTrack(tracks, listOf("it", original), "en"))

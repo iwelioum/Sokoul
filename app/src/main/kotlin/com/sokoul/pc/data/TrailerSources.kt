@@ -88,7 +88,14 @@ class TrailerSources(
     }
 
     /** Apple's trailers then AlloCiné's, for the title page's row. Empty when neither knows the title. */
-    suspend fun options(kind: String, info: TmdbInfo): List<TrailerOption> = coroutineScope {
+    suspend fun options(kind: String, info: TmdbInfo): List<TrailerOption> =
+        // Runs on its own: a page that stops waiting (the row's few seconds) must not cancel the fetch, whose result
+        // the cache then keeps for the next visit.
+        background.async { gather(kind, info) }.await()
+
+    private val background = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.IO)
+
+    private suspend fun gather(kind: String, info: TmdbInfo): List<TrailerOption> = coroutineScope {
         val apple = async { info.imdbId?.let { runCatching { apple(kind, it) }.getOrNull() }.orEmpty() }
         val allocine = async { runCatching { allocine(kind, info.title, info.originalTitle, info.year) }.getOrNull().orEmpty() }
         // A film's trailer is named after the film on Apple: said again on the card, it would tell nothing.
@@ -290,11 +297,11 @@ object TrailerParse {
         val best = lines.filter { it.startsWith("#EXT-X-STREAM-INF") }
             .mapNotNull { size.find(it)?.destructured?.let { (w, h) -> (w.toIntOrNull() ?: 0) to (h.toIntOrNull() ?: 0) } }
             .maxByOrNull { (w, h) -> maxOf(h, w * 9 / 16) } ?: return null
-        // The sound a player starts with is the default track: an Apple TV+ series on the French storefront lists
-        // French among eleven languages but starts in English (2026-11-24).
+        // Any French sound: the players pick the viewer's language among the tracks (AudioMatch), so an Apple TV+ series
+        // whose default is English is heard in French all the same (Severance on the Google TV, 2026-11-24).
         val audio = lines.filter { it.startsWith("#EXT-X-MEDIA:") && "TYPE=AUDIO" in it }.toList()
         val fr = Regex("""LANGUAGE="fr""", RegexOption.IGNORE_CASE)
-        val french = (audio.filter { "DEFAULT=YES" in it }.ifEmpty { audio }).any { fr.containsMatchIn(it) }
+        val french = audio.any { fr.containsMatchIn(it) }
         return HlsInfo(best.first, best.second, french)
     }
 

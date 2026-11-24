@@ -852,12 +852,15 @@ private fun Sections(
         if (fans != null) {
             com.sokoul.pc.anime.AnimeSections(deps, item, fans, onRead, onPlayThemes) {
                 if (item.kind() == "tv") Episodes(deps, item, info, onPlay, fans)
+                // Right after the episodes here too: after the manga, the calendar and the films it was out of reach
+                // (Frieren on the Google TV, 2026-11-24).
+                TrailersRow(deps, item.kind(), info, info?.backdrop ?: item.backdrop, onPlayTrailer, onPlayStream)
             }
-        } else if (item.kind() == "tv") {
-            Episodes(deps, item, info, onPlay)
+        } else {
+            if (item.kind() == "tv") Episodes(deps, item, info, onPlay)
+            // After the episodes and before the cast, where Apple TV puts its trailers.
+            TrailersRow(deps, item.kind(), info, info?.backdrop ?: item.backdrop, onPlayTrailer, onPlayStream)
         }
-        // After the episodes and before the cast, where Apple TV puts its trailers.
-        TrailersRow(deps, item.kind(), info, info?.backdrop ?: item.backdrop, onPlayTrailer, onPlayStream)
         val cast = info?.cast.orEmpty()
         if (cast.isNotEmpty()) {
             CardRow(tr(Text.RowCast), cast, key = { "${it.id}-${it.name}" }, testTag = "row-cast") { _, p -> PersonCard(p, onOpenPerson) }

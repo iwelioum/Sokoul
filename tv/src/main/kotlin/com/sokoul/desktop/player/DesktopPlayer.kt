@@ -138,6 +138,38 @@ class DesktopPlayer private constructor() {
             ?.key ?: picked
     }
 
+    /**
+     * On a screen without HDR, the SDR pictures of a stream that offers both: the highest bitrate taken by itself was
+     * Apple's 4K Dolby Vision, shown dark and dull on the 720p Google TV Streamer (Severance's trailer, 2026-11-24).
+     * Left alone when the screen shows HDR, or when the stream has no SDR picture to fall back on.
+     */
+    private fun sdrOnScreenWithoutHdr(tracks: Tracks) {
+        if (screenShowsHdr) return
+        for (group in tracks.groups) {
+            if (group.type != C.TRACK_TYPE_VIDEO || group.length < 2) continue
+            val sdr = (0 until group.length).filter { group.isTrackSupported(it) && !isHdr(group.getTrackFormat(it)) }
+            if (sdr.isEmpty() || sdr.size == group.length) continue
+            exo.trackSelectionParameters = exo.trackSelectionParameters.buildUpon()
+                .setOverrideForType(TrackSelectionOverride(group.mediaTrackGroup, sdr)).build()
+            return
+        }
+    }
+
+    private val screenShowsHdr: Boolean by lazy {
+        runCatching {
+            val dm = com.sokoul.tv.TvApp.context.getSystemService(android.hardware.display.DisplayManager::class.java)
+            dm.getDisplay(android.view.Display.DEFAULT_DISPLAY)?.isHdr == true
+        }.getOrDefault(false)
+    }
+
+    private fun isHdr(f: Format): Boolean {
+        val codecs = f.codecs.orEmpty().lowercase()
+        val transfer = f.colorInfo?.colorTransfer
+        return transfer == C.COLOR_TRANSFER_ST2084 || transfer == C.COLOR_TRANSFER_HLG ||
+            f.sampleMimeType == androidx.media3.common.MimeTypes.VIDEO_DOLBY_VISION ||
+            codecs.startsWith("dvh") || codecs.startsWith("dva") || codecs.startsWith("hvc1.2") || codecs.startsWith("hev1.2")
+    }
+
     private fun isHighEfficiency(f: Format) = f.codecs.orEmpty().let { "mp4a.40.5" in it || "mp4a.40.29" in it }
 
     private fun refreshTracks(tracks: Tracks) {
@@ -161,6 +193,10 @@ class DesktopPlayer private constructor() {
                     }
                 }
             }
+        }
+        if (!videoPicked && tracks.groups.any { it.type == C.TRACK_TYPE_VIDEO }) {
+            videoPicked = true
+            sdrOnScreenWithoutHdr(tracks)
         }
         // Same rule as the PC (AudioMatch), applied once per media and never over the viewer's own choice.
         if (!audioPicked && audio.isNotEmpty()) {
@@ -250,6 +286,7 @@ class DesktopPlayer private constructor() {
         retries = 0
         pausedAt = 0
         audioPicked = false
+        videoPicked = false
         _stats.value = null
         _status.update { PlayerStatus(title = req.title, buffering = true, volume = it.volume, muted = it.muted, session = req.session) }
         exo.setPlaybackSpeed(1f)
@@ -329,6 +366,7 @@ class DesktopPlayer private constructor() {
 
     /** The audio track of this media is set (by the rule or by the viewer): later track updates leave it alone. */
     private var audioPicked = false
+    private var videoPicked = false
     fun setSubtitles(id: Int) = ui { choose(C.TRACK_TYPE_TEXT, id) }
     fun setRate(rate: Float) = ui { exo.setPlaybackSpeed(rate); _status.update { it.copy(rate = rate) } }
     fun setSubtitleDelay(ms: Long) { _status.update { it.copy(subtitleDelayMs = ms) } }
