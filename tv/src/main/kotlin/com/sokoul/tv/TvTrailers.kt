@@ -40,11 +40,17 @@ object TvTrailers {
     /** The best picture up to 1080p, with the original sound. */
     suspend fun best(keys: List<String>): TrailerStream? = withContext(Dispatchers.IO) {
         ready
-        keys.take(MAX_TRIES).firstNotNullOfOrNull { key ->
-            found[key]?.takeIf { it.first > System.currentTimeMillis() }?.second ?: runCatching { extract(key) }.getOrNull()?.also {
+        // The sharpest of the candidates, stopping at the first full HD one: TMDB lists a 360p upload as readily as the
+        // studio's 1080p, and the first that answered was played whatever its size (2026-11-24).
+        var best: TrailerStream? = null
+        for (key in keys.take(MAX_TRIES)) {
+            val stream = found[key]?.takeIf { it.first > System.currentTimeMillis() }?.second ?: runCatching { extract(key) }.getOrNull()?.also {
                 found[key] = System.currentTimeMillis() + KEEP_MS to it
-            }
+            } ?: continue
+            if ((stream.height ?: 0) >= MAX_HEIGHT) return@withContext stream
+            if (best == null || (stream.height ?: 0) > (best.height ?: 0)) best = stream
         }
+        best
     }
 
     private fun extract(key: String): TrailerStream? {
@@ -52,7 +58,9 @@ object TvTrailers {
         e.fetchPage()
         val video = e.videoOnlyStreams
             .filter { it.deliveryMethod == DeliveryMethod.PROGRESSIVE_HTTP && it.isUrl && it.height <= MAX_HEIGHT }
-            .maxByOrNull { it.height } ?: return null
+            // At the same height, the highest bitrate: YouTube offers a 1080p from under 1 to near 7 Mb/s, and the first
+            // listed was taken, often the faintest.
+            .maxWithOrNull(compareBy({ it.height }, { it.bitrate })) ?: return null
         val sounds = e.audioStreams.filter { it.deliveryMethod == DeliveryMethod.PROGRESSIVE_HTTP && it.isUrl }
         val audio = (sounds.filter { it.audioTrackType == AudioTrackType.ORIGINAL }.ifEmpty { sounds }).maxByOrNull { it.averageBitrate } ?: return null
         return TrailerStream(video.content, audio.content, "newpipe", video.height, key)

@@ -311,7 +311,7 @@ class InterfaceTest {
     @Test
     fun trailer_waits_then_plays_with_sound_settings_untouched_and_stops() = runBlocking {
         val engine = FakeEngine()
-        val trailer = TrailerController(engine, { _: List<String> -> TrailerStream("https://v.test/x", "https://a.test/y", "yt-dlp") }, scope(), delayMs = 150)
+        val trailer = TrailerController(engine, { _: List<String> -> TrailerStream("https://v.test/x", "https://a.test/y", "yt-dlp", 1080) }, scope(), delayMs = 150)
         trailer.prepare("dQw4w9WgXcQ", "T")
         assertTrue("must wait before starting", engine.played.isEmpty())
         waitUntil("trailer started") { trailer.playing }
@@ -324,7 +324,7 @@ class InterfaceTest {
     @Test
     fun a_trailer_that_ends_at_once_gives_way_to_the_next() = runBlocking {
         val engine = FakeEngine()
-        val trailer = TrailerController(engine, { keys: List<String> -> TrailerStream("https://v.test/${keys.first()}", null, "yt-dlp", key = keys.first()) }, scope(), delayMs = 10)
+        val trailer = TrailerController(engine, { keys: List<String> -> TrailerStream("https://v.test/${keys.first()}", null, "yt-dlp", 1080, key = keys.first()) }, scope(), delayMs = 10)
         trailer.prepare(listOf("brokenlink", "goodvideo1"), "T")
         val end = System.currentTimeMillis() + 3_000
         while (engine.played.isEmpty() && System.currentTimeMillis() < end) delay(10)
@@ -337,9 +337,22 @@ class InterfaceTest {
     }
 
     @Test
+    fun a_trailer_below_full_hd_never_plays_by_itself() = runBlocking {
+        val engine = FakeEngine()
+        val trailer = TrailerController(engine, { TrailerStream("https://v.test/x", null, "yt-dlp", 720, key = "softvideo1") }, scope(), delayMs = 10)
+        trailer.prepare(listOf("softvideo1"), "Soft")
+        val end = System.currentTimeMillis() + 1_000
+        while (trailer.pending && System.currentTimeMillis() < end) delay(10)
+        assertEquals(false, trailer.pending)
+        assertEquals(0, engine.played.size)
+        // A scope trailer 1920x800 is full HD.
+        assertEquals(1080, TrailerStream("https://v.test/x", null, "yt-dlp", 800, width = 1920).sharpness)
+    }
+
+    @Test
     fun a_page_below_cannot_stop_the_trailer_of_the_page_on_top() = runBlocking {
         val engine = FakeEngine()
-        val trailer = TrailerController(engine, { TrailerStream("https://v.test/x", null, "yt-dlp") }, scope(), delayMs = 10)
+        val trailer = TrailerController(engine, { TrailerStream("https://v.test/x", null, "yt-dlp", 1080) }, scope(), delayMs = 10)
         val below = Any()
         val top = Any()
         trailer.prepare(listOf("belowvideo"), "Below", below)
@@ -362,7 +375,7 @@ class InterfaceTest {
     @Test
     fun interaction_before_the_delay_cancels_the_trailer() = runBlocking {
         val engine = FakeEngine()
-        val trailer = TrailerController(engine, { TrailerStream("https://v.test/x", null, "yt-dlp") }, scope(), delayMs = 300)
+        val trailer = TrailerController(engine, { TrailerStream("https://v.test/x", null, "yt-dlp", 1080) }, scope(), delayMs = 300)
         trailer.prepare("dQw4w9WgXcQ", "T")
         trailer.stop()
         delay(500)

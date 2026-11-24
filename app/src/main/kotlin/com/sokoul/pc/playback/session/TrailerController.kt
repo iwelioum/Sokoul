@@ -69,6 +69,12 @@ class TrailerController(
                 PcLog.event("trailer resolved in ${System.currentTimeMillis() - asked}ms found=${stream != null} method=${stream?.method} height=${stream?.height}")
                 waited.join()
                 if (stream == null) break
+                // Played by itself only when sharp: below full HD the still image is the better picture (the user,
+                // 2026-11-24). The resolver already returns the sharpest of the candidates, so none left would do better.
+                if (stream.sharpness < MIN_AUTOPLAY_SHARPNESS) {
+                    PcLog.event("trailer ${stream.key} not played: ${stream.sharpness}p is below ${MIN_AUTOPLAY_SHARPNESS}p")
+                    break
+                }
                 if (playStream(stream, title, asked)) return@launch
                 // Nothing else can be said about a key that did not resolve to itself: drop the first one.
                 left = left.filter { it != stream.key }.takeIf { it.size < left.size } ?: left.drop(1)
@@ -130,6 +136,8 @@ class TrailerController(
 
     companion object {
         const val START_DELAY_MS = 3_000L
+        /** Full HD, height or 16:9-equivalent width: a 1920x800 scope trailer counts. Unknown size does not. */
+        const val MIN_AUTOPLAY_SHARPNESS = 1080
         private const val STARTUP_TIMEOUT_MS = 30_000L
         private const val END_MARGIN_MS = 800L
         private const val MIN_REAL_PLAY_MS = 5_000L
