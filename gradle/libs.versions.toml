@@ -41,6 +41,10 @@ sqliteJdbc = "3.47.1.0"
 javaxInject = "1"
 socketIo = "2.1.1"
 
+# Sokoul server (server/)
+ktor = "3.0.3"
+slf4j = "2.0.16"
+
 [libraries]
 desugar-jdk-libs = { group = "com.android.tools", name = "desugar_jdk_libs", version.ref = "desugar" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -109,6 +113,15 @@ javax-inject = { group = "javax.inject", name = "javax.inject", version.ref = "j
 socketio-client = { group = "io.socket", name = "socket.io-client", version.ref = "socketIo" }
 vlcj = { group = "uk.co.caprica", name = "vlcj", version.ref = "vlcj" }
 sqlite-jdbc = { group = "org.xerial", name = "sqlite-jdbc", version.ref = "sqliteJdbc" }
+
+ktor-server-core = { group = "io.ktor", name = "ktor-server-core", version.ref = "ktor" }
+ktor-server-netty = { group = "io.ktor", name = "ktor-server-netty", version.ref = "ktor" }
+ktor-server-content-negotiation = { group = "io.ktor", name = "ktor-server-content-negotiation", version.ref = "ktor" }
+ktor-serialization-kotlinx-json = { group = "io.ktor", name = "ktor-serialization-kotlinx-json", version.ref = "ktor" }
+ktor-server-status-pages = { group = "io.ktor", name = "ktor-server-status-pages", version.ref = "ktor" }
+ktor-server-call-logging = { group = "io.ktor", name = "ktor-server-call-logging", version.ref = "ktor" }
+ktor-server-test-host = { group = "io.ktor", name = "ktor-server-test-host", version.ref = "ktor" }
+slf4j-simple = { group = "org.slf4j", name = "slf4j-simple", version.ref = "slf4j" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

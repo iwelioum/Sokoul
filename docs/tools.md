@@ -15,6 +15,7 @@ Scripts in [`tools/`](../tools). None of them prints a key; private inputs go to
 | `export-private-build-keys.py` | Write the keys typed on this PC into a private build input, without printing them |
 | `prepare-private-tv-config.py`, `configure-tv-private.py` | Prepare and import a private IPTV source on a TV (owner's devices only) |
 | `prepare-curl-impersonate.py` | Fetch the pinned curl-impersonate Android binaries into the build output |
+| `server.ps1`, `server.sh` | Sokoul server: `run`, `backup`, and printed steps for `install-service` and `tunnel` ([server.md](server.md)) |
 
 ## Live checks
 

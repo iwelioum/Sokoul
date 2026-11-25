@@ -22,5 +22,7 @@ include(":core")
 include(":extractor")
 include(":sources")
 include(":app")
+// The private Sokoul server (Ktor), replacing API/ lot by lot: openspec/changes/sokoul-server.
+include(":server")
 // The TV app needs the Android SDK: tools/build-tv.sh sets ANDROID_HOME. The Windows build never does.
 if (System.getenv("ANDROID_HOME") != null) include(":tv")
