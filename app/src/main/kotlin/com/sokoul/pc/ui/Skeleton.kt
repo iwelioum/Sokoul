@@ -71,10 +71,11 @@ private fun Modifier.pulsing(pulse: State<Float>, corner: Dp) = drawBehind {
 
 /** A row still loading: the heading bar, then cards of the size the row will have. */
 @Composable
-fun SkeletonRow(landscape: Boolean, modifier: Modifier = Modifier, cards: Int = 6, square: Boolean = false) {
+fun SkeletonRow(landscape: Boolean, modifier: Modifier = Modifier, cards: Int = 6, square: Boolean = false, cardWidth: Dp? = null, cardHeight: Dp? = null) {
     val pulse = rememberPulse()
-    val width = if (landscape) 414.dp else CardMetrics.PosterWidth
-    val height = when {
+    // A row with cards of its own size (the anime calendar's) gives it, so nothing moves when the row replaces this.
+    val width = cardWidth ?: if (landscape) 414.dp else CardMetrics.PosterWidth
+    val height = cardHeight ?: when {
         landscape -> 232.dp
         square -> CardMetrics.PosterWidth
         else -> CardMetrics.PosterHeight

@@ -111,11 +111,12 @@ class AnimeSamaDirectTest {
         start()
     }
 
-    @Test fun aNumberedFrenchEditionCanPublishMoreEpisodesFromALegacyScript() = runBlocking {
+    // The players are inline in the season page: the separate episodes.js answers 403 since 2026-11 and is not asked.
+    // The quick search counts the season by its original page; episode 2, past it, gets the thorough count (one page more).
+    @Test fun aNumberedFrenchEditionCanPublishMoreEpisodes() = runBlocking {
         val site = site(mapOf(
             "/catalogue/frieren/saison1/vostfr/" to """<script>var languesDispo = ["vostfr","vf3"]; var eps1 = ["https://vidmoly.to/embed-sub.html"];</script>""",
-            "/catalogue/frieren/saison1/vf3/" to """<script src="episodes.js"></script>""",
-            "/catalogue/frieren/saison1/vf3/episodes.js" to """var eps1 = ["https://video.sibnet.ru/shell.php?videoid=7", "https://video.sibnet.ru/shell.php?videoid=8"];""",
+            "/catalogue/frieren/saison1/vf3/" to """<script>var eps1 = ["https://video.sibnet.ru/shell.php?videoid=7", "https://video.sibnet.ru/shell.php?videoid=8"];</script>""",
         ))
         try {
             val http = OkHttpClient()
@@ -124,7 +125,7 @@ class AnimeSamaDirectTest {
             val result = source.find(PlayRequest("tv", 209867, 1, 2, "Frieren", null, null), listOf("Frieren"), 2)
             assertEquals(AudioLanguage.VF, result.versions.single().language)
             assertEquals(listOf("FR"), result.versions.single().announcedAudio)
-            assertEquals(5, site.requestCount)
+            assertEquals(4, site.requestCount)
         } finally {
             site.shutdown()
         }

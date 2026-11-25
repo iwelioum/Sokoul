@@ -48,8 +48,24 @@ sealed interface PosterArt {
 fun posterArt(item: TmdbItem, info: TmdbInfo?): PosterArt {
     val clean = info?.cleanPoster ?: return item.poster?.let { PosterArt.Original(it) }
         ?: PosterArt.WithTitle(info?.backdrop ?: item.backdrop, item.title)
-    val logo = info.logo
+    val logo = readableLogo(info)
     return if (logo != null) PosterArt.WithLogo(clean, logo) else PosterArt.WithTitle(clean, item.title)
+}
+
+/** Languages whose script a French or English reader cannot read: a logo or a poster in them does not name the work. */
+private val UNREADABLE_SCRIPTS = setOf("ja", "zh", "cn", "ko", "th", "ar", "he", "fa", "hi", "ta", "te", "ru", "uk", "el", "bg", "ka")
+
+fun unreadableScript(language: String?) = language != null && language in UNREADABLE_SCRIPTS
+
+/**
+ * The logo to draw over a title, or null for its name in text. TMDB's pick runs from the local language to the original
+ * one before English, so a Japanese work without a French logo got its Japanese one, and the anime hero said nothing a
+ * viewer here could read (Google TV, 2026-11-24). For such a work, the English logo or none.
+ */
+fun readableLogo(info: TmdbInfo?): String? {
+    info ?: return null
+    if (!unreadableScript(info.originalLanguage)) return info.logo
+    return info.logoEn?.replace(".svg", ".png")
 }
 
 /** A landscape card for a title: its image, with the logo on top, or the title in bold when it has none. */
@@ -60,7 +76,7 @@ fun BoxScope.SmartLandscape(catalog: CatalogApi, item: TmdbItem) {
     val info = artwork.second
     Art(info?.backdrop ?: item.backdrop ?: item.poster, Modifier.fillMaxSize())
     Box(Modifier.fillMaxSize().background(Color(0x40000000)))
-    val url = info?.logo
+    val url = readableLogo(info)
     val logo by produceState<Pair<Boolean, androidx.compose.ui.graphics.ImageBitmap?>>(url?.let(ImageLoader::cached).let { (it != null) to it }, url) {
         value = true to url?.let { runCatching { ImageLoader.load(it) }.getOrNull() }
     }
@@ -87,9 +103,7 @@ private val LogoFade = Brush.verticalGradient(0f to Color(0x14000000), 0.5f to C
 
 /** The poster with its logo or title. Until the artwork is known, the original poster holds the place. */
 @Composable
-fun BoxScope.SmartPoster(catalog: CatalogApi, item: TmdbItem) {
-    val info by produceState<TmdbInfo?>(null, item.id) { value = catalog.artwork(item.kind(), item.id) }
-    val art = posterArt(item, info)
+fun BoxScope.SmartPoster(item: TmdbItem, art: PosterArt) {
     Art(art.image, Modifier.fillMaxSize())
     when (art) {
         is PosterArt.Original -> Unit

@@ -173,7 +173,7 @@ fun HomeScreen(
     val layoutJson = deps.uiRevision.let { if (kind == PageKind.Home) deps.prefs.homeRowsJson else null }
     val plan = remember(kind, layoutJson) { com.sokoul.pc.data.HomeLayout.decode(layoutJson).apply(deps.catalog.plan(kind)) }
     val loaded = remember(kind) { mutableStateMapOf<String, List<TmdbItem>>() }
-    var animeRowLimit by remember(kind) { mutableIntStateOf(3) }
+    var animeRowLimit by remember(kind) { mutableIntStateOf(ANIME_FIRST_ROWS) }
     // Read off the interface thread: read on it, it waited for the database while the TV guide was being written, and the
     // Chromecast reported the app as not responding (ANR, 2026-11-22).
     val resumes by produceState(emptyList<Resume>(), active, kind) {
@@ -198,14 +198,24 @@ fun HomeScreen(
     }
 
     // Keyed on the plan too: a row hidden in the settings and shown again is loaded then, and one already loaded is kept.
-    val rowsReady = kind != PageKind.Anime || hero != null
-    LaunchedEffect(kind, plan, rowsReady) {
-        if (!rowsReady) return@LaunchedEffect
+    // The rows load from the start, alongside the hero: on the Anime page they waited for it, and its first rows came that
+    // much later (2026-11-24). Only their display waits for the hero (see the list below).
+    LaunchedEffect(kind, plan) {
         val gate = Semaphore(PARALLEL_ROWS)
         val scheduled = mutableSetOf<String>()
         androidx.compose.runtime.snapshotFlow { if (kind == PageKind.Anime) animeRowLimit else Int.MAX_VALUE }.collect { limit ->
             plan.filterIsInstance<PageRow.Titles>().take(limit).filter { loaded[it.id] == null && scheduled.add(it.id) }.forEach { row ->
-                launch { gate.withPermit { loaded[row.id] = deps.catalog.rowItems(row.source) } }
+                launch {
+                    // A row that fails is an empty row, which does not show: its failure no longer cancelled every other
+                    // row's loading with it, leaving their loading shapes for good.
+                    loaded[row.id] = try {
+                        gate.withPermit { deps.catalog.rowItems(row.source) }
+                    } catch (e: kotlinx.coroutines.CancellationException) {
+                        throw e
+                    } catch (_: Exception) {
+                        emptyList()
+                    }
+                }
             }
         }
     }
@@ -214,9 +224,11 @@ fun HomeScreen(
         if (because != null) loaded[BECAUSE] = deps.catalog.similar(because.kind, because.tmdbId)
     }
 
-    val visible = plan.filter { row ->
+    // A row still on its way keeps its place in the plan's order as a loading shape: rows arriving out of order were
+    // inserted above the one in focus and moved it (2026-11-24). A row that arrives too short leaves its place.
+    val present = plan.filter { row ->
         when (row) {
-            is PageRow.Titles -> (loaded[row.id]?.size ?: 0) >= row.minItems
+            is PageRow.Titles -> loaded[row.id]?.let { it.size >= row.minItems } ?: true
             is PageRow.Because -> (loaded[BECAUSE]?.size ?: 0) >= PageRow.MIN_ITEMS
             is PageRow.Sagas -> sagas.isNotEmpty()
             is PageRow.Categories -> categories.isNotEmpty()
@@ -225,6 +237,13 @@ fun HomeScreen(
             is PageRow.Discover -> deps.catalog.discover != null
         }
     }
+    fun pending(row: PageRow) = row is PageRow.Titles && loaded[row.id] == null
+    // The shapes between rows already there all stay; after the last one, only the next few, so the page never fills
+    // with them.
+    val lastArrived = present.indexOfLast { !pending(it) }
+    var shapesAfter = 0
+    val visible = present.filterIndexed { i, row -> !pending(row) || i < lastArrived || shapesAfter++ < PENDING_SHOWN }
+    val firstReal = visible.indexOfFirst { !pending(it) }
     // One choice for the undecided (docs/design/tv-home.md, 1.1): titles like the last one watched, not already begun,
     // in an order that stays the same all day. Hidden when there is no history to start from.
     val tonight = remember(kind, because?.tmdbId, loaded[BECAUSE], resumes) {
@@ -252,8 +271,8 @@ fun HomeScreen(
         if (kind != PageKind.Anime) return@LaunchedEffect
         val totalRows = plan.count { it is PageRow.Titles }
         androidx.compose.runtime.snapshotFlow { list.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0 }.collect { last ->
-            if (last >= (visible.size - 3).coerceAtLeast(1)) {
-                animeRowLimit = (animeRowLimit + 3).coerceAtMost(totalRows)
+            if (last >= (visible.size - ANIME_AHEAD).coerceAtLeast(1)) {
+                animeRowLimit = (animeRowLimit + ANIME_STEP).coerceAtMost(totalRows)
             }
         }
     }
@@ -320,8 +339,13 @@ fun HomeScreen(
                     }
                 }
             }
-            itemsIndexed(visible, key = { _, row -> row.id }) { rowIndex, row ->
-                val first = rowIndex == 0 && !hasContinue
+            // One key per row whether loading or loaded: the row replaces its loading shape in the same place.
+            itemsIndexed(visible, key = { _, row -> row.id }, contentType = { _, row -> if (pending(row)) SKELETON else row.javaClass }) { rowIndex, row ->
+                if (row is PageRow.Titles && loaded[row.id] == null) {
+                    com.sokoul.pc.ui.SkeletonRow(landscape = row.style == RowStyle.Landscape, square = row.style == RowStyle.Square)
+                    return@itemsIndexed
+                }
+                val first = rowIndex == firstReal && !hasContinue
                 val listIndex = rowIndex + (if (hasHero) 1 else 0) + (if (hasContinue) 1 else 0)
                 val up = if (first) primary else null
                 fun focusFor(index: Int): FocusRequester? = if (first && index == 0) firstRow else null
@@ -381,11 +405,6 @@ fun HomeScreen(
                     }
                 }
             }
-            // Rows still on their way keep their place with a loading shape (the next two only, so the page never fills with them).
-            val pending = plan.filterIsInstance<PageRow.Titles>().filter { loaded[it.id] == null }.take(PENDING_SHOWN)
-            itemsIndexed(pending, key = { _, row -> "skeleton-${row.id}" }) { _, row ->
-                com.sokoul.pc.ui.SkeletonRow(landscape = row.style == RowStyle.Landscape, square = row.style == RowStyle.Square)
-            }
         }
     }
     }
@@ -395,6 +414,14 @@ fun HomeScreen(
 private class Tonight(val because: String, val titles: List<TmdbItem>)
 
 private const val PENDING_SHOWN = 2
+private const val SKELETON = "skeleton"
+/**
+ * The Anime page's rows asked at first, then how many more each time the list nears its end (within [ANIME_AHEAD] rows).
+ * AniList allows few calls a minute, so they are not all asked at once; four fill the first screens.
+ */
+private const val ANIME_FIRST_ROWS = 4
+private const val ANIME_STEP = 3
+private const val ANIME_AHEAD = 4
 /** Titles a row shows before "See All": seven to ten keep a choice easy (docs/design/tv-home.md, 1.1). */
 private const val ROW_CAP = 10
 private const val TOP_COUNT = 10

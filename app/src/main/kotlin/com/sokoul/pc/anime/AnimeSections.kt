@@ -54,8 +54,9 @@ import com.sokoul.pc.ui.tvFocusable
 import kotlinx.coroutines.launch
 
 /**
- * On the page of a title: the work in its two forms, side by side. The episodes, their music and their chapters on one
- * side, the book and its reader on the other.
+ * On the page of a title, below its episodes and trailers: where to watch it, the book and its reader, the calendar, the
+ * music and the films around it. The episodes are not part of it: drawn here, they were made again when the anime's link
+ * arrived (back to season 1, reloaded, focus lost), and these rows came in above the cast (2026-11-24).
  */
 @Composable
 fun AnimeSections(
@@ -65,12 +66,10 @@ fun AnimeSections(
     onRead: (ReaderRequest) -> Unit,
     onPlayThemes: (List<AnimeTheme>, Int, com.sokoul.pc.ui.CardOrigin?) -> Unit,
     onOpenWork: (com.sokoul.pc.data.anime.AniTitle, com.sokoul.pc.ui.CardOrigin) -> Unit = { _, _ -> },
-    episodes: @Composable () -> Unit,
 ) {
     // One page for the whole work, every part one row below the other: tabs could not be reached with the remote, so
     // the book, the calendar and the music were out of reach on the TV.
     Column(Modifier.fillMaxWidth().testTag("anime-sections"), verticalArrangement = Arrangement.spacedBy(36.dp)) {
-        episodes()
         SourceLinks(L("Where to watch", "Où regarder").text(), link.streamingLinks, "anime-streaming-sources")
         if (link.manga != null) MangaSection(deps, item, link, onRead)
         CalendarRow(link)
@@ -242,21 +241,25 @@ fun MangaSection(deps: AppDeps, item: TmdbItem?, link: AnimeLink, onRead: (Reade
             val volumes = remember(list) { list.mapNotNull { it.volume }.distinct() }
             var volume by remember(list) { mutableStateOf(list.firstOrNull { it.number == resume?.chapter }?.volume) }
             if (volumes.size > 1) {
+                // Counted once per book, not on each card as it is composed.
+                val sizes = remember(list) { list.groupingBy { it.volume }.eachCount() }
                 CardRow(L("Volumes", "Tomes").text(), volumes, key = { it }, testTag = "row-volumes") { _, v ->
-                    val inside = list.filter { it.volume == v }
+                    val inside = sizes[v] ?: 0
                     FocusCard(VOLUME_W, VOLUME_H, { volume = if (volume == v) null else v }, tag = "volume-$v") { focused ->
                         Art(book.cover, Modifier.fillMaxSize())
                         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.35f to Color(0x33000000), 1f to Color(0xF2000000))))
                         Column(Modifier.align(Alignment.BottomStart).padding(14.dp)) {
                             Label(L("Volume $v", "Tome $v").text(), Type.Meta.copy(fontWeight = FontWeight.Bold), maxLines = 1)
-                            Label(L("${inside.size} chapters", "${inside.size} chapitres").text(), Type.Body, if (focused || volume == v) Palette.OnBackground else Palette.Secondary, maxLines = 1)
+                            Label(L("$inside chapters", "$inside chapitres").text(), Type.Body, if (focused || volume == v) Palette.OnBackground else Palette.Secondary, maxLines = 1)
                         }
                     }
                 }
             }
-            val shown = if (volume != null) list.filter { it.volume == volume } else list.takeLast(MAX_ROW).asReversed()
+            val shown = remember(list, volume) { if (volume != null) list.filter { it.volume == volume } else list.takeLast(MAX_ROW).asReversed() }
+            // Where each chapter sits in the book, found once: indexOf on each press went through the whole book.
+            val at = remember(list) { list.withIndex().associate { (i, c) -> c.id to i } }
             CardRow((volume?.let { L("Chapters of volume $it", "Chapitres du tome $it") } ?: L("Chapters", "Chapitres")).text(), shown, key = { it.id }, testTag = "row-chapters") { _, c ->
-                ChapterCard(c, c.number == resume?.chapter) { onRead(anime.readerRequest(book, list, list.indexOf(c), 0)) }
+                ChapterCard(c, c.number == resume?.chapter) { onRead(anime.readerRequest(book, list, at[c.id] ?: list.indexOf(c), 0)) }
             }
         }
     }

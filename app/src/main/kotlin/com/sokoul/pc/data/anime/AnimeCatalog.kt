@@ -9,7 +9,14 @@ import java.time.LocalDate
 import java.util.concurrent.ConcurrentHashMap
 import com.sokoul.pc.data.kind
 import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
+import kotlinx.coroutines.withContext
+import com.sokoul.iptv.data.anime.AnimeType
+import com.sokoul.pc.data.providers.RequestPriority
+import com.sokoul.pc.data.providers.SingleFlight
 
 /** A kind of story the categories are sorted into. */
 enum class CategoryGroup { Genres, Audience, Characters, Worlds, Action, Fantasy, SciFi, Drama, Comedy, Romance, SliceOfLife, Sports, Arts, Society }
@@ -69,9 +76,11 @@ data class AniRow(val key: String, val name: (Boolean) -> String, val query: Ani
 /** Anime and manga from AniList, matched with the app's catalog so that they open and play like any other title. */
 class AnimeCatalog(val client: AniListClient, val fans: FanSources, private val catalog: CatalogApi, private val db: com.sokoul.desktop.data.DesktopDb? = null,
     private val ghibli: GhibliClient? = null) {
-    private val matching = AnimeMatchCache()
+    // Matches and links are kept in the providers' cache table, so that a relaunch does not redo them (2026-11-24).
+    private val matching = AnimeMatchCache(read = db?.let { d -> d::tmdbGet }, write = db?.let { d -> d::tmdbPut })
     private val works = ConcurrentHashMap<Int, AniTitle>()
     private val links = ConcurrentHashMap<Int, AnimeLink>()
+    private val linking = SingleFlight<String, AnimeLink?>()
     private val mangaIds = ConcurrentHashMap<Int, String>()
 
     /** A row of the page, as the same items as every other row: same cards, same logos, same page when opened. */
@@ -93,7 +102,7 @@ class AnimeCatalog(val client: AniListClient, val fans: FanSources, private val 
     suspend fun ghibliItems(): List<TmdbItem> = kotlinx.coroutines.coroutineScope {
         ghibli?.films().orEmpty().map { film ->
             async {
-                matching.resolve("ghibli:${film.id}") {
+                matching.resolve("ghibli:${film.id}:${Strings.catalogLanguage()}") {
                     try { film.match(catalog.search(film.title)) }
                     catch (c: kotlinx.coroutines.CancellationException) { throw c }
                     catch (_: Exception) { null }
@@ -123,31 +132,102 @@ class AnimeCatalog(val client: AniListClient, val fans: FanSources, private val 
         // No genres known (a title opened from search, My list or Continue watching): the language alone decides, and
         // AniList's answer below. Before, such a title lost its whole anime part.
         if (known == null && item.genreIds.isNotEmpty() && ANIMATION_GENRE !in item.genreIds) return null
+        // The title page is waiting: its calls go before the rows' (2026-11-24), and a second visit reads what was kept.
+        val storeKey = "link:${item.kind()}:${item.id}"
+        return linking.run(storeKey) {
+            links[item.id]?.let { return@run it }
+            keptLink(storeKey)?.let { return@run it.also { links[item.id] = it } }
+            withContext(RequestPriority.Urgent) { findLink(item, known) }?.also {
+                links[item.id] = it
+                keepLink(storeKey, it)
+            }
+        }
+    }
+
+    private suspend fun findLink(item: TmdbItem, known: AniTitle?): AnimeLink? {
         // By its ids first: the name alone opened the neighbour ("Demon Slayer" found "Onigiri").
         val byId = if (known == null) catalog.animeIdentity?.let { a -> runCatching { a.identity(item.kind(), item.id) }.getOrNull() }
             ?.main?.anilist?.let { id -> runCatching { client.byId(id) }.getOrNull() } else null
         val work = known ?: byId ?: listOfNotNull(item.originalTitle, item.title).firstNotNullOfOrNull { runCatching { client.find(it, MediaKind.ANIME) }.getOrNull() } ?: return null
         val episodes: suspend () -> Int = {
-            if (item.kind() != "tv") 0 else (1..(catalog.details("tv", item.id)?.seasons ?: 1).coerceAtLeast(1)).sumOf { s -> runCatching { catalog.season(item.id, s).size }.getOrDefault(0) }
+            if (item.kind() != "tv") 0 else seasonSizes(item.id, (catalog.details("tv", item.id)?.seasons ?: 1).coerceAtLeast(1)).sum()
         }
-        return linkOf(work, episodes).also { links[item.id] = it }
+        return linkOf(work, episodes)
     }
 
+    /**
+     * The episodes of seasons 1 to [last] in the catalog, asked side by side, a few at a time: one after the other, a
+     * long series made its title page wait for each season in turn (2026-11-24).
+     */
+    private suspend fun seasonSizes(tvId: Int, last: Int): List<Int> = coroutineScope {
+        val gate = Semaphore(SEASONS_AT_ONCE)
+        (1..last).map { s -> async { gate.withPermit { runCatching { catalog.season(tvId, s).size }.getOrDefault(0) } } }.awaitAll()
+    }
+
+    /**
+     * A work's link. The detail, the sequels and the book are asked side by side, then the music of every season at once
+     * (2026-11-24: they were asked one after the other, each behind AniList's 2 s spacing). A work opened alone (no title
+     * of the catalog) is kept on the device too.
+     */
     suspend fun linkOf(t: AniTitle, episodesInCatalog: (suspend () -> Int)? = null): AnimeLink {
-        val detail = runCatching { client.detail(t.id) }.getOrNull()
+        if (episodesInCatalog != null) return withContext(RequestPriority.Urgent) { buildLink(t, episodesInCatalog) }
+        val storeKey = "work:${t.id}"
+        return linking.run(storeKey) {
+            keptLink(storeKey) ?: withContext(RequestPriority.Urgent) { buildLink(t, null) }.also { keepLink(storeKey, it) }
+        }!!
+    }
+
+    private suspend fun buildLink(t: AniTitle, episodesInCatalog: (suspend () -> Int)?): AnimeLink = coroutineScope {
+        val asked = async { runCatching { client.detail(t.id) }.getOrNull() }
+        val seasons = async { if (t.kind == MediaKind.ANIME) seasonsOf(t, episodesInCatalog) else emptyList() }
+        val detail = asked.await()
         val relations = detail?.relations.orEmpty()
-        val book = if (t.kind == MediaKind.MANGA) t else AnimeMatch.bookOf(relations)
-            ?: runCatching { client.find(t.romaji ?: t.title, MediaKind.MANGA) }.getOrNull()?.takeIf { sameName(it, t) }
-        val bookLinks = if (book == null) emptyList() else runCatching { client.detail(book.id).links }.getOrDefault(emptyList()).filter { it.site.isNotBlank() }.distinctBy { it.url }
-        val chain = if (t.kind == MediaKind.ANIME) seasonsOf(t, episodesInCatalog) else emptyList()
-        val themes = chain.flatMapIndexed { i, s -> runCatching { fans.themes(s.id) }.getOrDefault(emptyList()).map { it.copy(season = i) } }.distinctBy { it.video }
+        val books = async {
+            val book = if (t.kind == MediaKind.MANGA) t else AnimeMatch.bookOf(relations)
+                ?: runCatching { client.find(t.romaji ?: t.title, MediaKind.MANGA) }.getOrNull()?.takeIf { sameName(it, t) }
+            val bookLinks = if (book == null) emptyList() else runCatching { client.detail(book.id).links }.getOrDefault(emptyList()).filter { it.site.isNotBlank() }.distinctBy { it.url }
+            book to bookLinks
+        }
+        val chain = seasons.await()
+        val themes = chain.mapIndexed { i, s -> async { runCatching { fans.themes(s.id) }.getOrDefault(emptyList()).map { it.copy(season = i) } } }
+            .awaitAll().flatten().distinctBy { it.video }
         val adaptations = relations.filter { it.title.kind == MediaKind.ANIME }.map { it.title }.distinctBy { it.id }
-        return AnimeLink(t, book, bookLinks, themes, chain, adaptations,
+        val (book, bookLinks) = books.await()
+        AnimeLink(t, book, bookLinks, themes, chain, adaptations,
             detail?.links.orEmpty().filter { it.type == "STREAMING" }.distinctBy { it.url })
     }
 
-    /** The anime and its sequels, in order: each is one season here. */
-    private suspend fun seasonsOf(first: AniTitle, episodesInCatalog: (suspend () -> Int)?): List<AniTitle> {
+    private suspend fun keptLink(key: String): AnimeLink? {
+        val d = db ?: return null
+        val (text, at) = withContext(kotlinx.coroutines.Dispatchers.IO) { runCatching { d.tmdbGet(LINK_PREFIX + key) }.getOrNull() } ?: return null
+        if (System.currentTimeMillis() - at >= LINK_KEPT_MS) return null
+        return AnimeLinkCodec.decode(text)
+    }
+
+    private suspend fun keepLink(key: String, link: AnimeLink) {
+        val d = db ?: return
+        withContext(kotlinx.coroutines.Dispatchers.IO) { runCatching { d.tmdbPut(LINK_PREFIX + key, AnimeLinkCodec.encode(link), System.currentTimeMillis()) } }
+    }
+
+    /**
+     * The anime and its sequels, in order: each is one season here. Fribb's list says which AniList entries the catalog's
+     * series holds, in order: all of them are then asked in one request (2026-11-24). Without the list, each sequel is
+     * found from the one before.
+     */
+    private suspend fun seasonsOf(first: AniTitle, episodesInCatalog: (suspend () -> Int)?): List<AniTitle> =
+        runCatching { seasonsFromList(first) }.getOrNull() ?: seasonsBySequels(first, episodesInCatalog)
+
+    private suspend fun seasonsFromList(first: AniTitle): List<AniTitle>? {
+        val index = catalog.animeIdentity?.localIndex() ?: return null
+        val series = index.anilist(first.id)?.tmdbTv ?: return null
+        val ids = AnimeMatch.seasonIds(index.series(series), first.id) ?: return null
+        if (ids.size == 1) return listOf(first)
+        val found = client.byIds(ids.drop(1)).associateBy { it.id }
+        // One season AniList did not answer for: the chain would skip it and shift every later one.
+        return (listOf(first) + ids.drop(1).mapNotNull { found[it] }).takeIf { it.size == ids.size }
+    }
+
+    private suspend fun seasonsBySequels(first: AniTitle, episodesInCatalog: (suspend () -> Int)?): List<AniTitle> {
         val chain = mutableListOf(first)
         var at = first
         var limit: Int? = null
@@ -182,7 +262,7 @@ class AnimeCatalog(val client: AniListClient, val fans: FanSources, private val 
 
     /** Its number since the first season, by the one numbering of the app. Null when a season before is of unknown size. */
     suspend fun absoluteEpisode(tmdbId: Int, season: Int, episode: Int): Int? =
-        EpisodeMapper.absolute(season, episode, (1..season).map { s -> runCatching { catalog.season(tmdbId, s).size }.getOrDefault(0) })
+        EpisodeMapper.absolute(season, episode, seasonSizes(tmdbId, season))
 
     /** How many episodes come before this season, or null when one of them is of unknown size. */
     suspend fun seasonOffset(tmdbId: Int, season: Int): Int? = absoluteEpisode(tmdbId, season, 1)?.minus(1)
@@ -312,29 +392,48 @@ class AnimeCatalog(val client: AniListClient, val fans: FanSources, private val 
     }
 
     /** The same work in the app's catalog: this is what opens its page and finds its versions. */
-    suspend fun match(title: AniTitle): TmdbItem? = matching.resolve(title.id) {
-        val kind = if (title.format == "MOVIE") "movie" else "tv"
-        for (name in listOfNotNull(title.english, title.romaji, title.native).distinct()) {
-            val found = try { catalog.search(name) } catch (c: kotlinx.coroutines.CancellationException) {
-                throw c
-            } catch (_: Exception) { emptyList() }
-            AnimeMatch.pick(found, kind, title)?.let {
-                return@resolve it
+    suspend fun match(title: AniTitle): TmdbItem? {
+        var unsure = false
+        return matching.resolve("anilist:${title.id}:${Strings.catalogLanguage()}", keepMiss = { !unsure }) {
+            // Fribb's list on the device knows the catalog's id of most anime: no search, no likeness of names (2026-11-24).
+            byList(title)?.let { return@resolve it }
+            val kind = if (title.format == "MOVIE") "movie" else "tv"
+            for (name in listOfNotNull(title.english, title.romaji, title.native).distinct()) {
+                val found = try { catalog.search(name) } catch (c: kotlinx.coroutines.CancellationException) {
+                    throw c
+                } catch (_: Exception) { unsure = true; emptyList() }
+                AnimeMatch.pick(found, kind, title)?.let {
+                    return@resolve it
+                }
             }
+            null
         }
-        null
+    }
+
+    /** The catalog's title Fribb's list gives for this AniList entry, with its images and names from the catalog. */
+    private suspend fun byList(title: AniTitle): TmdbItem? {
+        val index = try { catalog.animeIdentity?.localIndex() } catch (c: kotlinx.coroutines.CancellationException) { throw c } catch (_: Exception) { null } ?: return null
+        val (kind, id) = AnimeMatch.listed(index.anilist(title.id) ?: return null, title.format) ?: return null
+        val info = try { catalog.artwork(kind, id) } catch (c: kotlinx.coroutines.CancellationException) { throw c } catch (_: Exception) { null } ?: return null
+        return TmdbItem(info.id, info.title, info.originalTitle, info.year, info.poster, info.backdrop, info.rating, info.overview,
+            info.genreIds, info.originalLanguage, mediaType = kind)
     }
 }
 
 private const val CHECKED_WHEN_AT_MOST = 3
 private const val TODAY_ROW = 30
 private const val MAX_SEASONS = 8
+private const val SEASONS_AT_ONCE = 4
+private const val LINK_PREFIX = "animelink:v1:"
+/** A link kept on the device serves for three days: a running series gets its new episodes and music after that. */
+private const val LINK_KEPT_MS = 3 * 24 * 3_600_000L
 private const val MAX_READING = 30
 private const val READING_LIST = "pc.manga_reading"
 private const val ANIMATION_GENRE = 16
 private val ASIAN_ANIMATION = setOf("ja", "zh", "ko")
 
 /** A title of the catalog and what fans know about it. */
+@kotlinx.serialization.Serializable
 data class AnimeLink(
     val anime: AniTitle,
     val manga: AniTitle?,
@@ -344,6 +443,15 @@ data class AnimeLink(
     val adaptations: List<AniTitle>,
     val streamingLinks: List<AniLink> = emptyList(),
 )
+
+/** An [AnimeLink] as kept on the device. Null for anything unreadable (an older shape): it is then looked up again. */
+internal object AnimeLinkCodec {
+    private val json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
+
+    fun encode(link: AnimeLink): String = json.encodeToString(AnimeLink.serializer(), link)
+
+    fun decode(text: String): AnimeLink? = runCatching { json.decodeFromString(AnimeLink.serializer(), text) }.getOrNull()
+}
 
 /** The opening an episode plays, by its number since the first season. */
 fun AnimeLink.openingOn(absolute: Int): AnimeTheme? {
@@ -480,6 +588,25 @@ object AnimeMatch {
         return books.maxWithOrNull(rank)?.title
     }
 
+
+    /**
+     * The catalog title Fribb's list places this entry in: the film for a film, the series for the rest. Null when the
+     * list does not say, and the catalog's search decides.
+     */
+    fun listed(entry: com.sokoul.iptv.data.anime.AnimeEntry, format: String?): Pair<String, Int>? =
+        if (format == "MOVIE") entry.tmdbMovies.firstOrNull()?.let { "movie" to it } else entry.tmdbTv?.let { "tv" to it }
+
+    /**
+     * The AniList ids of a catalog series' seasons from [first] on, in the catalog's order: its TV and web series placed
+     * in a numbered season (specials and films left out). Null when [first] is not among them.
+     */
+    fun seasonIds(entries: List<com.sokoul.iptv.data.anime.AnimeEntry>, first: Int): List<Int>? {
+        val ids = entries.filter { (it.type == AnimeType.TV || it.type == AnimeType.ONA) && (it.tmdbSeason ?: 0) >= 1 && it.anilist != null }
+            .sortedWith(compareBy({ it.tmdbSeason }, { it.tmdbOffset }))
+            .mapNotNull { it.anilist }.distinct()
+        val from = ids.indexOf(first)
+        return if (from < 0) null else ids.drop(from).take(MAX_SEASONS)
+    }
 
     fun pick(results: List<TmdbItem>, kind: String, title: AniTitle): TmdbItem? {
         val animated = results.filter { it.mediaType == kind && ANIMATION_GENRE in it.genreIds }

@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -106,9 +107,22 @@ fun AnimePageRow(
             }
         }
         is PageRow.Books -> {
-            val titles by produceState(emptyList<AniTitle>(), row.query) { value = runCatching { anime.client.titles(row.query) }.getOrDefault(emptyList()) }
-            if (titles.isNotEmpty()) {
-                CardRow(row.title.text(), titles, key = { it.id }, testTag = "row-${row.id}", onActive = onActive, upTarget = up) { i, t ->
+            val titles by produceState<List<AniTitle>?>(null, row.query) {
+                value = try {
+                    anime.client.titles(row.query)
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
+                } catch (_: Exception) {
+                    emptyList()
+                }.distinctBy { it.id }
+            }
+            val list = titles
+            // A loading shape keeps the row's place: it showed nothing until its books came, then pushed the rows below
+            // down (2026-11-24).
+            if (list == null) {
+                com.sokoul.pc.ui.SkeletonRow(landscape = false, cardWidth = READ_W, cardHeight = READ_H)
+            } else if (list.isNotEmpty()) {
+                CardRow(row.title.text(), list, key = { it.id }, testTag = "row-${row.id}", onActive = onActive, upTarget = up) { i, t ->
                     AniCard(t, tag = "${row.id}-$i") { origin -> onWork(t, origin) }
                 }
             }
@@ -137,11 +151,12 @@ internal fun ToolTile(label: String, tag: String, requester: FocusRequester?, ic
 private val TOOL_W = 320.dp
 private val TOOL_H = 150.dp
 
-/** Which chapters an episode adapts, whether it is filler, and which opening it plays. */
+/**
+ * Which chapters an episode adapts, whether it is filler, and which opening it plays. The chapters are asked once for the
+ * whole season by the row: asked by each card, every card made ahead of the scroll started a request of its own.
+ */
 @Composable
-fun EpisodeNote(deps: AppDeps, link: AnimeLink, absolute: Int, kind: EpisodeKind?) {
-    val anime = deps.anime ?: return
-    val chapters by produceState(emptyList<Int>(), link.anime.id, absolute) { value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { anime.chaptersOf(link, absolute) } }
+fun EpisodeNote(link: AnimeLink, absolute: Int, kind: EpisodeKind?, chapters: List<Int>) {
     val theme = link.openingOn(absolute)
     val parts = listOfNotNull(
         chapters.takeIf { it.isNotEmpty() }?.let { c -> FanParse.chapterRuns(c).let { if (c.size == 1) L("Chapter $it", "Chapitre $it").text() else L("Chapters $it", "Chapitres $it").text() } },
@@ -159,9 +174,10 @@ fun EpisodeNote(deps: AppDeps, link: AnimeLink, absolute: Int, kind: EpisodeKind
 @Composable
 fun FillerPill(hide: Boolean, onClick: () -> Unit) {
     var has by remember { mutableStateOf(false) }
-    val fill by animateColorAsState(if (has) Palette.FocusFill else if (hide) Palette.ButtonFill else Color.Transparent)
+    // Read when drawing, not in composition: the pill is not composed again at each frame of its fade.
+    val fill = animateColorAsState(if (has) Palette.FocusFill else if (hide) Palette.ButtonFill else Color.Transparent)
     Box(
-        Modifier.height(Metrics.ButtonHeight).clip(RoundedCornerShape(50)).background(fill)
+        Modifier.height(Metrics.ButtonHeight).clip(RoundedCornerShape(50)).drawBehind { drawRect(fill.value) }
             .tvFocusable(onFocusChanged = { has = it }, onClick = onClick).padding(horizontal = 30.dp).testTag("hide-filler"),
         contentAlignment = Alignment.Center,
     ) {

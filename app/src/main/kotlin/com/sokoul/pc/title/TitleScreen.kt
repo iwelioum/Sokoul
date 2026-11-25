@@ -65,6 +65,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -849,18 +850,14 @@ private fun Sections(
         verticalArrangement = Arrangement.spacedBy(36.dp),
     ) {
         val fans = link
-        if (fans != null) {
-            com.sokoul.pc.anime.AnimeSections(deps, item, fans, onRead, onPlayThemes) {
-                if (item.kind() == "tv") Episodes(deps, item, info, onPlay, fans)
-                // Right after the episodes here too: after the manga, the calendar and the films it was out of reach
-                // (Frieren on the Google TV, 2026-11-24).
-                TrailersRow(deps, item.kind(), info, info?.backdrop ?: item.backdrop, onPlayTrailer, onPlayStream)
-            }
-        } else {
-            if (item.kind() == "tv") Episodes(deps, item, info, onPlay)
-            // After the episodes and before the cast, where Apple TV puts its trailers.
-            TrailersRow(deps, item.kind(), info, info?.backdrop ?: item.backdrop, onPlayTrailer, onPlayStream)
-        }
+        // One place for the episodes, anime or not: in two branches, they were made again when the anime's link arrived,
+        // back on season 1, loaded again and the focus lost (2026-11-24). The link only adds their notes.
+        if (item.kind() == "tv") Episodes(deps, item, info, onPlay, fans)
+        // After the episodes and before the cast, where Apple TV puts its trailers; for an anime too, where after the
+        // manga, the calendar and the films it was out of reach (Frieren on the Google TV, 2026-11-24).
+        TrailersRow(deps, item.kind(), info, info?.backdrop ?: item.backdrop, onPlayTrailer, onPlayStream)
+        // Below what is already there, so nothing above moves when the anime's rows arrive.
+        if (fans != null) com.sokoul.pc.anime.AnimeSections(deps, item, fans, onRead, onPlayThemes)
         val cast = info?.cast.orEmpty()
         if (cast.isNotEmpty()) {
             CardRow(tr(Text.RowCast), cast, key = { "${it.id}-${it.name}" }, testTag = "row-cast") { _, p -> PersonCard(p, onOpenPerson) }
@@ -946,6 +943,18 @@ private fun Episodes(deps: AppDeps, item: TmdbItem, info: TmdbInfo?, onPlay: (Pl
                     deps.catalog.watchedEpisodes(item.id).filter { it.season == season }.associateBy { it.episode }
                 }
             }
+            // The chapters of the whole season, asked once here: asked by each card, every card made ahead of the scroll
+            // started a request of its own (2026-11-24).
+            val chapters by produceState(emptyMap<Int, List<Int>>(), fans, before, episodes) {
+                val f = fans
+                val b = before
+                val list = episodes
+                val anime = deps.anime
+                if (f == null || b == null || list == null || anime == null) return@produceState
+                value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+                    list.associate { e -> (b + e.episode) to anime.chaptersOf(f, b + e.episode) }
+                }
+            }
             val loaded = episodes
             when {
                 loaded == null -> Label(L("Loading…", "Chargement…").text(), Type.Meta, Palette.Secondary, Modifier.padding(horizontal = Metrics.PageMargin))
@@ -958,8 +967,8 @@ private fun Episodes(deps: AppDeps, item: TmdbItem, info: TmdbInfo?, onPlay: (Pl
                         horizontalArrangement = Arrangement.spacedBy(CardMetrics.Gap),
                         modifier = Modifier.testTag("row-episodes"),
                     ) {
-                        items(shownEpisodes, key = { "${it.season}-${it.episode}" }) { e ->
-                            EpisodeCard(e, seen[e.episode], note = { val b = before; if (fans != null && b != null) com.sokoul.pc.anime.EpisodeNote(deps, fans, b + e.episode, kinds[b + e.episode]) }) {
+                        items(shownEpisodes, key = { "${it.season}-${it.episode}" }, contentType = { "episode" }) { e ->
+                            EpisodeCard(e, seen[e.episode], note = { val b = before; if (fans != null && b != null) com.sokoul.pc.anime.EpisodeNote(fans, b + e.episode, kinds[b + e.episode], chapters[b + e.episode].orEmpty()) }) {
                                 onPlay(PlayRequest("tv", item.id, e.season, e.episode, item.title, e.name, e.still ?: item.backdrop))
                             }
                         }
@@ -979,7 +988,8 @@ private fun SeasonPill(number: Int, selected: Boolean, onClick: () -> Unit) {
     val scope = rememberCoroutineScope()
     var size by remember { mutableStateOf(androidx.compose.ui.unit.IntSize.Zero) }
     val room = with(androidx.compose.ui.platform.LocalDensity.current) { SEASON_ROOM.toPx() }
-    val fill by animateColorAsState(
+    // Read when drawing: read in composition, every pill was composed again at each frame of its fade.
+    val fill = animateColorAsState(
         when {
             focused -> Palette.FocusFill
             selected -> Palette.ButtonFill
@@ -988,7 +998,7 @@ private fun SeasonPill(number: Int, selected: Boolean, onClick: () -> Unit) {
     )
     Box(
         Modifier.bringIntoViewRequester(reveal).onSizeChanged { size = it }
-            .height(Metrics.ButtonHeight).clip(RoundedCornerShape(50)).background(fill)
+            .height(Metrics.ButtonHeight).clip(RoundedCornerShape(50)).drawBehind { drawRect(fill.value) }
             .tvFocusable(onFocusChanged = {
                 focused = it
                 if (it) scope.launch { reveal.bringIntoView(androidx.compose.ui.geometry.Rect(-room, -room, size.width + room, size.height + room)) }

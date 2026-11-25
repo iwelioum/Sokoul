@@ -2,8 +2,6 @@ package com.sokoul.pc.data.providers
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Semaphore
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -34,11 +32,13 @@ class ProviderHttp(
 ) {
     private val gates = ConcurrentHashMap<String, Semaphore>()
     private val pausedUntil = ConcurrentHashMap<String, Long>()
-    private val cacheLocks = List(64) { Mutex() }
+    private val refusals = ConcurrentHashMap<String, Int>()
+    private val flights = SingleFlight<String, JsonElement?>()
+    private val pacers = ConcurrentHashMap<String, Pacer>()
 
     /** A file, not cached here. Null when too large or refused. */
     suspend fun bytes(service: String, url: HttpUrl, headers: Map<String, String> = emptyMap()): ByteArray? = withContext(Dispatchers.IO) {
-        if ((pausedUntil[service] ?: 0) > clock()) return@withContext null
+        if (paused(service)) return@withContext null
         gates.computeIfAbsent(service) { Semaphore(PARALLEL_CALLS) }.withPermit {
             val request = Request.Builder().url(url).apply { headers.forEach { (k, v) -> header(k, v) } }.build()
             runCatching {
@@ -50,40 +50,83 @@ class ProviderHttp(
         }
     }
 
+    /**
+     * The answer, from the cache while it is fresh, else from the service. Callers asking for the same key at once share
+     * one call (2026-11-24: without holding a lock across the wait, so that other keys are never stuck behind it). When
+     * the service fails, is paused or refuses, the last answer kept is returned, however old.
+     */
     suspend fun get(service: String, url: HttpUrl, cacheKey: String, ttlMs: Long, headers: Map<String, String> = emptyMap(), body: RequestBody? = null): JsonElement? = withContext(Dispatchers.IO) {
         val key = "$service:$cacheKey"
-        cacheLocks[(key.hashCode() and Int.MAX_VALUE) % cacheLocks.size].withLock {
+        freshFrom(service, key, ttlMs)?.let { return@withContext it }
+        val priority = currentPriority()
+        flights.run(key) {
+            // A call for the same key may have just ended and filled the cache.
             val cached = runCatching { read(key) }.getOrNull()
             val fresh = cached?.takeIf { clock() - it.second < ttlMs }?.let { usable(service, it.first) }
-            if (fresh != null) return@withLock fresh
+            if (fresh != null) return@run fresh
             fun stale() = cached?.let { usable(service, it.first) }
-            if ((pausedUntil[service] ?: 0) > clock()) return@withLock stale()
-            gates.computeIfAbsent(service) { Semaphore(PARALLEL_CALLS) }.withPermit {
-                val refreshed = runCatching { read(key) }.getOrNull()
-                    ?.takeIf { clock() - it.second < ttlMs }?.let { usable(service, it.first) }
-                if (refreshed != null) return@withPermit refreshed
-                if ((pausedUntil[service] ?: 0) > clock()) return@withPermit stale()
-                spaceOut(service)
-                if ((pausedUntil[service] ?: 0) > clock()) return@withPermit stale()
-                val request = Request.Builder().url(url).apply {
-                    headers.forEach { (k, v) -> header(k, v) }
-                    if (body != null) post(body)
-                }.build()
-                val text = runCatching {
-                    http.newCall(request).execute().use { r ->
-                        when {
-                            r.isSuccessful -> r.body?.string()
-                            r.code == 401 || r.code == 403 -> { pausedUntil[service] = clock() + REFUSED_PAUSE_MS; null }
-                            r.code == 429 -> { pausedUntil[service] = clock() + busyPause(r.header("Retry-After")); null }
-                            else -> null
-                        }
-                    }
-                }.getOrNull() ?: return@withPermit stale()
-                val parsed = usable(service, text) ?: return@withPermit stale()
-                runCatching { write(key, text, clock()) }
-                parsed
-            }
+            if (paused(service)) return@run stale()
+            val text = send(service, request(url, headers, body), priority) ?: return@run stale()
+            val parsed = usable(service, text) ?: return@run stale()
+            runCatching { write(key, text, clock()) }
+            parsed
         }
+    }
+
+    /** One call, its answer not kept: for a request whose parts the caller keeps itself (AniList's batched rows). */
+    suspend fun ask(service: String, url: HttpUrl, headers: Map<String, String> = emptyMap(), body: RequestBody? = null): JsonElement? = withContext(Dispatchers.IO) {
+        if (paused(service)) return@withContext null
+        send(service, request(url, headers, body), currentPriority())?.let { usable(service, it) }
+    }
+
+    /** The answer kept for this key, however old, and its age in ms. Never asks the service. */
+    suspend fun cached(service: String, cacheKey: String): Pair<JsonElement, Long>? = withContext(Dispatchers.IO) {
+        runCatching { read("$service:$cacheKey") }.getOrNull()?.let { (text, at) -> usable(service, text)?.let { it to clock() - at } }
+    }
+
+    /** Keeps an answer under this key, as if [get] had fetched it. */
+    suspend fun save(service: String, cacheKey: String, text: String) {
+        withContext(Dispatchers.IO) { runCatching { write("$service:$cacheKey", text, clock()) } }
+    }
+
+    /** True while a refusal or "too many requests" keeps the service from being asked. */
+    fun paused(service: String): Boolean = (pausedUntil[service] ?: 0) > clock()
+
+    private fun freshFrom(service: String, key: String, ttlMs: Long): JsonElement? =
+        runCatching { read(key) }.getOrNull()?.takeIf { clock() - it.second < ttlMs }?.let { usable(service, it.first) }
+
+    private fun request(url: HttpUrl, headers: Map<String, String>, body: RequestBody?) = Request.Builder().url(url).apply {
+        headers.forEach { (k, v) -> header(k, v) }
+        if (body != null) post(body)
+    }.build()
+
+    /**
+     * Sends one call when its turn comes: spaced out for a service with a rate limit, two at a time for the others. The
+     * pause is checked again once the turn has come: a refusal may have arrived meanwhile.
+     */
+    private suspend fun send(service: String, request: Request, priority: RequestPriority): String? {
+        fun go(): String? {
+            if (paused(service)) return null
+            return runCatching {
+                http.newCall(request).execute().use { r ->
+                    when {
+                        r.isSuccessful -> r.body?.string().also { refusals.remove(service) }
+                        r.code == 401 || r.code == 403 -> {
+                            val inARow = refusals.merge(service, 1, Int::plus) ?: 1
+                            pausedUntil[service] = clock() + refusedPause(inARow)
+                            null
+                        }
+                        r.code == 429 -> { pausedUntil[service] = clock() + busyPause(r.header("Retry-After")); null }
+                        else -> null
+                    }
+                }
+            }.getOrNull()
+        }
+        val gap = SPACING[service]
+        return if (gap != null) {
+            pacers.computeIfAbsent(service) { Pacer(gap, clock) }.turn(priority)
+            go()
+        } else gates.computeIfAbsent(service) { Semaphore(PARALLEL_CALLS) }.withPermit { go() }
     }
 
     private fun parse(text: String) = runCatching { parser.parseToJsonElement(text) }.getOrNull()
@@ -94,23 +137,11 @@ class ProviderHttp(
         return parsed
     }
 
-    private val nextSlot = ConcurrentHashMap<String, Long>()
-
-    /**
-     * A service with a rate limit gets its calls spread out: AniList allows 30 to 90 a minute, and the Anime page alone
-     * asks for some twenty rows. Over the limit, it answered 429 and every anime part of the app went blank.
-     */
-    private suspend fun spaceOut(service: String) {
-        val gap = SPACING[service] ?: return
-        val slot = nextSlot.compute(service) { _, previous -> maxOf(clock(), previous ?: 0L) + gap }!! - gap
-        val wait = slot - clock()
-        if (wait > 0) kotlinx.coroutines.delay(wait)
-    }
-
     companion object {
         private val parser = Json { ignoreUnknownKeys = true; isLenient = true }
         private const val PARALLEL_CALLS = 2
         private const val MAX_FILE_BYTES = 5 * 1024 * 1024
+        private const val FIRST_REFUSAL_PAUSE_MS = 10 * 60_000L
         private const val REFUSED_PAUSE_MS = 24 * 3_600_000L
         private const val BUSY_PAUSE_MS = 3_600_000L
         private const val DEFAULT_BUSY_MS = 60_000L
@@ -119,10 +150,18 @@ class ProviderHttp(
 
         /**
          * After "too many requests": the wait the service asks for (Retry-After, in seconds), else a minute, never more
-         * than an hour. It used to be a full hour, during which the anime pages showed nothing.
+         * than an hour. It used to be a full hour, during which the anime pages showed nothing. Meanwhile every row
+         * already kept is shown as it was.
          */
         fun busyPause(retryAfter: String?): Long =
             (retryAfter?.trim()?.toLongOrNull()?.times(1_000) ?: DEFAULT_BUSY_MS).coerceIn(1_000L, BUSY_PAUSE_MS)
+
+        /**
+         * After a refusal (401/403): ten minutes, doubled at each refusal in a row, a day at most. One refusal used to stop
+         * AniList for a whole day, and a passing 403 from its gateway left the anime pages empty until the next (2026-11-24).
+         */
+        fun refusedPause(inARow: Int): Long =
+            (FIRST_REFUSAL_PAUSE_MS shl (inARow - 1).coerceIn(0, 20)).coerceAtMost(REFUSED_PAUSE_MS)
     }
 }
 

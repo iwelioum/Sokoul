@@ -324,7 +324,11 @@ class RealSources(
             lock.withLock { fromIptv = found; iptvDone = true; publish() }
         }
         if (!animeSamaDone) launch {
-            val identity = try { anime?.identity(request.kind, request.tmdbId, info) } catch (c: CancellationException) { throw c } catch (_: Exception) { null }
+            // The identity only adds names: past LOOKUP_MS the site is asked with the titles known (2026-11-24; it waited
+            // for every identity service before, while Real-Debrid already had its own limit).
+            val identity = try {
+                kotlinx.coroutines.withTimeoutOrNull(LOOKUP_MS) { anime?.identity(request.kind, request.tmdbId, info) }
+            } catch (c: CancellationException) { throw c } catch (_: Exception) { null }
             val asked = identity != null || info?.originalLanguage?.take(2) in setOf("ja", "zh", "ko")
             com.sokoul.pc.playback.session.StartClock.note("anime-sama ${if (asked) "asked" else "skipped: not an anime"}")
             val result = try {

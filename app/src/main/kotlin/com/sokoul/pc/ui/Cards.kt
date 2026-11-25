@@ -32,6 +32,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -72,6 +73,7 @@ import com.sokoul.pc.theme.InterDisplay
 import com.sokoul.pc.theme.Metrics
 import com.sokoul.pc.theme.Palette
 import com.sokoul.pc.theme.Type
+import com.sokoul.pc.data.kind
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
 
@@ -132,6 +134,8 @@ fun FocusCard(
 }
 
 private const val ROW_PREFETCH = 7
+/** The cards of a row are of one kind: their compositions are reused as the row scrolls. */
+private const val ROW_CARD = "card"
 
 private val BottomFade = Brush.verticalGradient(0.55f to Color.Transparent, 1f to Color(0xE6000000))
 
@@ -150,10 +154,22 @@ fun PosterCard(
     width: Dp = CardMetrics.PosterWidth,
     height: Dp = CardMetrics.PosterHeight,
 ) {
+    // Asked here, not in the poster: the card has to know whether the poster says which work it is.
+    val info by produceState<com.sokoul.iptv.data.net.TmdbInfo?>(null, item.id) { value = catalog.artwork(item.kind(), item.id) }
+    val art = posterArt(item, info)
+    // A poster lettered in a script the viewer cannot read (an anime's, in Japanese) gets its title under it, as the
+    // Apple TV app captions its rows: a row of them said nothing about which work each one was (Google TV, 2026-11-24).
+    val named = art is PosterArt.Original && unreadableScript(item.originalLanguage ?: info?.originalLanguage)
     FocusCard(width, height, onClick, modifier, tag = tag, onFocus = onFocus, requester = requester) { focused ->
         val showCaption = caption != null && (captionAlways || focused)
-        SmartPoster(catalog, item)
-        if (showCaption) {
+        SmartPoster(item, art)
+        if (named) {
+            Box(Modifier.fillMaxSize().background(BottomFade))
+            Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(horizontal = 12.dp, vertical = 14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Label(item.title, Type.Body.copy(fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center), Palette.OnBackground, Modifier.fillMaxWidth(), maxLines = 2)
+                if (showCaption) Label(caption!!, Type.Body.copy(textAlign = TextAlign.Center), if (focused) Palette.OnBackground else Palette.Secondary, Modifier.fillMaxWidth(), maxLines = 1)
+            }
+        } else if (showCaption) {
             Label(
                 caption!!,
                 Type.Body.copy(textAlign = TextAlign.Center),
@@ -324,7 +340,7 @@ fun <T> CardRow(
             contentPadding = PaddingValues(horizontal = Metrics.PageMargin, vertical = verticalPadding),
             horizontalArrangement = Arrangement.spacedBy(spacing),
         ) {
-            itemsIndexed(items, key = key?.let { k -> { _: Int, item: T -> k(item) } }) { index, item ->
+            itemsIndexed(items, key = key?.let { k -> { _: Int, item: T -> k(item) } }, contentType = { _, _ -> ROW_CARD }) { index, item ->
                 val itemRequester = remember { FocusRequester() }
                 androidx.compose.runtime.DisposableEffect(index, itemRequester) {
                     itemRequesters[index] = itemRequester

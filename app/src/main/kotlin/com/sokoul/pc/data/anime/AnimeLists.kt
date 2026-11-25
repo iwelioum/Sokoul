@@ -17,8 +17,9 @@ import java.util.concurrent.TimeUnit
 
 /**
  * The anime lists kept on the device: Fribb's (ids and place in the catalog) everywhere, manami's (names) on PC only, as
- * it weighs 60 MB. Downloaded the first time they are needed, then again once a week, in the background. A new list
- * replaces the old one only once it is whole and valid; until then, and when the download fails, the old one serves.
+ * it weighs 60 MB. Downloaded the first time they are needed, then again once a week (manami's once a month), in the
+ * background. A new list replaces the old one only once it is whole and valid; until then, and when the download fails,
+ * the old one serves.
  */
 class AnimeLists(
     private val dir: File,
@@ -34,6 +35,7 @@ class AnimeLists(
     private var ids: AnimeIndex? = null
     private var names: AnimeIndex? = null
     private val refreshing = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
+    private val tried = java.util.concurrent.ConcurrentHashMap<String, Long>()
     private val download = http.newBuilder().readTimeout(60, TimeUnit.SECONDS).callTimeout(5, TimeUnit.MINUTES).build()
 
     /** The id list, or null while it is not on the device yet (its download then starts). Never waits for the network. */
@@ -58,8 +60,11 @@ class AnimeLists(
 
     private fun refreshIfOld(name: String) {
         val f = File(dir, "$name.tsv")
-        if (f.isFile && clock() - f.lastModified() < WEEK_MS) return
+        if (f.isFile && clock() - f.lastModified() < maxAge(name)) return
+        // A download that failed is not tried again at each lookup, only some hours later.
+        if (f.isFile && clock() - (tried[name] ?: Long.MIN_VALUE / 2) < RETRY_MS) return
         if (!refreshing.add(name)) return
+        tried[name] = clock()
         scope.launch {
             try {
                 if (refresh(name)) lock.withLock { if (name == FRIBB) ids = load(FRIBB) else names = load(MANAMI) }
@@ -109,6 +114,14 @@ class AnimeLists(
         const val FRIBB_URL = "https://raw.githubusercontent.com/Fribb/anime-lists/master/anime-list-full.json"
         const val MANAMI_URL = "https://github.com/manami-project/anime-offline-database/releases/latest/download/anime-offline-database-minified.json"
         private const val WEEK_MS = 7 * 24 * 3_600_000L
+        private const val MONTH_MS = 30 * 24 * 3_600_000L
+        private const val RETRY_MS = 6 * 3_600_000L
+
+        /**
+         * Fribb's list changes every week and places the new seasons: weekly. manami's (60 MB) has not changed since
+         * 2026-07-04 and only adds names: the file on the device serves, asked again once a month at most (2026-11-24).
+         */
+        fun maxAge(name: String): Long = if (name == MANAMI) MONTH_MS else WEEK_MS
         /** Both lists hold some 40,000 entries: far fewer is a truncated file. */
         const val MIN_ENTRIES = 20_000
         private const val ONE_PIECE_TMDB = 37854

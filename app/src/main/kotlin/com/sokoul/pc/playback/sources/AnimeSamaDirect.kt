@@ -5,7 +5,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -131,7 +133,7 @@ internal object AnimeSamaSite {
             .apply { if (host.isNotEmpty()) addQueryParameter("h", host) }.build().toString()
 
     /**
-     * Player references per episode, in player order: inline `epsN` arrays of a season page (or a legacy episodes.js).
+     * Player references per episode, in player order: the inline `epsN` arrays of a season page.
      * A reference is kept without the expiring token; a video the site marks as removed goes last.
      */
     fun episodePlayers(source: String, pageUrl: String): List<List<String>> {
@@ -159,6 +161,27 @@ internal object AnimeSamaSite {
         while (episodes.isNotEmpty() && episodes.last().isEmpty()) episodes.removeAt(episodes.lastIndex)
         return episodes
     }
+
+    private val rxEpisodeRange = Regex("""(?i)[ÉéEe]p(?:isode)?s?\.?\s*(\d{1,4})\s*(?:à|a|-|–|to)\s*(\d{1,4})""")
+
+    /** The episodes a season card names ("Saga 1 East Blue [Episode 1 à 61]": 61), or null when it names none. */
+    fun episodesInName(name: String): Int? {
+        val m = rxEpisodeRange.find(name) ?: return null
+        val from = m.groupValues[1].toInt()
+        val to = m.groupValues[2].toInt()
+        return (to - from + 1).takeIf { from >= 1 && it in 1..MAX_IN_NAME }
+    }
+
+    private const val MAX_IN_NAME = 1500
+    private val rxHost = Regex("""anime-sama\.[a-z]{2,6}""")
+
+    /** The addresses the official page lists as the site's (`{ name: 'anime-sama.si' }`). */
+    fun listedHosts(html: String): Set<String> =
+        Regex("""name\s*:\s*'([a-z0-9.-]+)'""", RegexOption.IGNORE_CASE).findAll(html).map { it.groupValues[1].lowercase() }.filter(rxHost::matches).toSet()
+
+    /** The address the official page's main button leads to, or null. */
+    fun officialHost(html: String): String? =
+        Regex("""<a[^>]*class="btn-primary"[^>]*href="https://([a-z0-9.-]+)/?"""", RegexOption.IGNORE_CASE).find(html)?.groupValues?.get(1)?.lowercase()?.takeIf(rxHost::matches)
 
     /** A `lien.php` reference of an Anime-Sama catalogue page, or null for anything else. */
     fun reference(url: String): Reference? {
@@ -233,29 +256,45 @@ internal class AnimeSamaDns(http: OkHttpClient, private val now: () -> Long = Sy
 /**
  * Anime-Sama read by the app itself, in the shape of the Sokoul server's `/anime/search` answer so that
  * [AnimeSamaParse] matches and links it unchanged. Players are left for the local extractor (no relay).
+ *
+ * The site's address: [site] when given (tests), else the one its official page (anime-sama.pw) sends to, checked and
+ * kept for a day, else [DEFAULT_SITE] (2026-11-24: the address changes and was written in the code).
  */
-class AnimeSamaDirect(http: OkHttpClient, private val site: String = "https://anime-sama.to", private val now: () -> Long = System::currentTimeMillis) {
+class AnimeSamaDirect(http: OkHttpClient, private val site: String? = null, private val now: () -> Long = System::currentTimeMillis) {
     private val client = http.newBuilder().dns(AnimeSamaDns(http)).callTimeout(20, TimeUnit.SECONDS).followRedirects(true).build()
     private val catalogues = ConcurrentHashMap<String, Pair<Long, JsonArray>>()
+    private val works = ConcurrentHashMap<String, Pair<Long, JsonObject>>()
+    private val searches = ConcurrentHashMap<String, Pair<Long, List<AnimeSamaSite.Result>>>()
+    private val workPanels = ConcurrentHashMap<String, Pair<Long, List<AnimeSamaSite.Panel>>>()
+    private val workFlights = com.sokoul.pc.data.providers.SingleFlight<String, JsonObject?>()
     private data class SeasonPage(val declared: List<String>?, val players: List<List<String>>)
     private val seasonPages = LinkedHashMap<String, Pair<Long, SeasonPage>>(16, 0.75f, true)
     private val seasonRequests = Semaphore(PARALLEL)
+    @Volatile private var address: Pair<Long, String>? = null
 
-    /** Works matching [name], with their seasons and the episode count of each (players of one language only). */
-    suspend fun search(name: String): JsonArray? {
-        catalogues[name]?.takeIf { it.first > now() }?.let { return it.second }
-        val html = post("$site/template-php/defaut/fetch.php", name) ?: return null
+    /**
+     * Works matching [name], with their seasons and the episode count of each. A quick search (the default) counts a
+     * season by its card ("Saga 1 [Episode 1 à 61]") or by one page; [thorough] opens every original and French edition
+     * of every season and keeps the longest: wanted only when the episode is past the quick count (2026-11-24: each
+     * search opened every season in every language, some 30 pages for One Piece).
+     */
+    suspend fun search(name: String, thorough: Boolean = false): JsonArray? {
+        val key = "$thorough:$name"
+        catalogues[key]?.takeIf { it.first > now() }?.let { return it.second }
+        val site = site()
+        val results = results(name, site) ?: return null
         val works = coroutineScope {
-            AnimeSamaSite.searchResults(html).take(MAX_WORKS).map { result -> async { work(result) } }.awaitAll()
+            results.take(MAX_WORKS).map { result -> async { work(result, site, thorough) } }.awaitAll()
         }
         val answer = JsonArray(works.filterNotNull())
-        catalogues[name] = (now() + CATALOGUE_MS) to answer
+        catalogues[key] = (now() + CATALOGUE_MS) to answer
         return answer
     }
 
     /** The works of [search] with the target episode's players in every declared language, references resolved. */
     internal suspend fun resolve(name: String, target: AnimeSamaParse.Target): JsonArray? {
-        val root = search(name) ?: return null
+        // The search the target was found in: the thorough one when it was needed.
+        val root = catalogues["true:$name"]?.takeIf { it.first > now() }?.second ?: search(name) ?: return null
         val work = root.getOrNull(target.anime - 1)?.jsonObject ?: return null
         val seasons = work["seasons"]?.jsonArray ?: return null
         val season = seasons.getOrNull(target.season - 1)?.jsonObject ?: return null
@@ -273,7 +312,12 @@ class AnimeSamaDirect(http: OkHttpClient, private val site: String = "https://an
                 }
             }.awaitAll()
         }.filter { it.second.isNotEmpty() }
-        val episodes = season["episodes"]?.jsonArray.orEmpty().mapIndexed { i, e ->
+        // A season counted by its card may list fewer episodes than the pages hold: the target's place is made.
+        val listed = season["episodes"]?.jsonArray.orEmpty()
+        val padded = if (listed.size >= target.episode) listed else listed + (listed.size until target.episode).map { i ->
+            buildJsonObject { put("index", i + 1); putJsonArray("streaming_links") { } }
+        }
+        val episodes = padded.mapIndexed { i, e ->
             if (i != target.episode - 1) e else buildJsonObject {
                 e.jsonObject.forEach { (k, v) -> if (k != "streaming_links") put(k, v) }
                 putJsonArray("streaming_links") {
@@ -287,22 +331,45 @@ class AnimeSamaDirect(http: OkHttpClient, private val site: String = "https://an
         return JsonArray(root.mapIndexed { i, w -> if (i == target.anime - 1) resolvedWork else w })
     }
 
-    private suspend fun work(result: AnimeSamaSite.Result): JsonObject? {
-        val url = absolute(result.url) ?: return null
+    /** The site's search for [name], kept 30 minutes: the thorough search after a quick one does not ask again. */
+    private suspend fun results(name: String, site: String): List<AnimeSamaSite.Result>? {
+        searches[name]?.takeIf { it.first > now() }?.let { return it.second }
+        val html = post("$site/template-php/defaut/fetch.php", name, site) ?: return null
+        return AnimeSamaSite.searchResults(html).also { searches[name] = (now() + CATALOGUE_MS) to it }
+    }
+
+    /** A work's season cards, kept 30 minutes. */
+    private suspend fun panels(url: String, site: String): List<AnimeSamaSite.Panel>? {
+        workPanels[url]?.takeIf { it.first > now() }?.let { return it.second }
         val html = get(url, referer = "$site/") ?: return null
-        val panels = AnimeSamaSite.seasonPanels(html, url)
+        return AnimeSamaSite.seasonPanels(html, url).also { workPanels[url] = (now() + CATALOGUE_MS) to it }
+    }
+
+    /** One work's card: kept 30 minutes, and shared by the names searched at once that find it. */
+    private suspend fun work(result: AnimeSamaSite.Result, site: String, thorough: Boolean): JsonObject? {
+        val url = absolute(result.url, site) ?: return null
+        val key = "$thorough:$url"
+        works[key]?.takeIf { it.first > now() }?.let { return named(it.second, result) }
+        val built = workFlights.run(key) {
+            works[key]?.takeIf { it.first > now() }?.let { return@run it.second }
+            buildWork(url, site, thorough)?.also { works[key] = (now() + CATALOGUE_MS) to it }
+        } ?: return null
+        return named(built, result)
+    }
+
+    /** The card under the name and other names this search gave it. */
+    private fun named(work: JsonObject, result: AnimeSamaSite.Result) = JsonObject(work + mapOf(
+        "name" to JsonPrimitive(result.name),
+        "alternative_names" to JsonArray(result.alternativeNames.map(::JsonPrimitive)),
+    ))
+
+    private suspend fun buildWork(url: String, site: String, thorough: Boolean): JsonObject? {
+        val panels = panels(url, site) ?: return null
         val gate = Semaphore(PARALLEL)
         val counted = coroutineScope {
-            panels.map { panel ->
-                async {
-                    // The season spans every episode published in its original or French editions.
-                    gate.withPermit { panel to episodeCount(panel) }
-                }
-            }.awaitAll()
+            panels.map { panel -> async { gate.withPermit { panel to episodeCount(panel, thorough) } } }.awaitAll()
         }
         return buildJsonObject {
-            put("name", result.name)
-            putJsonArray("alternative_names") { result.alternativeNames.forEach { add(it) } }
             put("url", url)
             putJsonArray("seasons") {
                 counted.forEach { (panel, count) ->
@@ -318,9 +385,12 @@ class AnimeSamaDirect(http: OkHttpClient, private val site: String = "https://an
         }
     }
 
-    private suspend fun episodeCount(panel: AnimeSamaSite.Panel): Int {
+    private suspend fun episodeCount(panel: AnimeSamaSite.Panel, thorough: Boolean): Int {
+        if (!thorough) AnimeSamaSite.episodesInName(panel.name)?.let { return it }
         val firstLanguage = panel.language ?: "vostfr"
         val first = seasonPage(panel.url, firstLanguage)
+        if (!thorough) return first?.players?.size ?: 0
+        // The season spans every episode published in its original or French editions.
         val languages = AnimeSamaSite.seasonLanguages(first?.declared, panel.language)
             .filter { it != firstLanguage && (it == "vostfr" || AnimeSamaSite.frenchEdition(it)) }
         val editions = coroutineScope {
@@ -329,18 +399,20 @@ class AnimeSamaDirect(http: OkHttpClient, private val site: String = "https://an
         return maxOf(first?.players?.size ?: 0, editions.maxOrNull() ?: 0)
     }
 
+    /**
+     * A season page's players, read from the page itself (`epsN` arrays, `lien:` references): the separate
+     * `episodes.js` of before answers 403 since 2026-11 and is no longer asked. Kept 30 minutes.
+     */
     private suspend fun seasonPage(base: String, language: String): SeasonPage? {
         val page = "$base/$language/"
         synchronized(seasonPages) {
             seasonPages[page]?.takeIf { it.first > now() }?.let { return it.second }
         }
         return seasonRequests.withPermit {
-            val html = get(page, referer = "$site/") ?: return@withPermit null
-            val inline = AnimeSamaSite.episodePlayers(html, page)
-            val players = if (inline.isNotEmpty()) inline
-                else get("${page}episodes.js", referer = page)?.let { AnimeSamaSite.episodePlayers(it, page) }.orEmpty()
-            val resolved = SeasonPage(AnimeSamaSite.availableLanguages(html), players)
-            if (players.isNotEmpty() || resolved.declared != null) synchronized(seasonPages) {
+            synchronized(seasonPages) { seasonPages[page]?.takeIf { it.first > now() }?.let { return@withPermit it.second } }
+            val html = get(page, referer = "${page.toHttpUrlOrNull()?.let { "${it.scheme}://${it.host}" } ?: ""}/") ?: return@withPermit null
+            val resolved = SeasonPage(AnimeSamaSite.availableLanguages(html), AnimeSamaSite.episodePlayers(html, page))
+            if (resolved.players.isNotEmpty() || resolved.declared != null) synchronized(seasonPages) {
                 seasonPages[page] = (now() + SEASON_PAGE_MS) to resolved
                 if (seasonPages.size > SEASON_PAGE_LIMIT) seasonPages.remove(seasonPages.keys.first())
             }
@@ -348,31 +420,72 @@ class AnimeSamaDirect(http: OkHttpClient, private val site: String = "https://an
         }
     }
 
-    /** Player URLs for one episode: references resolved with the page's token, others kept; unresolved ones dropped. */
+    /**
+     * Player URLs for one episode: references resolved with the page's token, others kept; unresolved ones dropped.
+     * The references are asked a few at a time (one after the other before 2026-11-24), the page's token once.
+     */
     private suspend fun resolvePlayers(players: List<String>): List<String> {
         val sessions = HashMap<String, Pair<String, String>?>()
-        suspend fun session(page: String, fresh: Boolean): Pair<String, String>? {
-            if (!fresh && sessions.containsKey(page)) return sessions[page]
+        val sessionLock = Mutex()
+        suspend fun session(page: String, stale: Pair<String, String>?): Pair<String, String>? = sessionLock.withLock {
+            // A token found again by another player since this one failed with [stale] is used as it is.
+            if (sessions.containsKey(page) && sessions[page] != stale) return@withLock sessions[page]
+            if (stale == null && sessions.containsKey(page)) return@withLock sessions[page]
             val answer = fetch(page, referer = page.toHttpUrlOrNull()?.let { "${it.scheme}://${it.host}/" })
             val token = AnimeSamaSite.token(answer?.first)
-            return token?.let { it to AnimeSamaSite.cookie(answer!!.second) }.also { sessions[page] = it }
+            token?.let { it to AnimeSamaSite.cookie(answer!!.second) }.also { sessions[page] = it }
         }
-        return players.mapNotNull { player ->
-            val reference = AnimeSamaSite.reference(player) ?: return@mapNotNull player.takeIf(AnimeSamaSite::isPlayerUrl)
-            for (attempt in 0..1) {
-                val (token, cookie) = session(reference.page, attempt > 0) ?: return@mapNotNull null
-                val body = fetch("${reference.origin}${AnimeSamaSite.LINK_PATH}?j=${java.net.URLEncoder.encode(token, "UTF-8")}&l=${reference.id}",
-                    referer = reference.page, cookie = cookie, sameOrigin = true)?.first
-                val o = body?.let { runCatching { Json.parseToJsonElement(it).jsonObject }.getOrNull() }
-                val url = (o?.get("u") as? JsonPrimitive)?.contentOrNull?.trim()
-                if (AnimeSamaSite.isPlayerUrl(url)) return@mapNotNull url
-                if ((o?.get("erreur") as? JsonPrimitive)?.contentOrNull != "expire") return@mapNotNull null
-            }
-            null
-        }.distinct()
+        val gate = Semaphore(PARALLEL)
+        return coroutineScope {
+            players.map { player ->
+                async {
+                    val reference = AnimeSamaSite.reference(player) ?: return@async player.takeIf(AnimeSamaSite::isPlayerUrl)
+                    gate.withPermit {
+                        var used: Pair<String, String>? = null
+                        for (attempt in 0..1) {
+                            val current = session(reference.page, used) ?: return@withPermit null
+                            used = current
+                            val (token, cookie) = current
+                            val body = fetch("${reference.origin}${AnimeSamaSite.LINK_PATH}?j=${java.net.URLEncoder.encode(token, "UTF-8")}&l=${reference.id}",
+                                referer = reference.page, cookie = cookie, sameOrigin = true)?.first
+                            val o = body?.let { runCatching { Json.parseToJsonElement(it).jsonObject }.getOrNull() }
+                            val url = (o?.get("u") as? JsonPrimitive)?.contentOrNull?.trim()
+                            if (AnimeSamaSite.isPlayerUrl(url)) return@withPermit url
+                            if ((o?.get("erreur") as? JsonPrimitive)?.contentOrNull != "expire") return@withPermit null
+                        }
+                        null
+                    }
+                }
+            }.awaitAll()
+        }.filterNotNull().distinct()
     }
 
-    private fun absolute(href: String): String? = when {
+    /** The site's address now: see the class. */
+    private suspend fun site(): String {
+        site?.let { return it.trimEnd('/') }
+        address?.takeIf { it.first > now() }?.let { return it.second }
+        val found = try { discover() } catch (c: CancellationException) { throw c } catch (_: Exception) { null }
+        // A failed discovery is tried again within the hour, not at each search.
+        address = (now() + if (found != null) DISCOVERY_MS else DISCOVERY_RETRY_MS) to (found ?: DEFAULT_SITE)
+        return found ?: DEFAULT_SITE
+    }
+
+    /** The official page's main address, followed to where it sends; only an address the page itself lists is taken. */
+    private suspend fun discover(): String? {
+        val page = fetch(OFFICIAL_PAGE, referer = null)?.first ?: return null
+        val listed = AnimeSamaSite.listedHosts(page)
+        val main = AnimeSamaSite.officialHost(page)?.takeIf { it in listed } ?: return null
+        val landed = withContext(Dispatchers.IO) {
+            try {
+                client.newCall(browser(Request.Builder().url("https://$main/"), null).build()).execute().use { r ->
+                    if (r.isSuccessful) r.request.url.host.lowercase() else null
+                }
+            } catch (c: CancellationException) { throw c } catch (_: Exception) { null }
+        } ?: return null
+        return "https://$landed".takeIf { landed in listed }
+    }
+
+    private fun absolute(href: String, site: String): String? = when {
         href.startsWith("http") -> href.toHttpUrlOrNull()?.let { "$site${it.encodedPath}" }
         href.startsWith("/") -> "$site$href"
         else -> null
@@ -380,7 +493,7 @@ class AnimeSamaDirect(http: OkHttpClient, private val site: String = "https://an
 
     private suspend fun get(url: String, referer: String?): String? = fetch(url, referer)?.first
 
-    private suspend fun post(url: String, query: String): String? = withContext(Dispatchers.IO) {
+    private suspend fun post(url: String, query: String, site: String): String? = withContext(Dispatchers.IO) {
         try {
             client.newCall(browser(Request.Builder().url(url), "$site/").post(FormBody.Builder().add("query", query).build()).build()).execute().use { r ->
                 if (r.isSuccessful) r.body?.string() else null
@@ -407,11 +520,16 @@ class AnimeSamaDirect(http: OkHttpClient, private val site: String = "https://an
         .apply { referer?.let { header("Referer", it) } }
 
     private companion object {
+        const val DEFAULT_SITE = "https://anime-sama.to"
+        const val OFFICIAL_PAGE = "https://anime-sama.pw/"
+        const val DISCOVERY_MS = 24 * 3_600_000L
+        const val DISCOVERY_RETRY_MS = 3_600_000L
         const val MAX_WORKS = 4
         const val PARALLEL = 4
         const val CATALOGUE_MS = 30 * 60_000L
-        const val SEASON_PAGE_MS = 2 * 60_000L
-        const val SEASON_PAGE_LIMIT = 16
+        /** A season page's players and languages: they change when an episode comes out, a few times a week. */
+        const val SEASON_PAGE_MS = 30 * 60_000L
+        const val SEASON_PAGE_LIMIT = 128
         const val USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
     }
 }

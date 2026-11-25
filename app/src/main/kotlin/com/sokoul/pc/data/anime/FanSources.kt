@@ -11,6 +11,7 @@ import okhttp3.HttpUrl.Companion.toHttpUrl
 import java.util.concurrent.ConcurrentHashMap
 
 /** An opening or an ending, and the episodes it plays on. */
+@kotlinx.serialization.Serializable
 data class AnimeTheme(val slug: String, val song: String, val artist: String?, val episodes: String?, val video: String, val audio: String?, val season: Int = 0) {
     val isOpening: Boolean get() = slug.startsWith("OP")
 
@@ -60,12 +61,20 @@ class FanSources(private val http: ProviderHttp) {
         return found
     }
 
-    /** Which episodes are filler, for the series the list knows. */
+    /**
+     * Which episodes are filler, for the series the list knows. What the page says is kept on the device for a week (the
+     * whole page was downloaded again at each visit before 2026-11-24). A page that did not answer is
+     * not kept, and the last list known serves meanwhile.
+     */
     suspend fun episodeKinds(names: List<String>): Map<Int, EpisodeKind> {
         for (slug in names.map(FanParse::slug).filter { it.isNotEmpty() }.distinct()) {
             fillers[slug]?.let { if (it.isNotEmpty()) return it else return@let }
-            val bytes = http.bytes("fillerlist", "https://www.animefillerlist.com/shows/$slug".toHttpUrl(), browser)
-            val found = bytes?.let { FanParse.fillers(String(it)) }.orEmpty()
+            val kept = http.cached(FILLERS, "kinds:$slug")
+            val found = if (kept != null && kept.second < WEEK_MS) FanParse.kindsFrom(kept.first) else {
+                val bytes = http.bytes(FILLERS, "https://www.animefillerlist.com/shows/$slug".toHttpUrl(), browser)
+                if (bytes == null) kept?.let { FanParse.kindsFrom(it.first) }.orEmpty()
+                else FanParse.fillers(String(bytes)).also { http.save(FILLERS, "kinds:$slug", FanParse.kindsJson(it).toString()) }
+            }
             fillers[slug] = found
             if (found.isNotEmpty()) return found
         }
@@ -113,6 +122,8 @@ class FanSources(private val http: ProviderHttp) {
         const val MINUTE_MS = 60_000L
         const val DAY_MS = 24 * 3_600_000L
         const val MONTH_MS = 30 * DAY_MS
+        const val WEEK_MS = 7 * DAY_MS
+        const val FILLERS = "fillerlist"
         const val PAGE = 500
         const val MAX_CHAPTERS = 5000
     }
@@ -120,6 +131,15 @@ class FanSources(private val http: ProviderHttp) {
 
 /** Reading those sources. Pure and tested. */
 object FanParse {
+    /** The kinds of a series' episodes as kept on the device: `{"12":"Filler"}`. */
+    fun kindsJson(kinds: Map<Int, EpisodeKind>): JsonObject = JsonObject(kinds.entries.associate { (n, k) -> n.toString() to JsonPrimitive(k.name) })
+
+    fun kindsFrom(element: JsonElement?): Map<Int, EpisodeKind> = (element as? JsonObject).orEmpty().entries.mapNotNull { (n, k) ->
+        val number = n.toIntOrNull() ?: return@mapNotNull null
+        val kind = EpisodeKind.entries.firstOrNull { it.name == (k as? JsonPrimitive)?.contentOrNull } ?: return@mapNotNull null
+        number to kind
+    }.toMap()
+
     private fun JsonObject.str(n: String) = (this[n] as? JsonPrimitive)?.contentOrNull?.takeIf { it.isNotBlank() }
     private fun JsonObject.obj(n: String) = this[n] as? JsonObject
     private fun JsonObject.list(n: String) = (this[n] as? JsonArray).orEmpty()

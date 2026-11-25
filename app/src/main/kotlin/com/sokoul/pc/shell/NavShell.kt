@@ -100,8 +100,8 @@ fun NavShell(
     // A tablet is held and touched: its bar stays on screen, as in the Apple TV and Disney+ apps on an iPad. Hidden as on
     // the TV, it had to be called back with the remote's Up key, which a tablet has not (2026-11-23).
     val immersive = com.sokoul.pc.Platform.IS_TV && !Form.isPhone && !Form.tablet
-    // A phone held upright keeps its tabs at the bottom; everything else has the Apple TV bar: the menu and search.
-    val portrait = Form.isPortrait
+    // Every form has the Apple TV bar, the menu and search, a phone held upright too: its bottom tabs covered the
+    // hero's button and dots, and turning the phone changed the whole navigation (the user, 2026-11-24).
     var menuOpen by remember { mutableStateOf(false) }
     // How far the page has scrolled, read from the scrolls that pass through the shell: the bar's black backdrop
     // fades in once the page has left its top, and out when it is back.
@@ -128,7 +128,6 @@ fun NavShell(
     val backdrop by animateFloatAsState(if (!atTop || menuOpen) 1f else 0f, tween(260), label = "bar-backdrop")
     var homeNavRequested by remember(active) { mutableStateOf(false) }
     var barFocused by remember(active) { mutableStateOf(false) }
-    var bottomBarFocused by remember(active) { mutableStateOf(false) }
     var timedBarVisible by remember(active) { mutableStateOf(true) }
     LaunchedEffect(active, barFocused) {
         if (barFocused || !immersive) timedBarVisible = true
@@ -150,8 +149,8 @@ fun NavShell(
         else -> atTop || scrollingUp
     }
     val reportHomeHeroAtTop: (Boolean) -> Unit = remember(active) { { homeHeroAtTop = it } }
-    LaunchedEffect(barFocused, bottomBarFocused) {
-        if (homeNavRequested && !barFocused && !bottomBarFocused) homeNavRequested = false
+    LaunchedEffect(barFocused) {
+        if (homeNavRequested && !barFocused) homeNavRequested = false
     }
     val visibilityState = animateFloatAsState(if (barVisible) 1f else 0f, tween(220))
     val visibility by visibilityState
@@ -161,7 +160,7 @@ fun NavShell(
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     fun requester(id: String) = requesters.getOrPut(id) { FocusRequester() }
     // Up from a page reaches the menu button: there are no tabs on the bar any more.
-    val homeNavTarget = if (portrait) (entries.firstOrNull { it.id == SECTION_HOME }?.id ?: entries.firstOrNull()?.id ?: SECTION_SETTINGS) else MENU
+    val homeNavTarget = MENU
 
     LaunchedEffect(homeNavRequested) {
         if (homeNavRequested && runCatching { requester(homeNavTarget).requestFocus() }.isFailure) {
@@ -172,7 +171,7 @@ fun NavShell(
     // The page's first element when it exists, otherwise the section's own tab: focus is never lost.
     LaunchedEffect(active, defaultFocus) {
         if (runCatching { defaultFocus?.requestFocus() ?: error("none") }.isFailure && !homeControlsBar) {
-            runCatching { requester(if (portrait) active else MENU).requestFocus() }
+            runCatching { requester(MENU).requestFocus() }
         }
     }
 
@@ -196,7 +195,7 @@ fun NavShell(
                     // bar first made Back from the TV guide take two presses to reach Home.
                     if (immersive && !barVisible && onBack == null) {
                         timedBarVisible = true
-                        runCatching { requester(if (portrait) active else MENU).requestFocus() }
+                        runCatching { requester(MENU).requestFocus() }
                         return@onKeyEvent true
                     }
                     onBack?.invoke()
@@ -206,10 +205,9 @@ fun NavShell(
                 }
             },
     ) {
-        // Home overlays the bottom bar too, so revealing it never resizes the hero's viewport.
-        Box(Modifier.fillMaxSize().nestedScroll(scrollWatch).padding(bottom = if (portrait && !homeControlsBar) bottomBarHeight() else 0.dp)) {
+        Box(Modifier.fillMaxSize().nestedScroll(scrollWatch)) {
             CompositionLocalProvider(
-                LocalActiveTab provides requester(if (homeControlsBar || !portrait) homeNavTarget else active),
+                LocalActiveTab provides requester(homeNavTarget),
                 LocalNavBarVisible provides barVisible,
                 LocalReportHomeHeroAtTop provides reportHomeHeroAtTop,
             ) { content() }
@@ -219,11 +217,6 @@ fun NavShell(
                 barFocused = it.hasFocus
                 if (it.hasFocus) timedBarVisible = true
             }
-            if (portrait) {
-                val bottom = Modifier.align(Alignment.BottomCenter)
-                BottomTabs(entries, active, onSelect, ::requester,
-                    if (homeControlsBar) bottom.onFocusChanged { bottomBarFocused = it.hasFocus }.focusGroup() else bottom)
-            }
             // At the top of a page only the two icons show, over the picture; scrolled, a black veil comes behind them.
             Box(
                 Modifier.fillMaxWidth().height(NavMetrics.ScrimHeight)
@@ -232,7 +225,7 @@ fun NavShell(
                     // behind the menu icon when the page was not at its top (PC, 2026-11-24).
                     .background(Brush.verticalGradient(0f to Color.Black, 0.72f to Color(0xF5000000), 1f to Color.Transparent)),
             )
-            if (!portrait) Box(
+            Box(
                 Modifier
                     .fillMaxWidth()
                     .padding(top = NavMetrics.Top)
@@ -359,46 +352,6 @@ private val MENU_WIDTH = 560.dp
 /** Pixels scrolled before the bar's backdrop shows. */
 private const val SCROLL_SHOW_PX = 40f
 
-/** The bottom bar's height: a tablet's is taller, its tabs read from arm's length. */
-private fun bottomBarHeight() = if (Form.tabletPortrait) 112.dp else NavMetrics.BottomBar
-
-/** The sections of a phone held upright: icon over name, the current one white, the others grey. */
-@Composable
-private fun BottomTabs(entries: List<NavEntry>, active: String, onSelect: (String) -> Unit, requester: (String) -> FocusRequester, modifier: Modifier) {
-    Row(
-        modifier
-            .fillMaxWidth()
-            .height(bottomBarHeight())
-            .background(Palette.BarFill)
-            .border(1.dp, Palette.Hairline)
-            .padding(horizontal = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        entries.forEach { entry ->
-            val isActive = entry.id == active
-            val tint = if (isActive) Palette.OnBackground else Palette.Secondary
-            androidx.compose.foundation.layout.Column(
-                Modifier
-                    .weight(1f)
-                    .fillMaxSize()
-                    .testTag("menu-${entry.id}")
-                    .tvFocusable(onFocusChanged = {}, onClick = { onSelect(entry.id) }, requester = requester(entry.id)),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-            ) {
-                val big = Form.tabletPortrait
-                Box(
-                    Modifier.size(if (big) 76.dp else 52.dp, if (big) 44.dp else 32.dp).clip(RoundedCornerShape(50)).background(if (isActive) Palette.ActiveFill else Color.Transparent),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(entry.icon, null, tint = tint, modifier = Modifier.size(if (big) 34.dp else NavMetrics.Icon))
-                }
-                Spacer(Modifier.height(if (big) 6.dp else 4.dp))
-                Label(entry.label, if (big) Type.TabLabel.copy(fontSize = 21.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold) else Type.TabLabel, tint, maxLines = 1)
-            }
-        }
-    }
-}
 
 @Composable
 private fun Tab(entry: NavEntry, isActive: Boolean, onClick: () -> Unit, requester: FocusRequester) {

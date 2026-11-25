@@ -141,7 +141,14 @@ fun Tagline(text: String) {
 fun Facts(info: TmdbInfo?, remainingMin: Int?) {
     val rating = info?.rating?.takeIf { it > 0 }
     val minutes = remainingMin ?: info?.runtimeMin?.takeIf { it > 0 }
-    Row(Modifier.testTag("title-facts"), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(22.dp)) {
+    // Wraps rather than cuts: on a phone held upright the languages, last, were pushed out and only their globe showed
+    // (Galaxy Z Fold2, 2026-11-24).
+    @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+    androidx.compose.foundation.layout.FlowRow(
+        Modifier.testTag("title-facts"),
+        horizontalArrangement = Arrangement.spacedBy(22.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
         if (rating != null) {
             Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                 repeat(5) { i ->
@@ -425,7 +432,8 @@ fun fitGenres(all: List<String>): List<String> {
 fun HeroInfo(deps: com.sokoul.pc.AppDeps, kind: String, itemId: Int, title: String, overview: String?, info: TmdbInfo?, extras: com.sokoul.pc.data.TitleExtras, remainingMin: Int?, onFocused: (Boolean) -> Unit) {
     Reveal(0, itemId) { PresentedBy(info?.brands.orEmpty()) }
     Spacer(Modifier.height(12.dp))
-    Reveal(1, itemId) { com.sokoul.pc.home.TitleLogo(info?.logo, title) }
+    // A logo in a script the viewer cannot read (an anime's Japanese one) gives way to the title in text (2026-11-24).
+    Reveal(1, itemId) { com.sokoul.pc.home.TitleLogo(com.sokoul.pc.ui.readableLogo(info), title) }
     info?.tagline?.takeIf { it.isNotBlank() }?.let {
         Spacer(Modifier.height(8.dp))
         Reveal(2, itemId) { Tagline(it) }

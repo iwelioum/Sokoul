@@ -15,6 +15,10 @@ import com.sokoul.iptv.data.anime.SkipInterval
 import com.sokoul.iptv.data.net.TmdbInfo
 import com.sokoul.iptv.data.net.TmdbItem
 import com.sokoul.pc.data.providers.ProviderHttp
+import com.sokoul.pc.data.providers.RequestPriority
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -51,6 +55,13 @@ class AnimeIdentityResolver(
 
     private class Result(val identity: AnimeIdentity?, val at: Long = System.currentTimeMillis())
 
+    /** Lookups running now: the player asks for the same identity three times at once (IPTV, Anime-Sama, Real-Debrid). */
+    private val running = ConcurrentHashMap<String, kotlinx.coroutines.Deferred<AnimeIdentity?>>()
+    private val sizesKnown = ConcurrentHashMap<String, Pair<Int?, Long>>()
+
+    /** Fribb's list on the device, without asking the network; null while it is not there or when the identity is off. */
+    suspend fun localIndex(): AnimeIndex? = if (enabled()) lists?.ids() else null
+
     /** The identity of a catalog title, or null when it is not an anime or when nothing links it for sure. */
     suspend fun identity(kind: String, tmdbId: Int, info: TmdbInfo? = null): AnimeIdentity? {
         if (!enabled()) return null
@@ -58,15 +69,25 @@ class AnimeIdentityResolver(
         // An identity found holds for the session. "Nothing found" is asked again after a while: a lookup whose
         // services timed out once left an anime without Kitsu, SeaDex and its romaji names until the app restarted.
         known[key]?.takeIf { it.identity != null || System.currentTimeMillis() - it.at < MISS_RETRY_MS }?.let { return it.identity }
-        val found = try {
-            resolve(kind, tmdbId, info)
-        } catch (c: CancellationException) {
-            throw c
-        } catch (_: Exception) {
-            null
+        // One lookup per title at a time, run on its own: the player asks three times at once, and one of them giving up
+        // (Anime-Sama's time limit) neither stops nor restarts it for the others. Its calls to AniList go before the rows'
+        // (2026-11-24).
+        val lookup = running.computeIfAbsent(key) {
+            background.async(RequestPriority.Urgent, start = kotlinx.coroutines.CoroutineStart.LAZY) {
+                val found = try {
+                    resolve(kind, tmdbId, info)
+                } catch (c: CancellationException) {
+                    throw c
+                } catch (_: Exception) {
+                    null
+                }
+                known[key] = Result(found)
+                found
+            }
         }
-        known[key] = Result(found)
-        return found
+        lookup.invokeOnCompletion { running.remove(key, lookup) }
+        lookup.start()
+        return lookup.await()
     }
 
     private suspend fun resolve(kind: String, tmdbId: Int, given: TmdbInfo?): AnimeIdentity? = coroutineScope {
@@ -189,8 +210,22 @@ class AnimeIdentityResolver(
 
     /** Where an episode of the catalog is in each anime database. */
     suspend fun episode(identity: AnimeIdentity?, tmdbId: Int, season: Int, episode: Int): EpisodeRef {
-        val sizes = (1..season).map { s -> timed { tmdb.seasonSize(tmdbId, s) } }
-        return EpisodeMapper.map(season, episode, sizes, identity?.entries.orEmpty())
+        return EpisodeMapper.map(season, episode, seasonSizes(tmdbId, season), identity?.entries.orEmpty())
+    }
+
+    /**
+     * The sizes of seasons 1 to [last], asked side by side (one after the other before 2026-11-24: ten seasons, ten
+     * waits) and remembered for an hour; a size not known is asked again next time.
+     */
+    internal suspend fun seasonSizes(tmdbId: Int, last: Int): List<Int?> = coroutineScope {
+        val gate = kotlinx.coroutines.sync.Semaphore(SEASONS_AT_ONCE)
+        (1..last).map { s ->
+            async {
+                val key = "$tmdbId:$s"
+                sizesKnown[key]?.takeIf { it.first != null && System.currentTimeMillis() - it.second < SIZE_MS }?.let { return@async it.first }
+                gate.withPermit { timed { tmdb.seasonSize(tmdbId, s) } }.also { sizesKnown[key] = it to System.currentTimeMillis() }
+            }
+        }.awaitAll()
     }
 
     /** The length of an episode, from Kitsu, when the catalog does not tell it. */
@@ -223,7 +258,9 @@ class AnimeIdentityResolver(
      * past the limit the lookup goes on without it, the call ending in the background.
      */
     private suspend fun <T> timed(block: suspend () -> T): T? = try {
-        val call = background.async { runCatching { block() }.getOrNull() }
+        // The call keeps the caller's priority (the player's): it runs in its own scope, which would lose it.
+        val priority = currentCoroutineContext()[RequestPriority] ?: RequestPriority.Normal
+        val call = background.async(priority) { runCatching { block() }.getOrNull() }
         withTimeoutOrNull(CALL_MS) { call.await() }
     } catch (c: CancellationException) {
         throw c
@@ -242,6 +279,8 @@ class AnimeIdentityResolver(
         const val WEEK_MS = 7 * 24 * 3_600_000L
         const val DAY_MS = 24 * 3_600_000L
         const val MAX_HOMONYMS = 6
+        const val SEASONS_AT_ONCE = 4
+        const val SIZE_MS = 3_600_000L
         const val ANIMATION = 16
         val ASIAN = setOf("ja", "zh", "ko")
     }
