@@ -30,7 +30,7 @@ tasks.jar {
     manifest { attributes("Implementation-Version" to project.version) }
 }
 
-val generateServerVersion by tasks.registering {
+val generateServerVersion = tasks.register("generateServerVersion") {
     val out = layout.buildDirectory.dir("generated/serverVersion")
     val v = project.version.toString()
     inputs.property("version", v)

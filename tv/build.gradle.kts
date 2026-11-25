@@ -110,7 +110,6 @@ android {
         // NewPipe's extractor uses java.time and java.nio beyond what Android 8 has.
         isCoreLibraryDesugaringEnabled = true
     }
-    kotlinOptions { jvmTarget = "17" }
     packaging {
         resources {
             excludes += setOf("jni/**", "META-INF/*.kotlin_module", "META-INF/AL2.0", "META-INF/LGPL2.1", "META-INF/versions/**", "org/sqlite/native/Windows/**", "org/sqlite/native/Mac/**", "org/sqlite/native/FreeBSD/**", "org/sqlite/native/Linux/**", "org/sqlite/native/Linux-Musl/**", "org/sqlite/native/Linux-Android/**")
@@ -119,6 +118,10 @@ android {
         jniLibs { useLegacyPackaging = true }
     }
     lint { checkReleaseBuilds = false }
+}
+
+kotlin {
+    compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) }
 }
 
 // Compose compiler reports, on demand only (-PcomposeReports): which composables can be skipped, which classes are stable.

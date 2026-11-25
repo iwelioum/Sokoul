@@ -25,7 +25,7 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach 
 // API keys (sokoul.key.*) come from this checkout's local.properties or an explicit SOKOUL_KEYS_FILE.
 // The generated class stays in the build folder: never committed or printed.
 val keysDir = layout.buildDirectory.dir("generated/keys")
-val generateDesktopKeys by tasks.registering {
+val generateDesktopKeys = tasks.register("generateDesktopKeys") {
     // Build inputs come from this checkout or an explicitly configured external key file.
     val candidates = listOfNotNull(
         System.getenv("SOKOUL_KEYS_FILE")?.let { File(it) },
@@ -93,7 +93,7 @@ val prunedVlc = layout.buildDirectory.dir("vlc-pruned")
 // macOS: libVLC enters the .app through Compose's app resources (<root>/macos/vlc), before the bundle is signed;
 // files added to a finished .app would break its signature.
 val macVlcResources = layout.buildDirectory.dir("vlc-app-resources")
-val pruneVlc by tasks.registering(Sync::class) {
+val pruneVlc = tasks.register<Sync>("pruneVlc") {
     from(vlcDir) {
         exclude(
             "plugins/gui/**", "plugins/visualization/**", "plugins/video_splitter/**", "plugins/services_discovery/**",
@@ -103,7 +103,7 @@ val pruneVlc by tasks.registering(Sync::class) {
     }
     into(if (isMacHost) macVlcResources.map { it.dir("macos/vlc") } else prunedVlc.map { it.dir("vlc") })
 }
-val bundleVlcResources by tasks.registering(Sync::class) {
+val bundleVlcResources = tasks.register<Sync>("bundleVlcResources") {
     dependsOn(pruneVlc)
     from(prunedVlc.map { it.dir("vlc") })
     into(layout.buildDirectory.dir("compose/binaries/main/app/Sokoul PC/app/resources/vlc"))
@@ -139,7 +139,7 @@ compose.desktop {
 
 // Development tools (screen renders, audits, trials, checks) live in their own source set: they never ship in the app,
 // and the TV build never sees them. They can use the main code, internals included.
-val dev: SourceSet by sourceSets.creating {
+val dev: SourceSet = sourceSets.create("dev") {
     compileClasspath += sourceSets["main"].output + sourceSets["main"].compileClasspath
     runtimeClasspath += output + compileClasspath + sourceSets["main"].runtimeClasspath
 }
