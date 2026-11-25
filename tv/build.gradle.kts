@@ -1,7 +1,6 @@
 // Sokoul on Google TV: the screens of :app, with Media3 instead of libVLC. Installs beside the old app, which it never touches.
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.kotlin.compose)
 }
@@ -64,7 +63,7 @@ val copyCurlNatives = tasks.register<Copy>("copyCurlNatives") {
 android {
     namespace = "com.sokoul.tv"
     ndkVersion = "27.1.12297006"
-    compileSdk = 35
+    compileSdk = 36
     defaultConfig {
         applicationId = "com.sokoul.tv"
         minSdk = 26
@@ -91,19 +90,19 @@ android {
             signingConfig = signingConfigs.getByName("debug")
         }
     }
-    sourceSets["main"].apply {
-        java.srcDir(shared)
-        java.exclude("**/* - Copie.kt", "**/* - copy.kt")
+    // AGP 9's source sets take plain directories (no providers, no exclude patterns): OneDrive's "- Copie" duplicates are
+    // kept out by syncShared and the Kotlin compile tasks, and out of the APK by the packaging and assets rules below.
+    sourceSets.getByName("main") {
+        kotlin.directories += shared.get().asFile.path
         // The keys class generated from the local configuration, never in the repo.
-        java.srcDir(layout.buildDirectory.dir("../app/generated/keys"))
-        resources.srcDir("../app/src/main/resources")
-        assets.srcDir("../app/src/main/resources")
-        res.exclude("**/* - Copie.*", "**/* - copy.*")
-        resources.exclude("**/* - Copie.*", "**/* - copy.*")
-        assets.exclude("**/* - Copie.*", "**/* - copy.*")
-        jniLibs.srcDir(sqliteNatives)
-        jniLibs.srcDir(curlNatives)
+        kotlin.directories += layout.buildDirectory.dir("../app/generated/keys").get().asFile.path
+        resources.directories += "../app/src/main/resources"
+        assets.directories += "../app/src/main/resources"
+        jniLibs.directories += sqliteNatives.get().asFile.path
+        jniLibs.directories += curlNatives.get().asFile.path
+        jniLibs.directories += project(":extractor").layout.buildDirectory.dir("generated/quickjsAndroid").get().asFile.path
     }
+    androidResources { ignoreAssetsPatterns += listOf("* - Copie.*", "* - copy.*") }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -112,16 +111,12 @@ android {
     }
     packaging {
         resources {
-            excludes += setOf("jni/**", "META-INF/*.kotlin_module", "META-INF/AL2.0", "META-INF/LGPL2.1", "META-INF/versions/**", "org/sqlite/native/Windows/**", "org/sqlite/native/Mac/**", "org/sqlite/native/FreeBSD/**", "org/sqlite/native/Linux/**", "org/sqlite/native/Linux-Musl/**", "org/sqlite/native/Linux-Android/**")
+            excludes += setOf("jni/**", "META-INF/*.kotlin_module", "META-INF/AL2.0", "META-INF/LGPL2.1", "META-INF/versions/**", "org/sqlite/native/Windows/**", "org/sqlite/native/Mac/**", "org/sqlite/native/FreeBSD/**", "org/sqlite/native/Linux/**", "org/sqlite/native/Linux-Musl/**", "org/sqlite/native/Linux-Android/**", "**/* - Copie.*", "**/* - copy.*")
         }
         // Unpacked at install into the app's native folder, where sqlite-jdbc loads it by its full path (TvApp).
         jniLibs { useLegacyPackaging = true }
     }
     lint { checkReleaseBuilds = false }
-}
-
-kotlin {
-    compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) }
 }
 
 // Compose compiler reports, on demand only (-PcomposeReports): which composables can be skipped, which classes are stable.
@@ -134,7 +129,6 @@ if (project.hasProperty("composeReports")) {
 
 tasks.named("preBuild") { dependsOn(syncShared, ":app:generateDesktopKeys", extractSqliteNatives, copyCurlNatives) }
 tasks.named("preBuild") { dependsOn(":extractor:extractAndroidNatives") }
-android.sourceSets["main"].jniLibs.srcDir(project(":extractor").layout.buildDirectory.dir("generated/quickjsAndroid"))
 
 dependencies {
     implementation(project(":extractor"))

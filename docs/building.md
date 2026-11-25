@@ -9,7 +9,7 @@ caches stay in `%TEMP%` so that OneDrive never syncs them. The Windows bootstrap
 | For | Needs |
 | --- | --- |
 | PC app | Windows 10/11 x64 or macOS (arm64/x64), JDK 17+, libVLC 3.0.21 (see below) |
-| TV / phone app | Android SDK (`ANDROID_HOME`, default `%LOCALAPPDATA%\Android\Sdk`, or `~/Library/Android/sdk` on macOS), platform 35 |
+| TV / phone app | Android SDK (`ANDROID_HOME`, default `%LOCALAPPDATA%\Android\Sdk`, or `~/Library/Android/sdk` on macOS), platform 36, build-tools 36 |
 | Backend | Docker Desktop (MySQL, Redis), or Node.js 20+ and Python 3.11+ for running services directly |
 | Extension and extractor bundle | Node.js 20+ |
 
