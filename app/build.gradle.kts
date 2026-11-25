@@ -61,7 +61,7 @@ dependencies {
     implementation(compose.material3)
     implementation(compose.materialIconsExtended)
     implementation(libs.okhttp)
-    implementation("com.google.zxing:core:3.5.3")
+    implementation(libs.zxing.core)
     // Streaming sites read by the app itself (Coflix…), as core already does.
     implementation(libs.jsoup)
     implementation(libs.kotlinx.serialization.json)

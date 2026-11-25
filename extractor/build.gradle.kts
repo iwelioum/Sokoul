@@ -14,8 +14,8 @@ dependencies {
 val quickjsJvmNatives by configurations.creating
 val quickjsAndroidNatives by configurations.creating
 dependencies {
-    quickjsJvmNatives("io.github.dokar3:quickjs-kt-jvm:1.0.15@jar") { isTransitive = false }
-    quickjsAndroidNatives("io.github.dokar3:quickjs-kt-android:1.0.15@aar") { isTransitive = false }
+    quickjsJvmNatives("io.github.dokar3:quickjs-kt-jvm:${libs.versions.quickjs.get()}@jar") { isTransitive = false }
+    quickjsAndroidNatives("io.github.dokar3:quickjs-kt-android:${libs.versions.quickjs.get()}@aar") { isTransitive = false }
 }
 sourceSets.main { kotlin.srcDir("src/quickjs/kotlin") }
 val extractJvmNatives by tasks.registering(Sync::class) {
