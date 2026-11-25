@@ -139,6 +139,7 @@ object Copy {
     val keySaved get() = L("Saved", "Enregistrée").text()
     val keyField get() = L("Key", "Clé").text()
     val save get() = L("Save", "Enregistrer").text()
+    val checkAnyway get() = L("Check anyway", "Vérifier quand même").text()
     fun advancedSummary(n: Int, total: Int) = L("$n of $total keys", "$n clés sur $total").text()
     val advancedLead get() = L(
         "Sokoul already works without these. Each key adds something precise.",

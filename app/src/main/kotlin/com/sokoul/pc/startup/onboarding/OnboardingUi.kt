@@ -91,6 +91,12 @@ internal object OnbMetrics {
 
 internal val OnbEase = CubicBezierEasing(0.2f, 0f, 0f, 1f)
 
+/**
+ * True where these parts are drawn inside the TV's monochrome chrome (Settings › Sources and keys, DESIGN.md §1): states
+ * and notes lose their green and red, and quiet buttons fill white under focus. The first launch keeps its own colours.
+ */
+internal val LocalMonochrome = androidx.compose.runtime.staticCompositionLocalOf { false }
+
 /** Brighter, warmer text on glass than [Palette.Secondary]: AA contrast on the darkest panel. */
 internal val Soft = Color(0xFFB8B8BC)
 
@@ -112,8 +118,9 @@ internal fun PrimaryButton(text: String, onClick: () -> Unit, modifier: Modifier
 /** A quiet action: text on translucent glass. */
 @Composable
 internal fun QuietButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    PressSurface(onClick = onClick, modifier = modifier.heightIn(min = OnbMetrics.Target), shape = RoundedCornerShape(50), rest = Color(0x1AFFFFFF), focus = Color(0x40FFFFFF)) { _ ->
-        Label(text, OnbType.Button, Color.White, Modifier.padding(horizontal = 44.dp), maxLines = 1)
+    val mono = LocalMonochrome.current
+    PressSurface(onClick = onClick, modifier = modifier.heightIn(min = OnbMetrics.Target), shape = RoundedCornerShape(50), rest = Color(0x1AFFFFFF), focus = if (mono) Color(0xFFF5F5F7) else Color(0x40FFFFFF)) { focused ->
+        Label(text, OnbType.Button, if (mono && focused) Palette.OnFocus else Color.White, Modifier.padding(horizontal = 44.dp), maxLines = 1)
     }
 }
 
@@ -169,7 +176,7 @@ internal fun TouchField(
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
     val outline by animateColorAsState(
-        when { error -> Palette.Error; focused -> Color.White; else -> Color(0x26FFFFFF) }, tween(140), label = "field-outline",
+        when { error && !LocalMonochrome.current -> Palette.Error; error || focused -> Color.White; else -> Color(0x26FFFFFF) }, tween(140), label = "field-outline",
     )
     val shape = RoundedCornerShape(OnbMetrics.RowCorner)
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -292,8 +299,9 @@ internal fun SourceGlyph(icon: ImageVector, tint: Color, modifier: Modifier = Mo
 /** A plain-language problem under a form. */
 @Composable
 internal fun ProblemNote(text: String, modifier: Modifier = Modifier) {
+    val mono = LocalMonochrome.current
     Row(modifier.fillMaxWidth().semantics { role = Role.Image }, horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.Top) {
-        Icon(Icons.Rounded.ErrorOutline, null, Modifier.padding(top = 4.dp).size(32.dp), tint = Color(0xFFFF9C94))
-        Label(text, OnbType.Secondary, Color(0xFFFFB7B0))
+        Icon(Icons.Rounded.ErrorOutline, null, Modifier.padding(top = 4.dp).size(32.dp), tint = if (mono) Color.White else Color(0xFFFF9C94))
+        Label(text, OnbType.Secondary, if (mono) Color.White else Color(0xFFFFB7B0))
     }
 }

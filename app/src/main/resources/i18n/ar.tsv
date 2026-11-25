@@ -1030,3 +1030,36 @@ Eclectic	متنوع الأذواق
 A bit of everything, at your own pace.	قليل من كل شيء، على إيقاعك.
 Your viewing style	أسلوبك في المشاهدة
 Your chapters	فصولك
+Sources and keys	المصادر والمفاتيح
+Everything is optional. Choose a service to see what it adds and how to get it.	كل شيء اختياري. اختر خدمة لترى ما تضيفه وكيف تحصل عليها.
+Not added	غير مضاف
+No key needed	لا حاجة إلى مفتاح
+Enter my subscription	إدخال اشتراكي
+Enter the address	إدخال العنوان
+Enter the key	إدخال المفتاح
+How to get it	كيف تحصل عليه
+Scan with your phone	امسح الرمز بهاتفك
+Check anyway	التحقق على أي حال
+This looks like the long token; paste the 32-character key.	يبدو هذا كالرمز الطويل؛ الصق المفتاح المكوّن من 32 حرفًا.
+This doesn't look like a {1} key. Check that you copied all of it.	لا يبدو هذا مفتاح {1}. تأكد من أنك نسخته كاملًا.
+Your sources	مصادرك
+Expert keys	مفاتيح للخبراء
+TV channels	القنوات التلفزيونية
+Sokoul server	خادم Sokoul
+To fix	يحتاج إلى إصلاح
+Sign in with Real-Debrid	تسجيل الدخول عبر Real-Debrid
+Sokoul already works without these. Each key adds something precise.	يعمل Sokoul دونها. كل مفتاح يضيف شيئًا محددًا.
+French and English subtitles for everything you watch	ترجمات بالفرنسية والإنجليزية لكل ما تشاهده
+Your provider's live channels, TV guide, films and series, in Sokoul.	القنوات المباشرة ودليل البرامج والأفلام والمسلسلات من مزوّدك، داخل Sokoul.
+Films and series in high quality, played through your Real-Debrid account.	أفلام ومسلسلات بجودة عالية، تُشغَّل عبر حسابك في Real-Debrid.
+The Movie Database: the catalogue, posters, summaries, cast and trailers Sokoul shows everywhere.	The Movie Database: الكتالوج والملصقات والملخصات وطاقم العمل والإعلانات التي يعرضها Sokoul في كل مكان.
+Subtitles in French, English and other languages for the film or episode you are watching.	ترجمات بالفرنسية والإنجليزية ولغات أخرى للفيلم أو الحلقة التي تشاهدها.
+More subtitles, looked up when OpenSubtitles doesn't have enough.	مزيد من الترجمات، يُبحث عنها عندما لا يكفي ما لدى OpenSubtitles.
+IMDb and Rotten Tomatoes ratings, and awards, on title pages.	تقييمات IMDb وRotten Tomatoes والجوائز في صفحات الأعمال.
+Title logos and wide, high-quality artwork for posters and backgrounds.	شعارات الأعمال وصور عريضة عالية الجودة للملصقات والخلفيات.
+Complete episode lists, with titles in French, when TMDB is missing some.	قوائم حلقات كاملة، مع العناوين بالفرنسية، عندما تنقص بعضها في TMDB.
+The date of a series' next episode.	تاريخ الحلقة القادمة من المسلسل.
+Where else a title can be watched in your country, when Movie of the Night doesn't know.	أين يمكن مشاهدة عمل ما في بلدك، عندما لا يعرف Movie of the Night.
+Recommendations of films similar to the ones you like.	توصيات بأفلام مشابهة لما تحبه.
+Which streaming services offer a title in your country (Netflix, Prime Video…).	خدمات البث التي تعرض عملًا ما في بلدك (Netflix وPrime Video…).
+More web and anime sources, from the PC at home that runs the Sokoul server.	مزيد من مصادر الويب والأنمي، من حاسوب المنزل الذي يشغّل خادم Sokoul.

@@ -346,6 +346,17 @@ fun SokoulPcApp(deps: AppDeps, skipSplash: Boolean = false) {
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main.immediate) { deps.uiChanged() }
         }
     }
+    /** Loads the active playlist's channels and guide in the background, after a subscription was saved. */
+    fun syncActivePlaylist() {
+        val playlists = deps.db.playlists()
+        val active = deps.db.setting(com.sokoul.desktop.data.Settings.ACTIVE_PLAYLIST)?.toLongOrNull()
+        (playlists.firstOrNull { it.id == active } ?: playlists.firstOrNull())?.let { playlist ->
+            setupScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                runCatching { com.sokoul.desktop.data.DesktopSync(deps.db).sync(playlist) }
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main.immediate) { deps.uiChanged() }
+            }
+        }
+    }
     fun afterSplash() = when {
         StartupRoute.needsSetup(StartupRoute.state(deps.db)) -> Route.Setup
         // Several profiles: who is watching decides what Home shows.
@@ -367,14 +378,7 @@ fun SokoulPcApp(deps: AppDeps, skipSplash: Boolean = false) {
                 model,
                 onFinished = {
                     // The catalogue opens at once and fills in while the channels arrive.
-                    val playlists = deps.db.playlists()
-                    val active = deps.db.setting(com.sokoul.desktop.data.Settings.ACTIVE_PLAYLIST)?.toLongOrNull()
-                    (playlists.firstOrNull { it.id == active } ?: playlists.firstOrNull())?.let { playlist ->
-                        setupScope.launch(kotlinx.coroutines.Dispatchers.IO) {
-                            runCatching { com.sokoul.desktop.data.DesktopSync(deps.db).sync(playlist) }
-                            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main.immediate) { deps.uiChanged() }
-                        }
-                    }
+                    syncActivePlaylist()
                     route = Route.Main
                 },
                 onLater = { route = Route.Main },
@@ -385,7 +389,7 @@ fun SokoulPcApp(deps: AppDeps, skipSplash: Boolean = false) {
         Route.Profiles -> com.sokoul.pc.startup.ProfilesScreen(deps.profiles, onChosen = { route = Route.Main })
         Route.Main -> androidx.compose.runtime.CompositionLocalProvider(com.sokoul.pc.live.LocalProgramArt provides deps.programArt, com.sokoul.pc.data.LocalProfile provides deps.profiles.current) {
             androidx.compose.runtime.key(deps.languageRevision) {
-                com.sokoul.pc.home.ScreensaverHost(deps) { MainInterface(deps, controller, onProfiles = { route = Route.Profiles }, onPlaylistSaved = ::syncSavedPlaylist) }
+                com.sokoul.pc.home.ScreensaverHost(deps) { MainInterface(deps, onProfiles = { route = Route.Profiles }, onSourcesSaved = ::syncActivePlaylist) }
             }
         }
     }
@@ -411,7 +415,7 @@ private sealed interface Overlay {
 
 @OptIn(ExperimentalComposeUiApi::class, ExperimentalFoundationApi::class)
 @Composable
-private fun MainInterface(deps: AppDeps, controller: SetupController, onProfiles: () -> Unit = {}, onPlaylistSaved: () -> Unit = {}) {
+private fun MainInterface(deps: AppDeps, onProfiles: () -> Unit = {}, onSourcesSaved: () -> Unit = {}) {
     // The user may hide entries of the menu (settings); reading the revision redraws it after a change.
     val hiddenEntries = deps.uiRevision.let { deps.prefs.railHidden }
     val allEntries = listOf(
@@ -762,23 +766,22 @@ private fun MainInterface(deps: AppDeps, controller: SetupController, onProfiles
             return@Box
         }
         if (editingCredentials) {
-            Box(
-                Modifier.fillMaxSize().onPreviewKeyEvent { e ->
-                    if (e.type == KeyEventType.KeyDown && e.key == Key.Escape && controller.editingField == null) {
-                        editingCredentials = false
-                        true
-                    } else {
-                        false
-                    }
-                },
-            ) {
-                SetupScreen(controller, onDone = {
-                    editingCredentials = false
-                    catalogRevision++
-                    section = SECTION_HOME
-                    onPlaylistSaved()
-                }, onLater = null, onBack = { editingCredentials = false })
+            // Settings › Sources and keys: the first launch's cards and sheets, with a guide per service.
+            val sourcesScope = androidx.compose.runtime.rememberCoroutineScope()
+            val model = remember {
+                com.sokoul.pc.startup.onboarding.OnboardingModel(
+                    deps.db, deps.validator, com.sokoul.iptv.data.debrid.RealDebridOAuth(okhttp3.OkHttpClient()), sourcesScope,
+                )
             }
+            val iptvAtOpen = remember { model.sources[com.sokoul.pc.startup.onboarding.SourceKind.Iptv] }
+            com.sokoul.pc.setup.SourcesScreen(model, onBack = {
+                model.cancelDeviceLink()
+                editingCredentials = false
+                catalogRevision++
+                // A subscription saved here fills the TV pages at once, as after the first launch.
+                val iptv = model.sources[com.sokoul.pc.startup.onboarding.SourceKind.Iptv]
+                if (iptv != iptvAtOpen && iptv?.status == com.sokoul.pc.startup.onboarding.SourceStatus.Ready) onSourcesSaved()
+            })
             return@Box
         }
         // On a touch tablet, Settings opens with nothing lit (settings-redesign touch-input); a remote or keyboard starts on it.

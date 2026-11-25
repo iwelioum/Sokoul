@@ -270,6 +270,69 @@ fun main(args: Array<String>) {
         kotlin.system.exitProcess(0)
     }
 
+    // "sources-page": Settings › Sources and keys with one source ready, one with a problem and the rest empty, then the
+    // TMDB guide and its key sheet open; TV 1920x1080 and a tablet held upright, in a throwaway database.
+    if (args.getOrNull(1) == "sources-page") {
+        ProviderConfig.builtIn = { emptyMap() }
+        val file = File.createTempFile("render-sources-page", ".db")
+        DesktopDb(file).use { db ->
+            val pid = db.upsertPlaylist(com.sokoul.desktop.data.Playlist(0, "IPTV", com.sokoul.desktop.data.PlaylistType.XTREAM,
+                "http://exemple.invalid:8080", "sample", "sample", null, null))
+            db.putSetting(com.sokoul.desktop.data.Settings.ACTIVE_PLAYLIST, pid.toString())
+            ProviderConfig.setKey(db, "tmdb", "0123456789abcdef0123456789ab4f2c")
+            ProviderConfig.setKey(db, "opensubtitles", "sample-subtitles-k9Q1")
+            val model = com.sokoul.pc.startup.onboarding.OnboardingModel(
+                db, CredentialValidator(OkHttpClient()), com.sokoul.iptv.data.debrid.RealDebridOAuth(OkHttpClient()),
+                CoroutineScope(Dispatchers.Unconfined),
+            )
+            model.sources[com.sokoul.pc.startup.onboarding.SourceKind.RealDebrid] = com.sokoul.pc.startup.onboarding.SourceView(
+                com.sokoul.pc.startup.onboarding.SourceStatus.Problem, problem = com.sokoul.pc.startup.onboarding.Copy.debridRefused,
+            )
+            val wanted = args.getOrNull(2)?.split(',')
+            data class Shot(val name: String, val w: Int, val h: Int, val portrait: Boolean, val guide: String?, val entry: String?, val scrolled: Boolean = false)
+            val shots = listOf(
+                Shot("page", 1920, 1080, false, null, null),
+                Shot("page-scrolled", 1920, 1080, false, null, null, scrolled = true),
+                Shot("guide-tmdb", 1920, 1080, false, "tmdb", null),
+                Shot("guide-subtitles", 1920, 1080, false, "subtitles", null),
+                Shot("guide-iptv", 1920, 1080, false, "iptv", null),
+                Shot("entry-tmdb", 1920, 1080, false, null, "tmdb"),
+                Shot("tablet-page", 1600, 2560, true, null, null),
+                Shot("tablet-guide-tmdb", 1600, 2560, true, "tmdb", null),
+            ).filter { wanted == null || it.name in wanted }
+            for (language in listOf("fr", "en")) {
+                com.sokoul.pc.i18n.Strings.applyLanguage(language)
+                for (shot in shots) {
+                    com.sokoul.pc.ui.Form.tablet = shot.portrait
+                    com.sokoul.pc.ui.Form.tabletPortrait = shot.portrait
+                    model.keyErrors.clear()
+                    model.keyErrors["omdb"] = com.sokoul.pc.startup.onboarding.Copy.keyRefused
+                    val s = ImageComposeScene(shot.w, shot.h, Density(1f)) {
+                        ScaledRoot {
+                            com.sokoul.pc.setup.SourcesScreen(model, onBack = {}, backButton = shot.portrait, initialGuide = shot.guide, initialEntry = shot.entry)
+                        }
+                    }
+                    var t = 0L
+                    repeat(12) { s.render(t); t += 50_000_000L }
+                    if (shot.scrolled) {
+                        repeat(5) {
+                            s.sendKeyEvent(KeyEvent(Key.DirectionDown, KeyEventType.KeyDown)); s.render(t)
+                            s.sendKeyEvent(KeyEvent(Key.DirectionDown, KeyEventType.KeyUp)); s.render(t)
+                            t += 200_000_000L
+                        }
+                        repeat(8) { s.render(t); t += 50_000_000L }
+                    }
+                    save("sources-page_${shot.name}_$language", s, t)
+                    s.close()
+                }
+            }
+            com.sokoul.pc.ui.Form.tablet = false
+            com.sokoul.pc.ui.Form.tabletPortrait = false
+        }
+        file.delete()
+        kotlin.system.exitProcess(0)
+    }
+
     // "intro": the animated intro (Figma "breaking the evil eye"), one picture per key moment.
     if (args.getOrNull(1) == "intro") {
         val s = ImageComposeScene(1920, 1080, Density(1f)) { ScaledRoot { com.sokoul.pc.startup.SokoulIntro() } }

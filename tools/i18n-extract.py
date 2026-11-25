@@ -13,7 +13,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 STRING = r'"((?:[^"\\]|\\.)*)"'
-PAIR = re.compile(r'\bL\(\s*' + STRING + r'\s*,\s*' + STRING + r'\s*\)', re.S)
+# A trailing comma after the French text (L spread over several lines) is still a pair.
+PAIR = re.compile(r'\bL\(\s*' + STRING + r'\s*,\s*' + STRING + r'\s*,?\s*\)', re.S)
 TEMPLATE = re.compile(r'\$\{(?:[^{}]|\{[^{}]*\})*\}|\$[A-Za-z_][A-Za-z0-9_.]*(?:\(\))?')
 TEXT = re.compile(r'Text\.(\w+) to ' + STRING)
 # Pairs written outside L(), then passed to it or to Strings.pick as values: each pattern captures (english, french).

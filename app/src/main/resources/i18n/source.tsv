@@ -36,6 +36,7 @@ A second life	Une seconde vie
 A single provider connection is shared between playback and DVR	Le direct et le DVR partagent une seule connexion fournisseur
 About	À propos
 About 2 minutes · everything is optional	Environ 2 minutes · tout est facultatif
+About TVmaze	À propos de TVmaze
 Accent colour	Couleur d'accent
 Access key (if asked)	Clé d'accès (si demandée)
 Account connected	Compte connecté
@@ -46,6 +47,7 @@ Active	Actif
 Active collection	Collection active
 Adaptations	Adaptations
 Add	Ajouter
+Add a free OpenSubtitles or Subdl key to turn subtitles on. One of the two is enough.	Ajoutez une clé gratuite OpenSubtitles ou Subdl pour activer les sous-titres. L'une des deux suffit.
 Add a language	Ajouter une langue
 Add channel to favorites	Ajouter la chaîne aux favoris
 Add channels	Ajouter des chaînes
@@ -108,6 +110,9 @@ Applied the next time a channel is opened. Local live recording currently requir
 Are you still watching?	Vous regardez toujours ?
 Arts and music	Arts et musique
 Ask at start	Demander au lancement
+Ask for a key and describe your use as personal, without income.	Demandez une clé et décrivez votre usage comme personnel, sans revenus.
+Ask for a key, accept the terms and fill in the short form for personal use.	Demandez une clé, acceptez les conditions et remplissez le court formulaire pour un usage personnel.
+Ask for an access key and copy it.	Demandez une clé d'accès et copiez-la.
 Ask me	Me demander
 Asked before this profile opens or is edited.	Demandé avant d'ouvrir ou de modifier ce profil.
 at %s	à %s
@@ -189,6 +194,7 @@ Chapters of volume {1}	Chapitres du tome {1}
 Chapters {1}	Chapitres {1}
 Characters	Personnages
 Check and save	Vérifier et enregistrer
+Check anyway	Vérifier quand même
 Checking PIN…	Vérification du code…
 Checking with your provider…	Vérification auprès de votre fournisseur…
 Checking…	Vérification…
@@ -207,6 +213,7 @@ Choose another group	Choisir un autre groupe
 Choose Another Version	Choisir une autre version
 Choose Channels and enter a name or number, or explore Programmes.	Choisissez Chaînes et saisissez un nom ou numéro, ou explorez Programmes.
 Choose folder…	Choisir un dossier…
+Choose “FREE!” and type your e-mail address.	Choisissez « FREE! » et saisissez votre adresse e-mail.
 Classics	Les classiques
 Clear	Effacer
 CLEAR	EFFACER
@@ -227,18 +234,37 @@ Comedy	Comédie
 Coming soon	Prochainement
 Coming up	À suivre
 Competitions	Compétitions
+Complete episode lists, with titles in French, when TMDB is missing some.	Des listes d'épisodes complètes, avec les titres en français, quand il en manque chez TMDB.
 Configure later	Configurer plus tard
 Configure your Sokoul server and access key in Credentials.	Configurez le serveur Sokoul et sa clé dans les Identifiants.
 Confirm delete	Confirmer la suppression
+Confirm on your phone: Sokoul connects by itself, no key to type.	Confirmez sur votre téléphone : Sokoul se connecte tout seul, aucune clé à saisir.
 Connected to 	Connecté à 
 Connecting…	Connexion…
 Content sources	Sources de contenu
 Continue	Valider
 Continue Watching	Continuer à regarder
+Copy its key and paste it in Sokoul.	Copiez sa clé et collez-la dans Sokoul.
+Copy the key and paste it in Sokoul.	Copiez la clé et collez-la dans Sokoul.
+Copy the key from the e-mail and paste it in Sokoul.	Copiez la clé de l'e-mail et collez-la dans Sokoul.
+Copy the key shown in your account.	Copiez la clé affichée dans votre compte.
+Copy the key Watchmode gives you.	Copiez la clé que Watchmode vous donne.
+Copy the short “API Key” (32 characters), not the long “Read Access Token”.	Copiez la « Clé d'API » courte (32 caractères), pas le long « Jeton d'accès en lecture ».
+Copy your personal key.	Copiez votre clé personnelle.
 Could not reach the source server.	Échec de connexion au serveur source.
 Could not start the download.	Impossible de démarrer le téléchargement.
 Counting…	Calcul en cours…
 Create a collection	Créer une collection
+Create a free account on fanart.tv.	Créez un compte gratuit sur fanart.tv.
+Create a free account on opensubtitles.com and confirm your e-mail.	Créez un compte gratuit sur opensubtitles.com et confirmez votre e-mail.
+Create a free account on subdl.com.	Créez un compte gratuit sur subdl.com.
+Create a free account on tastedive.com.	Créez un compte gratuit sur tastedive.com.
+Create a free account on themoviedb.org and confirm your e-mail.	Créez un compte gratuit sur themoviedb.org et confirmez votre e-mail.
+Create a free account on thetvdb.com.	Créez un compte gratuit sur thetvdb.com.
+Create a free account with the free plan.	Créez un compte gratuit avec l'offre gratuite.
+Create a new consumer: any name works, for example Sokoul.	Créez un nouveau « consumer » : n'importe quel nom convient, par exemple Sokoul.
+Create an account and choose the free plan.	Créez un compte et choisissez l'offre gratuite.
+Create an account on real-debrid.com and take a Premium subscription.	Créez un compte sur real-debrid.com et prenez un abonnement Premium.
 Create and add	Créer et ajouter
 Created by	Créé par
 Credentials and API keys	Identifiants et clés API
@@ -252,6 +278,7 @@ Current group	Groupe actuel
 Cyan	Cyan
 D-pad to type and browse · Back returns to your selection	Flèches pour saisir et parcourir · Retour retrouve votre sélection
 Dark box	Fond sombre
+Data: TMDB. Anime: Fribb anime-lists, manami-project anime-offline-database (ODbL), ARM, animeapi, Kitsu, Jikan, AniList, SeaDex (releases.moe), AniSkip. Sokoul is not endorsed by these services.	Données : TMDB. Animés : Fribb anime-lists, manami-project anime-offline-database (ODbL), ARM, animeapi, Kitsu, Jikan, AniList, SeaDex (releases.moe), AniSkip. Sokoul n'est pas approuvé par ces services.
 days in a row, at best	jours d'affilée, au mieux
 days in front of the screen	jours devant l'écran
 Dead link	Lien mort
@@ -278,6 +305,7 @@ Download started.	Téléchargement démarré.
 downloading %d %%	téléchargement %d %%
 Drama	Drame
 Drama & Romance	Drame et romance
+Each source brings something different. Add one, several or none: you can finish later in Settings.	Chaque source apporte quelque chose de différent. Ajoutez-en une, plusieurs ou aucune : vous pourrez compléter plus tard dans Réglages.
 Eclectic	Éclectique
 Edit collection	Gérer la collection
 Edit profiles	Modifier les profils
@@ -292,8 +320,12 @@ Enter a title	Saisissez un titre
 Enter a valid HTTP or HTTPS XMLTV address, or off to clear it.	Saisissez une adresse XMLTV HTTP ou HTTPS valide, ou off pour l’effacer.
 Enter a valid HTTPS address, or a local HTTP address.	Saisissez une adresse HTTPS valide, ou une adresse HTTP locale.
 Enter both the username and the password.	Saisissez l'identifiant et le mot de passe.
+Enter my subscription	Saisir mon abonnement
 Enter Sokoul	Entrer dans Sokoul
+Enter the address	Saisir l'adresse
 Enter the code to edit this profile.	Entrez le code pour modifier ce profil.
+Enter the key	Saisir la clé
+Enter what your IPTV provider sent you, by e-mail or in your customer area.	Saisissez ce que votre fournisseur IPTV vous a envoyé, par e-mail ou dans votre espace client.
 Enter your adult PIN to manage protected groups.	Saisissez votre code adulte pour gérer les groupes protégés.
 Enter your IPTV credentials or a TMDB key, or choose Configure later.	Saisissez vos identifiants IPTV ou une clé TMDB, ou choisissez Configurer plus tard.
 Ep. {1}	Ép. {1}
@@ -310,6 +342,7 @@ Every day	Chaque jour
 Every week	Chaque semaine
 Everyone plays the title with their own sources; play, pause and jumps stay in step.	Chacun lit le titre avec ses propres sources ; lecture, pause et sauts restent synchronisés.
 Everything	Tout
+Everything is optional. Choose a service to see what it adds and how to get it.	Tout est facultatif. Choisissez un service pour voir ce qu'il apporte et comment l'obtenir.
 Everywhere	Partout
 Excluded versions	Versions écartées
 Exit full screen	Quitter le plein écran
@@ -320,10 +353,12 @@ Export	Exporter
 Export failed. Check available space, folder access and existing files.	Échec de l’export. Vérifiez l’espace disponible, l’accès au dossier et les fichiers existants.
 Exporting recording…	Export de l’enregistrement…
 Extend 15 minutes	Prolonger de 15 min
+Extra anime episodes, from an anime server you run yourself.	Des épisodes d'anime en plus, depuis un serveur d'anime que vous faites tourner vous-même.
 E{1}	É{1}
 Failed	Échec
 Failing stream	Flux défaillant
 Family	En famille
+fanart.tv key page	Page de la clé fanart.tv
 Fantasy	Fantastique
 Fast	Rapide
 Favorite	Ajouter aux favoris
@@ -341,11 +376,13 @@ Film Page	Fiche du film
 Films	Films
 Films and series	Films et séries
 Films and series in high quality	Des films et séries en haute qualité
+Films and series in high quality, played through your Real-Debrid account.	Des films et des séries en haute qualité, lus grâce à votre compte Real-Debrid.
 Films That Twist Your Mind	Films qui retournent le cerveau
 Films took most of your time.	Les films ont pris l'essentiel de votre temps.
 Films, OVAs and more	Films, OAV et plus
 Find a channel	Rechercher une chaîne
 Find something to watch	Trouvez votre programme
+Find the e-mail or customer area of your IPTV provider.	Retrouvez l'e-mail ou l'espace client de votre fournisseur IPTV.
 Finding a source…	Recherche d'une source…
 Finished	Terminés
 Finished, to read in one go	Terminés, à lire d'une traite
@@ -370,6 +407,17 @@ Four episodes or more in a day, more than once.	Quatre épisodes ou plus dans la
 fps	i/s
 Fragile stream	Flux fragile
 Fragile stream. Try %s?	Flux fragile. Essayer %s ?
+Free account, with a usage limit shown on the site.	Compte gratuit, avec une limite d'utilisation indiquée sur le site.
+Free account.	Compte gratuit.
+Free account. Any limit is shown on subdl.com.	Compte gratuit. Une éventuelle limite est indiquée sur subdl.com.
+Free account. Downloads are limited per day: the limit is shown on opensubtitles.com.	Compte gratuit. Les téléchargements sont limités par jour : la limite est indiquée sur opensubtitles.com.
+Free for personal projects (no income), with credit to TheTVDB.	Gratuit pour les projets personnels (sans revenus), en citant TheTVDB.
+Free for personal, non-commercial use.	Gratuit pour un usage personnel, non commercial.
+Free plan for personal use, no bank card, with a monthly limit shown on the site.	Offre gratuite pour un usage personnel, sans carte bancaire, avec une limite mensuelle indiquée sur le site.
+Free plan: 1,000 requests a month. Paid plans offer more.	Offre gratuite : 1 000 requêtes par mois. Les offres payantes en donnent davantage.
+Free, without an account.	Gratuit, sans compte.
+Free: 1,000 requests a day. Patreon supporters get more.	Gratuit : 1 000 requêtes par jour. Les soutiens Patreon en ont davantage.
+Free: it runs on your own PC.	Gratuit : il tourne sur votre propre PC.
 French	Français
 French (VF)	Français (VF)
 French and English subtitles for everything you watch	Des sous-titres en français et en anglais pour tout ce que vous regardez
@@ -421,13 +469,19 @@ Host link tools	Outils de liens hébergés
 Hoster {1}	Hébergeur {1}
 How a title starts and which version comes first.	Comment un titre démarre et quelle version passe en premier.
 How do you like to watch?	Comment aimez-vous regarder ?
+How to get it	Comment l'obtenir
+If an access key is asked, it is on the PC, in the SokoulApi folder (file access.key).	Si une clé d'accès est demandée, elle se trouve sur le PC, dans le dossier SokoulApi (fichier access.key).
+If it gives a server address, a username and a password (the “Xtream Codes” format), choose “Server and sign-in”.	S'il donne une adresse de serveur, un identifiant et un mot de passe (le format « Xtream Codes »), choisissez « Serveur et identifiants ».
+If it gives a single link instead (it often contains get.php), choose “Playlist link (M3U)” and paste it.	S'il donne plutôt un seul lien (il contient souvent get.php), choisissez « Lien de playlist (M3U) » et collez-le.
 If no language matches	Si aucune langue ne correspond
 If you liked this	Si vous avez aimé
 If You Liked This Saga	Si vous avez aimé cette saga
+IMDb and Rotten Tomatoes ratings, and awards, on title pages.	Les notes IMDb et Rotten Tomatoes, et les récompenses, sur les fiches.
 In %d min	Dans %d min
 In cinemas	Au cinéma
 In cinemas on {1}	Au cinéma le {1}
 In My List	Dans Ma liste
+In Sokoul, choose “Sign in with Real-Debrid”: a code and a QR appear.	Dans Sokoul, choisissez « Se connecter avec Real-Debrid » : un code et un QR s'affichent.
 In the Same Universe	Dans le même univers
 Inactive	Inactif
 Information	Informations
@@ -515,6 +569,8 @@ Moods	Humeurs
 MOODS	AMBIANCES
 More	Suite
 More options	Autres options
+More subtitles, looked up when OpenSubtitles doesn't have enough.	Plus de sous-titres, cherchés quand OpenSubtitles n'en a pas assez.
+More web and anime sources, from the PC at home that runs the Sokoul server.	Plus de sources web et d'anime, depuis le PC de la maison qui fait tourner le serveur Sokoul.
 More web and anime sources, from the PC that runs it	Plus de sources web et d'anime, depuis le PC qui le fait tourner
 Morning viewer	Spectateur du matin
 Most of your viewing happened after 10 pm.	L'essentiel de vos séances a eu lieu après 22 h.
@@ -527,6 +583,7 @@ Move up	Monter
 Move with ↑ ↓ · OK saves · Back cancels	Déplacer avec ↑ ↓ · OK enregistre · Retour annule
 Movie	Film
 Movie and series source priorities	Priorités des sources films et séries
+Movie of the Night for developers	Movie of the Night pour les développeurs
 Movies	Films
 Movies, shows, cast and more	Films, séries, distribution et plus
 Music	Musiques
@@ -572,11 +629,14 @@ No channels in this group.	Aucune chaîne dans ce groupe.
 No channels in this zapping list. Choose a list in My TV.	Aucune chaîne dans cette liste de zapping. Choisissez une liste dans Ma TV.
 No chapter can be read here: its publisher holds it.	Aucun chapitre lisible ici : son éditeur en garde les droits.
 No chapter can be read here: its publisher holds it. Read it on {1}	Aucun chapitre lisible ici : son éditeur en garde les droits. À lire sur {1}
+No chapter can be read here: its publisher holds it. Your own files open too.	Aucun chapitre lisible ici : son éditeur en garde les droits. Tes propres fichiers s'ouvrent aussi.
 No episodes were returned by this provider.	Le fournisseur n’a renvoyé aucun épisode.
 No events are listed right now.	Aucune rencontre n’est annoncée pour le moment.
 No groups are available. Add or refresh your IPTV source in Settings.	Aucun groupe disponible. Ajoutez ou actualisez votre source IPTV dans les réglages.
 No guide for this channel	Pas de guide pour cette chaîne
 No host service is enabled on the server.	Aucun service de débridage n'est activé sur le serveur.
+No key and no account: nothing personal is sent.	Aucune clé ni compte : rien de personnel n'est envoyé.
+No key needed	Aucune clé nécessaire
 No limit	Sans limite
 No matching group. Back clears the search.	Aucun groupe trouvé. Retour efface la recherche.
 No matching groups. Back clears the search.	Aucun groupe trouvé. Retour efface la recherche.
@@ -592,6 +652,7 @@ No reminder yet. In the guide, choose a programme to come and press OK.	Aucun ra
 No results.	Aucun résultat.
 No screen watching right now	Aucun écran en cours de lecture
 No server is available for this event yet.	Aucun serveur n’est encore disponible pour cette rencontre.
+No Sokoul server answers at this address. Check that the PC is on and on the same Wi-Fi.	Aucun serveur Sokoul ne répond à cette adresse. Vérifiez que le PC est allumé et sur le même Wi-Fi.
 No source configured	Aucune source configurée
 No source is available for this title.	Aucune source n'est disponible pour ce titre.
 No subtitles found online.	Aucun sous-titre trouvé en ligne.
@@ -602,6 +663,7 @@ No {1} audio · Playing in {2}	Pas de piste en {1} · Lecture en {2}
 No {1} audio · Playing in {2}, {3} subtitles	Pas de piste en {1} · Lecture en {2}, sous-titres en {3}
 None of your channels shows {1}.	Aucune de vos chaînes ne correspond à {1}.
 Normal	Normale
+Not added	Non ajouté
 Not added · you can add it later in Settings	Non ajouté · à ajouter plus tard dans Réglages
 Not available	Indisponible
 Not available on a kids profile ({1})	Indisponible sur un profil enfant ({1})
@@ -610,6 +672,8 @@ Not Now	Plus tard
 Not set	Non renseigné
 Not the film	Pas le film
 Not yet at home	Pas encore en vidéo
+Note its address, for example http://192.168.1.20:3000.	Notez son adresse, par exemple http://192.168.1.20:3000.
+Note the PC's address shown in the server's window, for example 192.168.1.20.	Notez l'adresse du PC affichée dans la fenêtre du serveur, par exemple 192.168.1.20.
 Nothing announced this week.	Rien d'annoncé cette semaine.
 Nothing found.	Rien trouvé.
 Nothing from your list airs on these days.	Rien de ta liste n'est diffusé ces jours-là.
@@ -618,6 +682,8 @@ Nothing is what it seems.	Rien n'est ce qu'il paraît.
 Nothing matches all of these.	Rien ne correspond à tout cela.
 Nothing matches. Widen the filters.	Rien ne correspond. Élargissez les filtres.
 Nothing started yet	Rien n'a encore été lancé
+Nothing to do: TVmaze needs no key, Sokoul uses it on its own.	Rien à faire : TVmaze ne demande aucune clé, Sokoul l'utilise tout seul.
+Nothing to pay to Sokoul: the server is yours.	Rien à payer à Sokoul : le serveur est le vôtre.
 Nothing watched this year yet.	Rien de regardé cette année pour l'instant.
 Notify me	Me prévenir
 Now	Maintenant
@@ -629,11 +695,16 @@ OK  Watch · Menu  Favorite	OK  Regarder · Menu  Favori
 OK shows or hides a row; the arrows beside it change its place.	OK affiche ou cache une rangée ; les flèches à côté changent sa place.
 OK to change · Back to guide	OK pour modifier · Retour au guide
 OK to choose · Back to guide	OK pour choisir · Retour au guide
+OMDb key page	Page de la clé OMDb
 On	Activé
 On 	Diffusé sur 
+On a computer, open “Settings”, then “API” (themoviedb.org/settings/api).	Sur un ordinateur, ouvrez « Paramètres », puis « API » (themoviedb.org/settings/api).
 On air now	À l’antenne
 On now	En cours
 On the air right now.	En ce moment à l'antenne.
+On the PC that runs it, start the Sokoul server. On that PC, nothing else to do.	Sur le PC qui le fait tourner, lancez le serveur Sokoul. Sur ce PC, rien d'autre à faire.
+On the PC that runs the Sokoul server, its address is shown in its window. Example: 192.168.1.20	Sur le PC qui fait tourner le serveur Sokoul, son adresse est affichée dans sa fenêtre. Exemple : 192.168.1.20
+On the TV, type this address in “PC address”. The TV and the PC must be on the same Wi-Fi.	Sur la TV, saisissez cette adresse dans « Adresse du PC ». La TV et le PC doivent être sur le même Wi-Fi.
 ON YOUR CHANNELS	SUR VOS CHAÎNES
 On your channels now	Sur vos chaînes maintenant
 One page	Une page
@@ -641,20 +712,31 @@ One page, right to left	Une page, sens japonais
 One shots	One shots
 Ongoing	En cours
 Online	En ligne
+Only chapter {1} can be read here: its publisher holds the others.	Seul le chapitre {1} est lisible ici : son éditeur garde les autres.
+Only chapters {1} can be read here: its publisher holds the others.	Seuls les chapitres {1} sont lisibles ici : son éditeur garde les autres.
 Only this collection is removed. Channels and favorites are kept.	Seule cette collection est supprimée. Les chaînes et les favoris sont conservés.
 Only when I ask	Seulement quand je le demande
+Only {1} of {2} chapters can be read here ({3}): its publisher holds the rest.	Seuls {1} chapitres sur {2} sont lisibles ici ({3}) : son éditeur garde les autres.
 Open	Voir la fiche
 Open a comic file	Ouvrir un fichier de manga
 Open a file	Ouvrir un fichier
+Open api.watchmode.com/requestApiKey.	Ouvrez api.watchmode.com/requestApiKey.
+Open developers.movieofthenight.com.	Ouvrez developers.movieofthenight.com.
 Open download	Ouvrir le téléchargement
 Open group controls	Ouvrir les réglages du groupe
 Open in guide	Ouvrir dans le guide
+Open omdbapi.com/apikey.aspx.	Ouvrez omdbapi.com/apikey.aspx.
+Open the e-mail OMDb sends and follow its instructions. It can take a while with Outlook or Yahoo addresses.	Ouvrez l'e-mail envoyé par OMDb et suivez ses instructions. Il peut tarder avec les adresses Outlook ou Yahoo.
+Open the key page of your account (subdl.com/panel/api).	Ouvrez la page de clé de votre compte (subdl.com/panel/api).
+Open the keys page of your dashboard (thetvdb.com/dashboard/account/apikey).	Ouvrez la page des clés de votre tableau de bord (thetvdb.com/dashboard/account/apikey).
 Open the TV workspace on the app window to manage downloads.	Ouvrez l’espace TV dans l’application pour gérer les téléchargements.
 Open website	Ouvrir le site
 Open your other groups	Ouvrir vos autres groupes
+Open your profile menu, then “API consumers” (opensubtitles.com/en/consumers).	Ouvrez le menu de votre profil, puis « API consumers » (opensubtitles.com/en/consumers).
 Opening credits	Générique
 Opening the chapter…	Ouverture du chapitre…
 Opening…	Ouverture…
+OpenSubtitles key page	Page de la clé OpenSubtitles
 Optional · enter off to disable	Facultatif · saisir off pour désactiver
 Optional · use provider default	Facultatif · utiliser le guide fournisseur
 Options	Options
@@ -673,15 +755,21 @@ Original, French subtitles	VO sous-titrée français
 Oscars won	Oscars remportés
 Other	Autres
 Other streams of this channel	Autres flux de cette chaîne
+Other way: copy your private token from real-debrid.com/apitoken and paste it in “Use a private token instead”.	Autre moyen : copiez votre jeton privé sur real-debrid.com/apitoken et collez-le dans « Utiliser plutôt un jeton privé ».
 Out most recently, newest first.	Sortis le plus récemment, du plus récent au plus ancien.
 OVA	OAV
 Page {1}	Page {1}
 Pages	Pages
+Paid to your IPTV provider, not to Sokoul. Sokoul shows the end date and the number of screens when the provider gives them.	Payant auprès de votre fournisseur IPTV, pas de Sokoul. Sokoul affiche la date de fin et le nombre d'écrans quand le fournisseur les donne.
+Paid: a Premium subscription is needed. Prices are shown on real-debrid.com.	Payant : il faut un abonnement Premium. Les prix sont affichés sur real-debrid.com.
 Part of the Collection	Fait partie de la collection
 Partly filler	En partie hors-série
 Password	Mot de passe
 Paste a link that starts with http:// or https://	Collez un lien qui commence par http:// ou https://
+Paste it in Sokoul and press “Check and save”.	Collez-la dans Sokoul et appuyez sur « Vérifier et enregistrer ».
+Paste it in Sokoul.	Collez-la dans Sokoul.
 Paste the key first.	Collez d'abord la clé.
+Paste the XMLTV address supplied for your IPTV account. Enter off to clear it; leave empty to keep the saved source.	Collez l’adresse XMLTV fournie pour votre compte IPTV. Saisissez off pour l’effacer ; laissez vide pour conserver la source enregistrée.
 PC address	Adresse du PC
 Picked from what you watch.	Choisis d'après ce que vous regardez.
 Picture	Image
@@ -727,6 +815,8 @@ PRESENTS	PRÉSENTE
 Press + on a film or series page to keep it here.	Appuyez sur + sur la fiche d'un film ou d'une série pour le garder ici.
 Press again to confirm	Appuyer à nouveau pour confirmer
 Press OK to enter a link	Appuyez sur OK pour saisir un lien
+Press “Check and save”: Sokoul asks your provider before keeping anything.	Appuyez sur « Vérifier et enregistrer » : Sokoul interroge votre fournisseur avant de garder quoi que ce soit.
+Press “Copy API Code”.	Appuyez sur « Copy API Code ».
 Previous	Précédent
 Previous chapter	Chapitre précédent
 Previous page	Page précédente
@@ -767,10 +857,12 @@ Real-Debrid refused your key. Check it in Settings.	Real-Debrid refuse ta clé. 
 Real-Debrid refuses this file: its rights holder had it blocked.	Real-Debrid refuse ce fichier : ses ayants droit l'ont fait bloquer.
 Real-Debrid search found no version for this title	La recherche Real-Debrid n’a trouvé aucune version pour ce titre
 Real-Debrid search is temporarily unavailable	La recherche Real-Debrid est temporairement indisponible
+Real-Debrid sign-in page	Page de connexion Real-Debrid
 Recent	Récentes
 Recent channels	Chaînes récentes
 Recent searches	Recherches récentes
 Recommendations from what you like	Recommandations selon vos goûts
+Recommendations of films similar to the ones you like.	Des recommandations de films proches de ceux que vous aimez.
 RECOMMENDED	RECOMMANDÉE
 Record once	Enregistrer une fois
 Record programme	Enregistrer l’émission
@@ -828,6 +920,7 @@ Romance	Romance
 Rotten Tomatoes	Rotten Tomatoes
 Roulette	Roulette
 Roulette: let chance choose	Roulette : laissez le hasard choisir
+Run an AniProject-compatible anime server on a PC at home.	Faites tourner un serveur d'anime compatible AniProject sur un PC de la maison.
 Runtime	Durée
 S%1$d, E%2$d	S%1$d, E%2$d
 Sagas	Sagas
@@ -843,6 +936,7 @@ Save offline	Enregistrer hors ligne
 Saved	Enregistrée
 Saved library	Bibliothèque
 Saving schedule…	Enregistrement de la planification…
+Scan the QR with your phone, or go to real-debrid.com/device and type the code.	Scannez le QR avec votre téléphone, ou allez sur real-debrid.com/device et saisissez le code.
 Scan with your phone	Scannez avec votre téléphone
 Schedule cancelled.	Enregistrement planifié annulé.
 Scheduled	Planifié
@@ -906,7 +1000,10 @@ Show results	Afficher les résultats
 Showing saved information; the provider could not be reached. Its connection counter may be delayed.	Informations enregistrées : le fournisseur n’a pas pu être joint. Son compteur de connexions peut être retardé.
 Showing {1}+ titles	{1}+ titres affichés
 Shown	Affichée
+Sign in from your phone: no key to type.	Connectez-vous depuis votre téléphone : aucune clé à saisir.
 Sign in with Real-Debrid	Se connecter avec Real-Debrid
+Signed in, open fanart.tv/get-an-api-key.	Une fois connecté, ouvrez fanart.tv/get-an-api-key.
+Signed in, open tastedive.com/account/api_access.	Une fois connecté, ouvrez tastedive.com/account/api_access.
 Size	Taille
 Skip Credits	Passer la fin
 Skip Intro	Passer le générique
@@ -915,10 +1012,12 @@ Slice of life	Tranche de vie
 Small	Petite
 Society and more	Société et autres
 Soft and soothing	Doux et apaisant
+Sokoul already works without these. Each key adds something precise.	Sokoul fonctionne déjà sans elles. Chaque clé ajoute quelque chose de précis.
 Sokoul is loading your content. It appears as it arrives.	Sokoul charge votre contenu. Il apparaît au fur et à mesure.
 Sokoul picks the right version for you. You can change it at any time.	Sokoul choisit la bonne version pour vous. Vous pourrez changer à tout moment.
 Sokoul server	Serveur Sokoul
 SOKOUL SERVERS	SERVEURS SOKOUL
+Sokoul uses it only once an address is entered; clear it to stop.	Sokoul ne l'utilise qu'une fois l'adresse saisie ; effacez-la pour arrêter.
 Sort anime by category	Trier les animés par catégorie
 Sound	Son
 Sound off	Son coupé
@@ -928,6 +1027,7 @@ Source preferences updated.	Préférences de la source mises à jour.
 Source status and playback preferences	État de la source et préférences de lecture
 Source {1}	Source {1}
 Source: %s	Source : %s
+Sources and keys	Sources et clés
 Space	Espace
 SPACE	ESPACE
 Speak	Dicter
@@ -966,6 +1066,7 @@ Stream lost, moved to %s	Flux perdu, passage à %s
 Stretch	Étirer
 STUDIO	STUDIO
 Studios	Studios
+Subdl key page	Page de la clé Subdl
 Subscription	Abonnement
 Subscription active	Abonnement actif
 Subscription and guide	Abonnement et guide
@@ -973,7 +1074,9 @@ Subscription saved	Abonnement enregistré
 Subtitle languages and how they look.	La langue des sous-titres et leur aspect.
 Subtitle style	Style des sous-titres
 Subtitles	Sous-titres
+Subtitles in French, English and other languages for the film or episode you are watching.	Des sous-titres en français, en anglais et dans d'autres langues pour le film ou l'épisode que vous regardez.
 Subtitles of the stream itself take this style from the next title.	Les sous-titres intégrés au flux prennent ce style dès le titre suivant.
+Subtitles work with the keys built into Sokoul. Add your own only if you have one.	Les sous-titres fonctionnent avec les clés intégrées à Sokoul. Ajoutez la vôtre seulement si vous en avez une.
 Superheroes	Super-héros
 Superpowers	Super-pouvoirs
 Switch	Basculer
@@ -983,9 +1086,12 @@ Synchronization: Classic	Synchronisation : classique
 Synchronization: Pro	Synchronisation : Pro
 System	Système
 S{1} · E{2}	S{1} · É{2}
+TasteDive key page	Page de la clé TasteDive
 Ten days in a row or more with something on screen.	Dix jours d'affilée ou plus avec quelque chose à l'écran.
 That PIN was not accepted.	Ce code n’a pas été accepté.
+The address and access key stay on this device and only lead to your own PC. The key is never shown in full.	L'adresse et la clé d'accès restent sur cet appareil et ne mènent qu'à votre propre PC. La clé n'est jamais affichée en entier.
 The address of the computer running the watch party server, for instance http://192.168.0.20:25566	L'adresse de l'ordinateur qui fait tourner le serveur watch party, par exemple http://192.168.0.20:25566
+The address stays on this device. No account or key is sent.	L'adresse reste sur cet appareil. Aucun compte ni clé n'est envoyé.
 The anime	L'animé
 The best rated by viewers.	Les mieux notés par les spectateurs.
 The change could not be saved. Try again.	La modification n’a pas pu être enregistrée. Réessayez.
@@ -993,17 +1099,21 @@ The code has expired.	Le code a expiré.
 The collection changed. Cancel and try again.	La collection a changé. Annulez et réessayez.
 The complete programme is scheduled, with a 2 minute lead-in and a 5 minute safety margin.	L’émission complète est planifiée, avec 2 minutes d’avance et 5 minutes de marge.
 The connection was interrupted.	La connexion a été interrompue.
+The date of a series' next episode.	La date du prochain épisode d'une série.
+The display settings are the accent, the menu, the home rows, the subtitle style and the screensaver. Keys, accounts and playback choices are kept.	L'affichage, ce sont l'accent, le menu, les rangées de l'accueil, le style des sous-titres et l'économiseur. Clés, comptes et choix de lecture sont conservés.
 The Faces	Les visages
 the file was not the film	le fichier n'était pas le film
 the file was not the right length	le fichier n'avait pas la bonne durée
 The Films	Les films
 The films everyone is watching.	Les films que tout le monde regarde.
+The first language a version offers is played. Original audio is the language the work was made in. Every version and track stays available in the player.	La première langue qu'une version propose est lue. L'audio original est la langue dans laquelle l'œuvre a été faite. Toutes les versions et pistes restent disponibles dans le lecteur.
 The highest rated of all time.	Les mieux notés de tous les temps.
 The Honors	Le palmarès
 The IPTV provider just refused a connection. Try again in %d s.	Le fournisseur IPTV vient de refuser une connexion. Réessaie dans %d s.
 The IPTV server refused these credentials or did not respond.	Le serveur IPTV a refusé ces identifiants ou n'a pas répondu.
 The language of Sokoul.	La langue de Sokoul.
 The manga	Le manga
+The Movie Database: the catalogue, posters, summaries, cast and trailers Sokoul shows everywhere.	The Movie Database : le catalogue, les affiches, les résumés, la distribution et les bandes-annonces que Sokoul affiche partout.
 The only version left is not as long as this episode.	La seule version restante n'a pas la durée de cet épisode.
 The only version left seems to be a film, not this episode.	La seule version restante semble être un film, pas cet épisode.
 The only version left seems to be another episode.	La seule version restante semble être un autre épisode.
@@ -1014,6 +1124,7 @@ The provider stream could not be opened. Try again.	Le flux du fournisseur n’a
 The recording could not be started.	Impossible de démarrer l’enregistrement.
 The recording is still growing	L’enregistrement est toujours en cours
 The series everyone is talking about.	Les séries dont tout le monde parle.
+The server doesn't answer. Check the address and the port, then try again.	Le serveur ne répond pas. Vérifiez l'adresse et le port, puis réessayez.
 The server refused this version (error %d).	Le serveur refuse cette version (erreur %d).
 The server requires an active VIP key.	Le serveur demande une clé VIP active.
 The server took too long to answer.	Délai de réponse dépassé.
@@ -1032,10 +1143,13 @@ The Work	L'œuvre
 The worlds of Studio Ghibli	Les mondes du Studio Ghibli
 THEME	THÈME
 These controls are unavailable on a kids profile.	Ces réglages sont indisponibles sur un profil enfant.
+TheTVDB key page	Page de la clé TheTVDB
 This category is restricted for this profile.	Cette catégorie est restreinte pour ce profil.
 This channel is no longer available.	Cette chaîne n'est plus disponible.
 This channel is restricted for this profile	Cette chaîne est restreinte pour ce profil
 This channel is restricted for this profile.	Cette chaîne est restreinte pour ce profil.
+This chapter is no longer available: its source took it down. The chapter list button shows the others.	Ce chapitre n'est plus disponible : sa source l'a retiré. Le bouton de la liste des chapitres montre les autres.
+This doesn't look like a {1} key. Check that you copied all of it.	Cela ne ressemble pas à une clé {1}. Vérifiez que vous l'avez copiée en entier.
 This doesn't look like an address. Example: http://exemple.tv:8080	Cette adresse n'a pas le bon format. Exemple : http://exemple.tv:8080
 This entry is not a direct video file and cannot be saved offline.	Cette source n’est pas un fichier vidéo direct téléchargeable.
 This episode adapts	Cet épisode adapte
@@ -1043,6 +1157,7 @@ This file does not have the language wanted.	Ce fichier n'a pas la langue voulue
 This key was refused.	Cette clé a été refusée.
 This link doesn't answer. Check it and try again.	Ce lien ne répond pas. Vérifiez-le et réessayez.
 This link doesn't lead to a playlist.	Ce lien ne mène pas à une playlist.
+This looks like the long token; paste the 32-character key.	Ceci ressemble au long jeton ; collez la clé de 32 caractères.
 This name is empty, too long or already used.	Ce nom est vide, trop long ou déjà utilisé.
 This profile is protected.	Ce profil est protégé.
 This provider entry has no playable stream.	Cette entrée ne fournit pas de flux lisible.
@@ -1069,7 +1184,9 @@ This week's releases	Les sorties de la semaine
 This year	Cette année
 Thriller	Thriller
 Tip-off 	Début 
+Title logos and wide, high-quality artwork for posters and backgrounds.	Les logos des titres et de grands visuels de qualité pour les affiches et les fonds.
 titles	titres
+TMDB key page	Page de la clé TMDB
 to download	à télécharger
 To fix	À corriger
 to try	à essayer
@@ -1104,6 +1221,8 @@ TV guide	Guide TV
 TV settings	Réglages TV
 TV Show	Série TV
 Type it again	Tapez-le une seconde fois
+Type the server address with its port, for example http://exemple.tv:8080, then the username and password.	Saisissez l'adresse du serveur avec son port, par exemple http://exemple.tv:8080, puis l'identifiant et le mot de passe.
+Type this address in Sokoul's Settings.	Saisissez cette adresse dans les Réglages de Sokoul.
 Type with your remote	Saisissez avec la télécommande
 Unable to load this page. Try refreshing.	Impossible de charger cette page. Réessayez avec Actualiser.
 Unavailable	Indisponible
@@ -1153,6 +1272,7 @@ Watch with the lights on.	À regarder les lumières allumées.
 watched	regardées
 Watched	Vu
 Watchlist	À suivre
+Watchmode key page	Page de la clé Watchmode
 Web	Web
 Weekdays	En semaine
 Welcome	Bienvenue
@@ -1161,7 +1281,9 @@ What everyone is watching now.	Ce que tout le monde regarde en ce moment.
 What Sokoul uses to find and play your programmes, on this device.	Ce que Sokoul utilise pour trouver et lire vos programmes, sur cet appareil.
 What's Next	Et ensuite
 Where else a title can be watched	Où regarder un titre ailleurs
+Where else a title can be watched in your country, when Movie of the Night doesn't know.	Où regarder un titre ailleurs dans votre pays, quand Movie of the Night ne le sait pas.
 Where to watch	Où regarder
+Which streaming services offer a title in your country (Netflix, Prime Video…).	Sur quels services de streaming un titre est disponible dans votre pays (Netflix, Prime Video…).
 Which version	Quelle version
 White	Blanc
 Who is watching	Qui regarde
@@ -1176,11 +1298,13 @@ Written by	Scénario
 Wrong code. Try again.	Code incorrect. Réessayez.
 XMLTV guide URL	Adresse du guide XMLTV
 Yellow	Jaune
+You can explore the catalogue and trailers now, and add a source later in Settings.	Vous pouvez explorer le catalogue et les bandes-annonces dès maintenant, et ajouter une source plus tard dans Réglages.
 You haven't added any movies or shows.	Vous n'avez ajouté aucun film ni aucune série.
 You joined	Vous avez rejoint
 You often pressed play before 11 am.	Vous avez souvent lancé un titre avant 11 h.
 You stopped at episode {1}: the story goes on at chapter {2}	Tu t'es arrêté à l'épisode {1} : l'histoire continue au chapitre {2}
 your busiest month	votre mois le plus chargé
+Your channels, films and series in one place, with the posters and details of a real streaming service.	Vos chaînes, films et séries au même endroit, avec les affiches et les fiches d'un vrai service de streaming.
 Your channels, in your order	Vos chaînes, dans votre ordre
 Your chapters	Vos chapitres
 Your favorite channels belong here	Vos chaînes favorites vous attendent ici
@@ -1190,11 +1314,17 @@ Your heart won't slow down.	Le cœur ne redescend pas.
 your IPTV	votre IPTV
 Your IPTV account is in use elsewhere (%d of %d connections). Close the other device, then retry.	Ton compte IPTV est utilisé ailleurs (%d connexions sur %d). Ferme l'autre appareil, puis réessaie.
 Your IPTV catalogue, with its own categories	Votre catalogue IPTV et ses catégories
+Your key stays on this device, or in your own vault on your Sokoul server. It is never shown in full: only its last 4 characters.	Votre clé reste sur cet appareil, ou dans votre propre coffre sur votre serveur Sokoul. Elle n'est jamais affichée en entier : seulement ses 4 derniers caractères.
 Your live service, recordings and personal channel layout	Votre service TV, vos enregistrements et vos chaînes personnalisées
 Your most watched	Vos plus regardés
 Your name	Votre nom
 Your next binge starts here.	Le prochain marathon commence ici.
 Your own keys for ratings, artwork and recommendations	Vos propres clés pour les notes, les visuels et les recommandations
+Your password stays on this device, or in your own vault on your Sokoul server. It is never shown again once saved.	Votre mot de passe reste sur cet appareil, ou dans votre propre coffre sur votre serveur Sokoul. Il n'est plus jamais affiché une fois enregistré.
+Your provider refused this username or password, or the subscription has ended.	Votre fournisseur refuse cet identifiant ou ce mot de passe, ou l'abonnement est terminé.
+Your provider's live channels, TV guide, films and series, in Sokoul.	Les chaînes en direct, le guide TV, les films et les séries de votre fournisseur, dans Sokoul.
+Your sign-in stays on this device, or in your own vault on your Sokoul server, and is never shown in full. The private token opens your whole account: never share it.	Votre connexion reste sur cet appareil, ou dans votre propre coffre sur votre serveur Sokoul, et n'est jamais affichée en entier. Le jeton privé ouvre tout votre compte : ne le partagez jamais.
+Your sign-ins stay on this device. They are never shown in full.	Vos identifiants restent sur cet appareil. Ils ne sont jamais affichés en entier.
 Your sources	Vos sources
 Your TV guide does not list this match.	Votre guide TV ne mentionne pas ce match.
 Your viewing style	Votre façon de regarder

@@ -205,6 +205,9 @@ class OnboardingModel(
 
     fun keyHint(id: String): String? = ProviderConfig.key(db, id)?.let(ProviderConfig::hint)
 
+    /** Every service key with where it comes from (entered or built in) and its mask, for Settings › Sources and keys. */
+    fun providerStatuses() = ProviderConfig.statuses(db)
+
     val keyErrors = mutableStateMapOf<String, String>()
 
     /** Checks one key with its service, then stores it. */

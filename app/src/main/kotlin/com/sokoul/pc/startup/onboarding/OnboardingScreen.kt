@@ -88,7 +88,7 @@ import kotlinx.coroutines.launch
 /** The short side of a tablet counts this many dp in the first launch, whatever the orientation. */
 private const val TABLET_SHORT_SIDE = 1200f
 
-private enum class Sheet { Iptv, RealDebrid, Subtitles, Server, Advanced }
+internal enum class Sheet { Iptv, RealDebrid, Subtitles, Server, Advanced }
 
 /**
  * The first launch on a touch tablet: Welcome → Sources → Viewing → Ready. Landscape keeps the steps in a column on
@@ -486,23 +486,29 @@ private fun SourceSheet(sheet: Sheet, model: OnboardingModel, landscape: Boolean
             Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(start = 56.dp, end = 56.dp, top = 24.dp, bottom = 56.dp),
             verticalArrangement = Arrangement.spacedBy(32.dp),
         ) {
-            when (sheet) {
-                Sheet.Iptv -> IptvSheet(model, onClose)
-                Sheet.RealDebrid -> DebridSheet(model, onClose)
-                Sheet.Subtitles -> KeysSheet(model, if (model.sources[SourceKind.Subtitles]?.status == SourceStatus.Ready) Copy.subtitlesLead else Copy.subtitlesNeedKey, listOf("opensubtitles" to "OpenSubtitles", "subdl" to "Subdl"), SourceKind.Subtitles)
-                Sheet.Server -> ServerSheet(model, onClose)
-                Sheet.Advanced -> KeysSheet(
-                    model, Copy.advancedLead,
-                    OnboardingModel.ADVANCED_KEYS.map { it.id to "${it.benefit.text()} · ${it.provider}" },
-                    SourceKind.Advanced,
-                )
-            }
+            SourceSheetBody(sheet, model, onClose)
         }
     }
 }
 
+/** What a source's sheet asks for, without its frame: the first launch and Settings › Sources and keys share it. */
 @Composable
-private fun IptvSheet(model: OnboardingModel, onClose: () -> Unit) {
+internal fun SourceSheetBody(sheet: Sheet, model: OnboardingModel, onClose: () -> Unit) {
+    when (sheet) {
+        Sheet.Iptv -> IptvSheet(model, onClose)
+        Sheet.RealDebrid -> DebridSheet(model, onClose)
+        Sheet.Subtitles -> KeysSheet(model, if (model.sources[SourceKind.Subtitles]?.status == SourceStatus.Ready) Copy.subtitlesLead else Copy.subtitlesNeedKey, listOf("opensubtitles" to "OpenSubtitles", "subdl" to "Subdl"), SourceKind.Subtitles)
+        Sheet.Server -> ServerSheet(model, onClose)
+        Sheet.Advanced -> KeysSheet(
+            model, Copy.advancedLead,
+            OnboardingModel.ADVANCED_KEYS.map { it.id to "${it.benefit.text()} · ${it.provider}" },
+            SourceKind.Advanced,
+        )
+    }
+}
+
+@Composable
+internal fun IptvSheet(model: OnboardingModel, onClose: () -> Unit) {
     val scope = rememberCoroutineScope()
     var tab by remember { mutableStateOf(0) }
     var server by remember { mutableStateOf("") }
@@ -542,15 +548,16 @@ private fun IptvSheet(model: OnboardingModel, onClose: () -> Unit) {
 }
 
 @Composable
-private fun ReadyNote(text: String) {
+internal fun ReadyNote(text: String) {
+    val mono = LocalMonochrome.current
     Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
-        Icon(Icons.Rounded.Check, null, Modifier.size(32.dp), tint = Color(0xFF7BE3A0))
-        Label(text, OnbType.Secondary, Color(0xFFB9F0CC))
+        Icon(Icons.Rounded.Check, null, Modifier.size(32.dp), tint = if (mono) Color.White else Color(0xFF7BE3A0))
+        Label(text, OnbType.Secondary, if (mono) Color.White else Color(0xFFB9F0CC))
     }
 }
 
 @Composable
-private fun DebridSheet(model: OnboardingModel, onClose: () -> Unit) {
+internal fun DebridSheet(model: OnboardingModel, onClose: () -> Unit) {
     val scope = rememberCoroutineScope()
     var tokenMode by remember { mutableStateOf(false) }
     var token by remember { mutableStateOf("") }
@@ -601,7 +608,7 @@ private fun DeviceCodePanel(link: DeviceLink.Waiting) {
 }
 
 @Composable
-private fun ServerSheet(model: OnboardingModel, onClose: () -> Unit) {
+internal fun ServerSheet(model: OnboardingModel, onClose: () -> Unit) {
     val scope = rememberCoroutineScope()
     var address by remember { mutableStateOf("") }
     var key by remember { mutableStateOf("") }
@@ -617,24 +624,40 @@ private fun ServerSheet(model: OnboardingModel, onClose: () -> Unit) {
 }
 
 @Composable
-private fun KeysSheet(model: OnboardingModel, lead: String, keys: List<Pair<String, String>>, kind: SourceKind) {
+internal fun KeysSheet(
+    model: OnboardingModel,
+    lead: String,
+    keys: List<Pair<String, String>>,
+    kind: SourceKind,
+    /**
+     * A plain-language warning when a value cannot be this service's key (the long TMDB token pasted for the short key):
+     * the first press shows it instead of asking the service, a second press with the same value checks anyway.
+     */
+    formatWarning: ((id: String, value: String) -> String?)? = null,
+) {
     val scope = rememberCoroutineScope()
     Label(lead, OnbType.Body, Soft)
     keys.forEach { (id, label) ->
         var value by remember(id) { mutableStateOf("") }
         var busy by remember(id) { mutableStateOf(false) }
         var saved by remember(id) { mutableStateOf(false) }
+        var warned by remember(id) { mutableStateOf<String?>(null) }
         val hint = model.keyHint(id)
+        val warning = warned?.takeIf { it == value }?.let { formatWarning?.invoke(id, it) }
+        fun submit() {
+            if (warning == null && formatWarning?.invoke(id, value) != null) {
+                warned = value
+                return
+            }
+            scope.launch { busy = true; saved = model.saveKey(id, value, kind); busy = false; if (saved) value = "" }
+        }
         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            TouchField(label, value, { value = it; saved = false }, hint = hint ?: Copy.keyField, secret = true, imeAction = ImeAction.Done, error = model.keyErrors[id] != null, onDone = {
-                scope.launch { busy = true; saved = model.saveKey(id, value, kind); busy = false; if (saved) value = "" }
-            })
+            TouchField(label, value, { value = it; saved = false }, hint = hint ?: Copy.keyField, secret = true, imeAction = ImeAction.Done, error = model.keyErrors[id] != null || warning != null, onDone = ::submit)
+            warning?.let { ProblemNote(it, Modifier.testTag("key-format-$id")) }
             model.keyErrors[id]?.let { ProblemNote(it) }
             if (saved) ReadyNote(Copy.keySaved)
             if (value.isNotBlank()) {
-                PrimaryButton(Copy.save, {
-                    scope.launch { busy = true; saved = model.saveKey(id, value, kind); busy = false; if (saved) value = "" }
-                }, busy = busy)
+                PrimaryButton(if (warning != null) Copy.checkAnyway else Copy.save, ::submit, Modifier.testTag("key-save-$id"), busy = busy)
             }
         }
     }
