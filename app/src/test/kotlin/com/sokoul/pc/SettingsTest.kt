@@ -64,6 +64,8 @@ class SettingsTest {
         db = DesktopDb(file)
         prefs = DesktopPrefs(db)
         changes = 0
+        // Tools shows the last starts: other tests' plays must not lengthen the page this class scrolls through.
+        com.sokoul.pc.playback.session.StartLog.open { null }
     }
 
     @After

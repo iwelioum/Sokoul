@@ -211,6 +211,11 @@ tasks.register<JavaExec>("validatePrivateKeys") {
 
 tasks.withType<Test>().configureEach {
     timeout.set(Duration.ofMinutes(25))
+    // Tests get their own empty data folder (AppDirs reads sokoul.data), never the user's %APPDATA%\SokoulPC: playback
+    // tests wrote their fake starts into the real start log, and Settings tests then hung on the longer page (2026-11-25).
+    val testData = layout.buildDirectory.dir("test-data/$name/SokoulPC")
+    systemProperty("sokoul.data", testData.get().asFile.absolutePath)
+    doFirst { testData.get().asFile.let { it.deleteRecursively(); it.mkdirs() } }
     testLogging {
         events("started", "failed")
         showStandardStreams = true

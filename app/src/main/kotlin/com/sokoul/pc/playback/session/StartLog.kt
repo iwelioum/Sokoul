@@ -48,6 +48,13 @@ object StartLog {
     /** Newest first. */
     @Synchronized fun recent(): List<Entry> { load(); return entries.reversed() }
 
+    /** Points the log at another file (null: memory only) and reads it afresh; for tests that need a known log. */
+    @Synchronized internal fun open(at: () -> File?) {
+        file = at
+        entries.clear()
+        loaded = false
+    }
+
     private fun load() {
         if (loaded) return
         loaded = true
