@@ -1,57 +1,40 @@
 package com.sokoul.desktop.data
 
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import okhttp3.MediaType.Companion.toMediaType
+import com.sokoul.credentials.ServiceCheck
+import com.sokoul.credentials.Verdict
 import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.RequestBody.Companion.toRequestBody
 import java.util.concurrent.TimeUnit
 
 data class ProbeResult(val ok: Boolean, val message: String)
 
 /**
- * « Tester » de Réglages › Clés API : un vrai appel par service. Le message ne contient jamais l'adresse
- * (certaines portent la clé), seulement le code HTTP ou la nature de l'échec.
+ * « Tester » de Réglages › Clés API : un vrai appel par service, celui de [ServiceCheck] (le même que le premier
+ * lancement et le coffre du serveur Sokoul). Le message ne contient jamais l'adresse (certaines portent la clé),
+ * seulement le code HTTP ou la nature de l'échec.
  */
 object ProviderProbe {
     private val http = OkHttpClient.Builder().dns(com.sokoul.iptv.data.net.Ipv4FirstDns)
         .connectTimeout(10, TimeUnit.SECONDS)
         .readTimeout(15, TimeUnit.SECONDS)
         .build()
+    private val services = ServiceCheck(http)
 
     suspend fun check(db: DesktopDb, id: String): ProbeResult {
         val key = ProviderConfig.key(db, id) ?: return ProbeResult(false, "Clé absente")
         return checkKey(id, key)
     }
 
-    suspend fun checkKey(id: String, key: String): ProbeResult = withContext(Dispatchers.IO) {
-        val request = when (id) {
-            "tmdb" -> Request.Builder().url("https://api.themoviedb.org/3/configuration?api_key=$key").get().build()
-            "realdebrid" -> Request.Builder().url("https://api.real-debrid.com/rest/1.0/user").header("Authorization", "Bearer $key").get().build()
-            "omdb" -> Request.Builder().url("https://www.omdbapi.com/?apikey=$key&i=tt1375666").get().build()
-            "tastedive" -> Request.Builder().url("https://tastedive.com/api/similar?k=$key&q=movie:inception&type=movie&limit=1").get().build()
-            "tvmaze" -> Request.Builder().url("https://api.tvmaze.com/singlesearch/shows?q=lupin").get().build()
-            "fanart" -> Request.Builder().url("https://webservice.fanart.tv/v3/movies/27205?api_key=$key").get().build()
-            "tvdb" -> Request.Builder().url("https://api4.thetvdb.com/v4/login")
-                .post("""{"apikey":"$key"}""".toRequestBody("application/json".toMediaType())).build()
-            "motn" -> Request.Builder().url("https://api.movieofthenight.com/v4/shows/movie/27205?country=fr&output_language=fr")
-                .header("X-API-Key", key).get().build()
-            "watchmode" -> Request.Builder().url("https://api.watchmode.com/v1/status/?apiKey=$key").get().build()
-            "opensubtitles" -> Request.Builder().url("https://api.opensubtitles.com/api/v1/infos/formats")
-                .header("Api-Key", key).header("User-Agent", "SokoulTV v2.0").get().build()
-            "subdl" -> Request.Builder().url("https://api.subdl.com/api/v1/subtitles?api_key=$key&tmdb_id=27205&type=movie&languages=FR&subs_per_page=1").get().build()
-            else -> return@withContext ProbeResult(true, "Clé détectée")
+    suspend fun checkKey(id: String, key: String): ProbeResult {
+        if (id !in ServiceCheck.SERVICES) return ProbeResult(true, "Clé détectée")
+        val r = services.key(id, key)
+        return when {
+            r.verdict == Verdict.Accepted -> ProbeResult(true, "Connexion réussie")
+            r.quota -> ProbeResult(false, "Quota atteint, réessayez plus tard")
+            r.httpCode != null && r.verdict == Verdict.Refused -> ProbeResult(false, "Clé refusée (HTTP ${r.httpCode})")
+            r.httpCode != null -> ProbeResult(false, "Service indisponible (HTTP ${r.httpCode})")
+            r.verdict == Verdict.Refused -> ProbeResult(false, "Clé refusée")
+            r.noNetwork -> ProbeResult(false, "Réseau indisponible")
+            else -> ProbeResult(false, "Pas de réponse (${r.failure})")
         }
-        runCatching {
-            http.newCall(request).execute().use { r ->
-                when {
-                    r.isSuccessful -> ProbeResult(true, "Connexion réussie")
-                    r.code == 401 || r.code == 403 -> ProbeResult(false, "Clé refusée (HTTP ${r.code})")
-                    r.code == 429 -> ProbeResult(false, "Quota atteint, réessayez plus tard")
-                    else -> ProbeResult(false, "Service indisponible (HTTP ${r.code})")
-                }
-            }
-        }.getOrElse { ProbeResult(false, if (it is java.net.UnknownHostException) "Réseau indisponible" else "Pas de réponse (${it.javaClass.simpleName})") }
     }
 }
