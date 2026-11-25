@@ -20,7 +20,3 @@ section, the table row above and `MOVIX-LICENSE` go too.
 | Server | `API/Mainapi/` (most routes, middleware and services), `API/watchpartyAPI/`, `API/proxiesembed/` (including `fsvid_vidzy_js_worker.py`) — to be replaced by the lean Sokoul server |
 | Extraction runtime | `extraction/runtime/extractors-core.js`, `extraction/runtime/fsvid-vidzy-quickjs-entry.js` |
 | Extractor bridge | `extractor/src/main/kotlin/com/sokoul/extract/ExtractorRuntime.kt`, `extractor/src/main/resources/sokoul-extract/host.js`, `extractor/src/main/resources/sokoul-extract/polyfills.js` |
-| Playback transport | `core/src/main/kotlin/com/sokoul/desktop/player/PngWrappedMpegTs.kt`, `tv/src/main/kotlin/com/sokoul/desktop/player/PngTsDataSource.kt` and its test |
-| Discovery | `core/src/main/kotlin/com/sokoul/iptv/discovery/Taste.kt`, `core/src/main/kotlin/com/sokoul/iptv/discovery/YearReview.kt` |
-| Series data | `app/src/main/kotlin/com/sokoul/pc/data/SegmentedSeasons.kt` |
-| Watch party | `app/src/main/kotlin/com/sokoul/pc/party/PartySyncEngine.kt` |

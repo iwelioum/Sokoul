@@ -130,12 +130,12 @@ class LocalMediaRelay : AutoCloseable {
                         val input = java.io.BufferedInputStream(raw)
                         var skipped = 0
                         if (upstream.code == 200 && exchange.requestHeaders.getFirst("Range") == null) {
-                            input.mark(PngWrappedMpegTs.MAX_PROBE_BYTES)
-                            val prefix = input.readNBytes(8)
-                            if (PngWrappedMpegTs.startsLikePng(prefix, prefix.size)) {
+                            input.mark(DisguisedTs.MAX_PROBE_BYTES)
+                            val prefix = input.readNBytes(DisguisedTs.SIGNATURE_BYTES)
+                            if (DisguisedTs.startsLikePicture(prefix, prefix.size)) {
                                 input.reset()
-                                val probe = input.readNBytes(PngWrappedMpegTs.MAX_PROBE_BYTES)
-                                skipped = PngWrappedMpegTs.payloadOffset(probe, probe.size) ?: 0
+                                val probe = input.readNBytes(DisguisedTs.MAX_PROBE_BYTES)
+                                skipped = DisguisedTs.payloadOffset(probe, probe.size) ?: 0
                             }
                             input.reset()
                             if (skipped > 0) input.skipNBytes(skipped.toLong())

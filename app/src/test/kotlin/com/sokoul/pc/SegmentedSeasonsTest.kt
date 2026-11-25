@@ -49,7 +49,20 @@ class SegmentedSeasonsTest {
         assertSame(input,SegmentedSeasons.season(68073,0,input))
         val mapped = SegmentedSeasons.season(68073,1,input)
         assertSame(mapped,SegmentedSeasons.season(68073,1,mapped))
-        // The reference's partial-dubbing limits must not hide later VOSTFR episodes.
+        // Every segment of a long season is kept, whatever the dubbing of the later ones.
         assertEquals(15,SegmentedSeasons.season(68073,10,(1..30).map { ep(it) }).size)
+    }
+
+    @Test fun placeholderDetectionAndFallbackKeepRealNames() {
+        assertTrue(SegmentedSeasons.needsFallback(listOf(ep(1, name = "Épisode 3"))))
+        assertFalse(SegmentedSeasons.needsFallback(listOf(ep(1, name = "Real title"))))
+        val result = SegmentedSeasons.merge(listOf(ep(1, name = "Kept"), ep(2, name = "Folge 2")), fallback = listOf(ep(1, name = "Other"), ep(2, name = "Found")))
+        assertEquals("Kept / Found", result.single().name)
+    }
+
+    @Test fun uncodedLongEntryIsSplitIntoParts() {
+        val result = SegmentedSeasons.merge(listOf(ep(1, runtime = 44)))
+        assertEquals(listOf(1 to 2, 2 to 2), result.map { it.partIndex to it.partCount })
+        assertEquals(listOf(listOf(1), listOf(1)), result.map { it.sourceEpisodeNumbers })
     }
 }

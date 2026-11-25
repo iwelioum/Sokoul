@@ -28,7 +28,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sokoul.iptv.data.net.TmdbItem
-import com.sokoul.iptv.discovery.Persona
+import com.sokoul.iptv.discovery.ViewerStyle
 import com.sokoul.iptv.discovery.TitleTime
 import com.sokoul.iptv.discovery.YearSummary
 import com.sokoul.pc.anime.Choices
@@ -48,7 +48,7 @@ import java.time.Month
 import java.time.format.TextStyle
 import java.util.Locale
 
-/** The year in review, after Movix's "Wrapped": figures, profile, favourite titles and genres, eras of the year. */
+/** The year in review: figures, viewing style, most watched titles, genres and the year's chapters. */
 @Composable
 internal fun ReviewPage(data: DiscoverData, onOpenTitle: (List<TmdbItem>, Int, CardOrigin?) -> Unit) {
     val now = LocalDate.now().year
@@ -73,7 +73,7 @@ internal fun ReviewPage(data: DiscoverData, onOpenTitle: (List<TmdbItem>, Int, C
             }
             else -> {
                 item { Figures(summary) }
-                item { PersonaCard(summary.persona) }
+                item { StyleCard(summary.style) }
                 if (summary.topTitles.isNotEmpty()) item {
                     val items = summary.topTitles.map { it.asItem() }
                     CardRow(L("Your most watched", "Vos plus regardés").text(), summary.topTitles, key = { "${it.kind}-${it.id}" }, testTag = "review-top") { i, t ->
@@ -85,12 +85,11 @@ internal fun ReviewPage(data: DiscoverData, onOpenTitle: (List<TmdbItem>, Int, C
                         summary.topGenres.forEach { g -> Bar(g.name, g.percent, "${hours(g.minutes)}") }
                     }
                 }
-                if (summary.eras.isNotEmpty()) item {
-                    Section(L("Your eras", "Vos périodes").text()) {
-                        summary.eras.forEach { e ->
-                            val label = if (e.kind == "format") kindName(e.label) else e.label
-                            val months = if (e.fromMonth == e.toMonth) month(e.fromMonth) else "${month(e.fromMonth)} – ${month(e.toMonth)}"
-                            Label("$months · $label (${e.share} %) · ${e.title.title}", Type.Body, Palette.OnBackground, maxLines = 1)
+                if (summary.chapters.isNotEmpty()) item {
+                    Section(L("Your chapters", "Vos chapitres").text()) {
+                        summary.chapters.forEach { c ->
+                            val months = if (c.fromMonth == c.toMonth) month(c.fromMonth) else "${month(c.fromMonth)} – ${month(c.toMonth)}"
+                            Label("$months · ${c.genre} (${c.percent} %) · ${c.title.title}", Type.Body, Palette.OnBackground, maxLines = 1)
                         }
                     }
                 }
@@ -119,28 +118,26 @@ private fun Figure(value: String, label: L) {
     }
 }
 
-private val PERSONAS = mapOf(
-    Persona.NightOwl to (L("The Night Owl", "L'Oiseau de nuit") to L("Your best sessions start after 10 pm.", "Vos meilleures séances commencent après 22 h.")),
-    Persona.EarlyBird to (L("The Early Bird", "Le Lève-tôt") to L("An episode before coffee.", "Un épisode avant le café.")),
-    Persona.Cinephile to (L("The Cinephile", "Le Cinéphile") to L("Films are your religion.", "Les films, c'est votre religion.")),
-    Persona.Binger to (L("The Binge-Watcher", "Le Binge-Watcher") to L("\"One more episode\" is your motto.", "« Encore un épisode » est votre devise.")),
-    Persona.SeriesAddict to (L("The Series Addict", "L'Accro aux séries") to L("Series are your second family.", "Les séries sont votre deuxième famille.")),
-    Persona.StreakMachine to (L("The Machine", "La Machine") to L("Not a single day off.", "Aucun jour de repos.")),
-    Persona.Explorer to (L("The Explorer", "L'Explorateur") to L("Always hunting for the next gem.", "Toujours à la recherche de la prochaine pépite.")),
-    Persona.Omnivore to (L("The All-Rounder", "Le Touche-à-tout") to L("Films and series: you take it all.", "Films et séries : vous prenez tout.")),
-    Persona.MovieLover to (L("The Movie Lover", "L'Amoureux du cinéma") to L("Nothing beats a good film.", "Rien ne vaut un bon film.")),
-    Persona.SeriesFan to (L("The Series Fan", "Le Fan de séries") to L("Series set the pace of your days.", "Les séries rythment vos journées.")),
+private val STYLES = mapOf(
+    ViewerStyle.Nocturnal to (L("Night viewer", "Spectateur de la nuit") to L("Most of your viewing happened after 10 pm.", "L'essentiel de vos séances a eu lieu après 22 h.")),
+    ViewerStyle.Morning to (L("Morning viewer", "Spectateur du matin") to L("You often pressed play before 11 am.", "Vous avez souvent lancé un titre avant 11 h.")),
+    ViewerStyle.Marathon to (L("Marathon runner", "Marathonien") to L("Four episodes or more in a day, more than once.", "Quatre épisodes ou plus dans la journée, et pas qu'une fois.")),
+    ViewerStyle.Faithful to (L("Regular", "Habitué") to L("Ten days in a row or more with something on screen.", "Dix jours d'affilée ou plus avec quelque chose à l'écran.")),
+    ViewerStyle.Curious to (L("Curious", "Curieux") to L("Many titles, and no genre took over.", "Beaucoup de titres, et aucun genre n'a pris le dessus.")),
+    ViewerStyle.FilmBuff to (L("Film lover", "Amateur de films") to L("Films took most of your time.", "Les films ont pris l'essentiel de votre temps.")),
+    ViewerStyle.SeriesBuff to (L("Series lover", "Amateur de séries") to L("Series took most of your time.", "Les séries ont pris l'essentiel de votre temps.")),
+    ViewerStyle.Eclectic to (L("Eclectic", "Éclectique") to L("A bit of everything, at your own pace.", "Un peu de tout, à votre rythme.")),
 )
 
 @Composable
-private fun PersonaCard(p: Persona) {
-    val (title, line) = PERSONAS.getValue(p)
+private fun StyleCard(style: ViewerStyle) {
+    val (title, line) = STYLES.getValue(style)
     Box(
         Modifier.padding(horizontal = Metrics.PageMargin, vertical = 8.dp).fillMaxWidth().height(200.dp).clip(RoundedCornerShape(22.dp))
-            .background(Brush.linearGradient(listOf(Color(0xFF5B2A86), Color(0xFF1F3B73)))).testTag("review-persona"),
+            .background(Palette.ButtonFill).testTag("review-style"),
     ) {
         Column(Modifier.align(Alignment.CenterStart).padding(32.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Label(L("Your viewer profile", "Votre profil de spectateur").text(), Type.Meta, Palette.BarText)
+            Label(L("Your viewing style", "Votre façon de regarder").text(), Type.Meta, Palette.BarText)
             Label(title.text(), Type.RowTitle.copy(fontSize = Type.RowTitle.fontSize * 1.4f, fontWeight = FontWeight.Bold), maxLines = 1)
             Label(line.text(), Type.Body, Palette.OnBackground, maxLines = 1)
         }
@@ -184,4 +181,3 @@ private fun hours(minutes: Long): String = if (minutes < 60) "$minutes min" else
 
 private fun month(m: Int): String = Month.of(m).getDisplayName(TextStyle.FULL, Locale.getDefault()).replaceFirstChar { it.uppercase() }
 
-private fun kindName(kind: String): String = if (kind == "tv") L("Series", "Séries").text() else L("Films", "Films").text()

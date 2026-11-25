@@ -1,5 +1,4 @@
 # Nederlands — english<TAB>translation, keyed by app/src/main/resources/i18n/source.tsv
-"One more episode" is your motto.	'Nog één aflevering' is je motto.
 %1$d h %2$d min	%1$d u %2$d min
 %1$d min	%1$d min
 %1$s Originals	%1$s Originals
@@ -35,7 +34,6 @@ Accent colour	Accentkleur
 Account status, formats and guide time offset	Accountstatus, formaten en tijdverschuiving van de gids
 Action	Actie
 Action & Adventure	Actie en avontuur
-Actions	Acties
 Active	Actief
 Active collection	Actieve collectie
 Adaptations	Bewerkingen
@@ -62,7 +60,6 @@ All channels	Alle zenders
 All formats	Alle formaten
 All groups	Alle groepen
 All languages	Alle talen
-All providers	Alle aanbieders
 All sports	Alle sporten
 All the Feels	Vol gevoel
 All titles	Alle titels
@@ -73,9 +70,7 @@ Also by {1}	Ook van {1}
 Also directed by {1}	Ook geregisseerd door {1}
 Also on	Ook op
 Also on %s	Ook op %s
-Always hunting for the next gem.	Altijd op zoek naar het volgende pareltje.
 An adult profile manages source settings.	Een volwassen profiel beheert de broninstellingen.
-An episode before coffee.	Een aflevering voor de koffie.
 Animation	Animatie
 Anime	Anime
 Anime only	Alleen in de anime
@@ -100,15 +95,14 @@ Audience	Publiek
 Audio	Audio
 Audio language	Audiotaal
 Audio languages	Audiotalen
-Audio not identified	Audio niet herkend
-Audio verified	Audio gecontroleerd
-Audio: {1}	Audio: {1}
+audio not identified	audio niet herkend
+audio verified	audio gecontroleerd
+AUDIO: {1}	AUDIO: {1}
 Auto scroll off	Automatisch scrollen uit
 Auto scroll {1}	Automatisch scrollen {1}
 Automatic	Automatisch
 Automatic trailers	Automatische trailers
 Average IMDb rating	Gemiddelde IMDb-score
-AWARDS	PRIJZEN
 Awards won	Gewonnen prijzen
 Back	Terug
 Back 10 s	10 s terug
@@ -174,7 +168,6 @@ Choose Channels and enter a name or number, or explore Programmes.	Kies Zenders 
 Choose folder…	Map kiezen…
 Clear	Wissen
 CLEAR	WISSEN
-Clear search	Zoekopdracht wissen
 Clear selection	Selectie wissen
 Clear the catalogue cache	Cataloguscache leegmaken
 Edit collection	Collectie beheren
@@ -192,13 +185,11 @@ Provider groups	Groepen van de aanbieder
 Real-Debrid search found no version for this title	Real-Debrid vond geen versie van deze titel
 Real-Debrid search is temporarily unavailable	Zoeken via Real-Debrid is tijdelijk niet beschikbaar
 Record this programme	Dit programma opnemen
-Search groups	Groepen zoeken
 Select all	Alles selecteren
 Select channels	Zenders selecteren
 Servers	Servers
 Set up the Sokoul server in Settings > Content sources.	Stel de Sokoul-server in via Instellingen > Inhoudsbronnen.
 TV actions	Tv-functies
-Your languages	Jouw talen
 Search services	Zoekdiensten
 If no language matches	Als geen taal overeenkomt
 Play the file's own track	De eigen audiotrack afspelen
@@ -211,7 +202,6 @@ Colour	Kleur
 Colours the progress of what you watch: the player's bar and the cards of Continue Watching.	Kleurt de voortgang van wat je kijkt: de balk van de speler en de kaarten van Verder kijken.
 Comedy	Komedie
 Coming up	Straks
-Compatible · {1}	Compatibel · {1}
 Configure later	Later instellen
 Configure your Sokoul server and access key in Credentials.	Stel je Sokoul-server en de sleutel in bij Inloggegevens.
 Confirm delete	Verwijderen bevestigen
@@ -223,7 +213,6 @@ Could not start the download.	De download kon niet worden gestart.
 Counting…	Tellen…
 Create a collection	Collectie maken
 Create and add	Maken en toevoegen
-CREATED BY	BEDACHT DOOR
 Created by	Bedacht door
 Credentials and API keys	Inloggegevens en API-sleutels
 Credits	Credits
@@ -242,7 +231,6 @@ Delete	Verwijderen
 Delete collection	Collectie verwijderen
 Delete “{1}”?	'{1}' verwijderen?
 DETAILS	DETAILS
-DIRECTED BY	GEREGISSEERD DOOR
 Directed by	Geregisseerd door
 Director	Regie
 Directors	Regisseurs
@@ -282,8 +270,6 @@ Every week	Elke week
 Everyone plays the title with their own sources; play, pause and jumps stay in step.	Iedereen speelt de titel af met eigen bronnen; afspelen, pauzeren en springen blijven gelijk.
 Everything	Alles
 Everywhere	Overal
-Excluded sources	Uitgesloten bronnen
-Excluded · {1}	Uitgesloten · {1}
 Exit full screen	Volledig scherm sluiten
 Expires {1}	Verloopt: {1}
 Explore	Ontdekken
@@ -308,8 +294,6 @@ Film	Film
 Film Page	Filmpagina
 Films	Films
 Films and series	Films en series
-Films and series: you take it all.	Films en series: jij neemt alles mee.
-Films are your religion.	Films zijn je religie.
 Films That Twist Your Mind	Films die je brein verdraaien
 Films, OVAs and more	Films, OVA's en meer
 Find something to watch	Vind iets om te kijken
@@ -362,7 +346,6 @@ Hide, order, parental code	Verbergen, ordenen, ouderlijke code
 Hide, protect and reorder groups	Groepen verbergen, beveiligen en ordenen
 High Tension	Hoogspanning
 Highest rated manga	De best beoordeelde manga
-Hold OK	OK ingedrukt houden
 Hold OK on a channel to add it to favorites or a collection.	Houd OK ingedrukt op een zender om hem aan favorieten of een collectie toe te voegen.
 Home	Start
 Home rows	Rijen op Start
@@ -373,7 +356,6 @@ Hoster {1}	Host {1}
 If you liked this	Als je dit leuk vond
 If You Liked This Saga	Als je deze saga leuk vond
 In %d min	Over %d min
-In account	In account
 In My List	In Mijn lijst
 In the Same Universe	In hetzelfde universum
 Inactive	Inactief
@@ -393,7 +375,6 @@ Kids profile: off	Kinderprofiel: uit
 Kids profile: on	Kinderprofiel: aan
 Korea	Korea
 Language	Taal
-LANGUAGES	TALEN
 Languages	Talen
 Large	Groot
 Last year	Vorig jaar
@@ -408,8 +389,6 @@ Light novels	Light novels
 Link entered	Ingevoerde link
 LIVE	LIVE
 Live	Live
-Live action	Live-action
-Live and upcoming events	Live en komende evenementen
 Live preview	Livevoorbeeld
 Live stream format	Formaat van de livestream
 Live TV	Live tv
@@ -436,7 +415,6 @@ Prefer quality up to	Kwaliteit bij voorkeur tot
 Prefer size up to	Grootte bij voorkeur tot
 MB/s	MB/s
 Measuring the stream	Stream meten
-Menu · edit	Menu · bewerken
 Message	Bericht
 Metacritic	Metacritic
 Mind Games	Hersenkrakers
@@ -457,11 +435,9 @@ Movies, shows, cast and more	Films, series, cast en meer
 Music	Muziek
 Must-See Series	Series die je moet zien
 Must-sees this week.	Deze week niet te missen.
-My channels	Mijn zenders
 My List	Mijn lijst
 My reminders	Mijn herinneringen
 My series	Mijn series
-My space	Mijn ruimte
 My TV	Mijn tv
 Name	Naam
 Name your collection	Geef je collectie een naam
@@ -511,17 +487,14 @@ No source configured	Geen bron ingesteld
 No source is available for this title.	Er is geen bron beschikbaar voor deze titel.
 No subtitles found online.	Geen ondertitels online gevonden.
 No upcoming programmes. Choose a future programme in the guide and select Remind me.	Geen komende programma's. Kies er een in de gids en kies Herinner mij.
-No version matches these filters. Reset them or refresh the sources.	Geen versie past bij deze filters. Stel ze opnieuw in of vernieuw de bronnen.
 No {1} audio · Playing in {2}	Geen audio in het {1} · Speelt af in het {2}
 Normal	Normaal
-Not a single day off.	Geen enkele vrije dag.
 Not available	Niet beschikbaar
 Not available on a kids profile ({1})	Niet beschikbaar op een kinderprofiel ({1})
 Not available to read here	Hier niet te lezen
 Not Now	Niet nu
 Not set	Niet ingesteld
 Nothing announced this week.	Deze week niets aangekondigd.
-Nothing beats a good film.	Niets gaat boven een goede film.
 Nothing found.	Niets gevonden.
 Nothing in your guide for this period. Try another tab.	Niets in je gids voor deze periode. Probeer een ander tabblad.
 Nothing is what it seems.	Niets is wat het lijkt.
@@ -534,7 +507,6 @@ Off	Uit
 OK  Apply group   ·   Back  Cancel	OK  Groep toepassen   ·   Terug  Annuleren
 OK  Watch · Menu  Actions · F  Favorite	OK  Kijken · Menu  Acties · F  Favoriet
 OK  Watch · Menu  Favorite	OK  Kijken · Menu  Favoriet
-OK opens in the guide · Back to guide	OK opent in de gids · Terug naar de gids
 OK shows or hides a row; the arrows beside it change its place.	OK toont of verbergt een rij; de pijlen ernaast veranderen de plaats.
 OK to change · Back to guide	OK om te wijzigen · Terug naar de gids
 OK to choose · Back to guide	OK om te kiezen · Terug naar de gids
@@ -576,7 +548,6 @@ Part of the Collection	Onderdeel van de collectie
 Partly filler	Deels filler
 Password	Wachtwoord
 Picked from what you watch.	Gekozen op basis van wat je kijkt.
-PICTURE	BEELD
 Picture	Beeld
 Picture and sound	Beeld en geluid
 Picture format	Beeldformaat
@@ -593,7 +564,6 @@ Play in Sokoul	Afspelen in Sokoul
 Play or pause	Afspelen of pauzeren
 Playback failed.	Afspelen mislukt.
 Playback paused after several episodes in a row without any action.	Het afspelen is gestopt na meerdere afleveringen op rij zonder actie.
-Playback sources	Afspeelbronnen
 Playing	Speelt af
 Popular	Populair
 Popular Films	Populaire films
@@ -614,7 +584,6 @@ probably ready	waarschijnlijk klaar
 Profile	Profiel
 Programme actions	Programma-acties
 Programme guide unavailable for this channel.	Geen gids beschikbaar voor deze zender.
-Programme information unavailable	Programma-informatie niet beschikbaar
 Programmes	Programma's
 Protect with PIN	Beveiligen met pincode
 Provider	Aanbieder
@@ -651,7 +620,6 @@ Recordings	Opnamen
 Recordings could not be loaded. Reopen this panel to retry.	De opnamen konden niet worden geladen. Open dit paneel opnieuw.
 Recurring Cast	Vaste cast
 Refresh	Vernieuwen
-Refresh servers	Servers vernieuwen
 Refresh subscription	Abonnement vernieuwen
 Refresh TV guide	Tv-gids vernieuwen
 Release calendar	Releasekalender
@@ -671,7 +639,6 @@ Rename	Naam wijzigen
 Rename collection	Collectie hernoemen
 Reorder channel	Zender verplaatsen
 Replay	Replay
-Reset filters	Filters herstellen
 Reset guide adjustment	Aanpassing herstellen
 Reset the default style	Standaardstijl herstellen
 Reset the display settings	Weergave herstellen
@@ -729,16 +696,12 @@ Select	Kiezen
 SELECTION	SELECTIE
 Send	Verzenden
 Series	Series
-Series are your second family.	Series zijn je tweede familie.
-Series set the pace of your days.	Series bepalen het ritme van je dagen.
 Series That Twist Your Mind	Series die je brein verdraaien
 Server	Server
 Server, username and password are all required.	Server, gebruikersnaam en wachtwoord zijn allemaal verplicht.
 Service	Dienst
-Services	Diensten
 Set adult PIN	Volwassenenpincode instellen
 Set up	Ingesteld
-Set up the Sokoul server in Settings > Credentials.	Stel de Sokoul-server in via Instellingen > Inloggegevens.
 Settings	Instellingen
 Settings always stays: it is how you get back here.	Instellingen blijft altijd staan: zo kom je hier terug.
 Setup	Instellen
@@ -761,7 +724,6 @@ Slice of life	Slice of life
 Small	Klein
 Society and more	Maatschappij en meer
 Sort anime by category	Anime op categorie sorteren
-SOUND	GELUID
 Sound	Geluid
 Sound off	Geluid uit
 Sound on	Geluid aan
@@ -770,7 +732,6 @@ Source preferences updated.	Bronvoorkeuren bijgewerkt.
 Source status and playback preferences	Bronstatus en afspeelvoorkeuren
 Source {1}	Bron {1}
 Source: %s	Bron: %s
-Sources are still arriving…	Bronnen komen nog binnen…
 Space	Spatie
 SPACE	SPATIE
 Speed	Snelheid
@@ -815,17 +776,11 @@ System	Systeem
 S{1} · E{2}	S{1} · A{2}
 That PIN was not accepted.	Die pincode is niet geaccepteerd.
 The address of the computer running the watch party server, for instance http://192.168.0.20:25566	Het adres van de computer met de watchparty-server, bijvoorbeeld http://192.168.0.20:25566
-The All-Rounder	De Alleskijker
 The anime	De anime
-The Binge-Watcher	De Bingewatcher
 The change could not be saved. Try again.	De wijziging kon niet worden bewaard. Probeer het opnieuw.
-The channel remains available to watch.	De zender blijft beschikbaar om te kijken.
-The Cinephile	De Cinefiel
 The collection changed. Cancel and try again.	De collectie is gewijzigd. Annuleer en probeer het opnieuw.
 The complete programme is scheduled, with a 2 minute lead-in and a 5 minute safety margin.	Het hele programma is gepland, met 2 minuten vooraf en 5 minuten marge.
 The connection was interrupted.	De verbinding is onderbroken.
-The Early Bird	De Vroege Vogel
-The Explorer	De Ontdekker
 The Faces	De gezichten
 The Films	De films
 The films everyone is watching.	De films waar iedereen naar kijkt.
@@ -833,10 +788,7 @@ The highest rated of all time.	De best beoordeelde aller tijden.
 The Honors	De onderscheidingen
 The IPTV provider just refused a connection. Try again in %d s.	De IPTV-aanbieder weigerde net een verbinding. Probeer het over %d s opnieuw.
 The IPTV server refused these credentials or did not respond.	De IPTV-server weigerde deze inloggegevens of reageerde niet.
-The Machine	De Machine
 The manga	De manga
-The Movie Lover	De Filmliefhebber
-The Night Owl	De Nachtuil
 The only version left is not as long as this episode.	De enige overgebleven versie is niet zo lang als deze aflevering.
 The only version left seems to be a film, not this episode.	De enige overgebleven versie lijkt een film te zijn, niet deze aflevering.
 The only version left seems to be another episode.	De enige overgebleven versie lijkt een andere aflevering te zijn.
@@ -845,9 +797,7 @@ The playback engine was not found.	De afspeelengine is niet gevonden.
 The provider stream could not be opened. Try again.	De stream van de aanbieder kon niet worden geopend. Probeer het opnieuw.
 The recording could not be started.	De opname kon niet worden gestart.
 The recording is still growing	De opname loopt nog
-The Series Addict	De Serieverslaafde
 The series everyone is talking about.	De series waar iedereen het over heeft.
-The Series Fan	De Seriefan
 The server refused this version (error %d).	De server weigerde deze versie (fout %d).
 The server requires an active VIP key.	De server vereist een actieve VIP-sleutel.
 The server took too long to answer.	De server reageerde te traag.
@@ -905,7 +855,6 @@ Too many attempts. Try again in one minute.	Te veel pogingen. Probeer het over e
 Top 10 Films This Week	Top 10 films van deze week
 Top 10 Series This Week	Top 10 series van deze week
 Top Results	Topresultaten
-Torrent ready in Real-Debrid	Torrent klaar in Real-Debrid
 Total budget	Totaal budget
 Trailer	Trailer
 Trailers	Trailers
@@ -918,7 +867,6 @@ TV & Shows	Tv en series
 TV guide	Tv-gids
 TV settings	Tv-instellingen
 TV Show	Serie
-TYPE	TYPE
 Type with your remote	Typ met je afstandsbediening
 Unable to load this page. Try refreshing.	Deze pagina kon niet worden geladen. Probeer te vernieuwen.
 Unavailable	Niet beschikbaar
@@ -962,7 +910,6 @@ Watchlist	Kijklijst
 Web	Web
 Weekdays	Doordeweeks
 What's Next	Wat er komt
-What's on	Nu op tv
 Where to watch	Waar te kijken
 Which version	Welke versie
 White	Wit
@@ -978,10 +925,8 @@ Yellow	Geel
 You haven't added any movies or shows.	Je hebt nog geen films of series toegevoegd.
 You joined	Je doet mee
 You stopped at episode {1}: the story goes on at chapter {2}	Je stopte bij aflevering {1}: het verhaal gaat verder in hoofdstuk {2}
-Your best sessions start after 10 pm.	Je beste sessies beginnen na 22.00 uur.
 your busiest month	je drukste maand
 Your channels, in your order	Je zenders, in jouw volgorde
-Your eras	Je tijdperken
 Your favorite channels belong here	Je favoriete zenders horen hier
 your favourite hour	je favoriete uur
 Your genres	Je genres
@@ -992,7 +937,6 @@ Your live service, recordings and personal channel layout	Je livedienst, opnamen
 Your most watched	Het meest gekeken
 Your name	Je naam
 Your next binge starts here.	Je volgende bingesessie begint hier.
-Your viewer profile	Je kijkersprofiel
 Your year in review	Jouw jaar in beeld
 Zapping, guide order, preview and your provider	Zappen, volgorde van de gids, voorbeeld en je aanbieder
 Zoom in {1} %	Inzoomen {1} %
@@ -1020,11 +964,9 @@ Zoom out	Uitzoomen
 {1} volumes	{1} delen
 {1} · play/pause, next	{1} · afspelen/pauzeren, volgende
 A second life	Een tweede leven
-Accounts	Accounts
 Anime films	Animatiefilms
 Another world	Een andere wereld
 Anti-heroes	Antihelden
-Appearance	Weergave
 At war	In oorlog
 Atkinson Hyperlegible	Atkinson Hyperlegible
 Blue	Blauw
@@ -1033,10 +975,8 @@ Death games	Doodsspellen
 Finished, to read in one go	Afgerond, in één ruk te lezen
 Food on screen	Eten op het scherm
 Found family	Gekozen familie
-Hide the entries you never use.	Verberg onderdelen die je nooit gebruikt.
 Highest rated	Best beoordeeld
 How a title starts and which version comes first.	Hoe een titel start en welke versie eerst komt.
-How subtitles look, for every video.	Hoe ondertitels eruitzien, voor elke video.
 Led by women	Gedragen door vrouwen
 Manhua from China	Manhua uit China
 Manhwa from Korea	Manhwa uit Korea
@@ -1055,15 +995,10 @@ Soft and soothing	Zacht en rustgevend
 Standard	Standaard
 Still being published	Verschijnt nog
 Superpowers	Superkrachten
-The colour of what shows your progress.	De kleur van wat je voortgang toont.
-The language of the interface.	De taal van de interface.
-The rows of the home page and what moves by itself.	De rijen van Start en wat vanzelf beweegt.
-This app, its credits and a little housekeeping.	Deze app, de credits en een beetje opruimen.
 This season	Dit seizoen
 Top 10 Anime	Top 10 anime
 Trending now	Nu trending
 Tsundere alert	Tsundere-alarm
-Who is watching, and the services Sokoul draws on.	Wie er kijkt, en de diensten die Sokoul gebruikt.
 Best quality first	Beste kwaliteit eerst
 At home on {1}	Thuis vanaf {1}
 Built-in key	Ingebouwde sleutel
@@ -1077,3 +1012,21 @@ Coming soon	Binnenkort
 In cinemas on {1}	In de bioscoop vanaf {1}
 Recent searches	Recente zoekopdrachten
 Speak	Inspreken
+Night viewer	Nachtkijker
+Most of your viewing happened after 10 pm.	Je keek vooral na 22 uur.
+Morning viewer	Ochtendkijker
+You often pressed play before 11 am.	Je drukte vaak al voor 11 uur op play.
+Marathon runner	Marathonloper
+Four episodes or more in a day, more than once.	Vier afleveringen of meer op één dag, en vaker dan eens.
+Regular	Vaste kijker
+Ten days in a row or more with something on screen.	Tien dagen of meer achter elkaar iets op het scherm.
+Curious	Nieuwsgierig
+Many titles, and no genre took over.	Veel titels, en geen genre nam de overhand.
+Film lover	Filmliefhebber
+Films took most of your time.	Films namen het grootste deel van je tijd in.
+Series lover	Serieliefhebber
+Series took most of your time.	Series namen het grootste deel van je tijd in.
+Eclectic	Veelzijdig
+A bit of everything, at your own pace.	Van alles wat, in je eigen tempo.
+Your viewing style	Jouw manier van kijken
+Your chapters	Jouw hoofdstukken

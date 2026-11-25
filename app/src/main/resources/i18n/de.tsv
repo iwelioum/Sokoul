@@ -1,5 +1,4 @@
 # Deutsch — english<TAB>translation, keyed by app/src/main/resources/i18n/source.tsv
-"One more episode" is your motto.	„Noch eine Folge“ ist dein Motto.
 %1$d h %2$d min	%1$d Std. %2$d Min.
 %1$d min	%1$d Min.
 %1$s Originals	%1$s Originals
@@ -35,7 +34,6 @@ Accent colour	Akzentfarbe
 Account status, formats and guide time offset	Kontostatus, Formate und Zeitversatz des Programmführers
 Action	Action
 Action & Adventure	Action & Abenteuer
-Actions	Aktionen
 Active	Aktiv
 Active collection	Aktive Sammlung
 Adaptations	Adaptionen
@@ -62,7 +60,6 @@ All channels	Alle Sender
 All formats	Alle Formate
 All groups	Alle Gruppen
 All languages	Alle Sprachen
-All providers	Alle Anbieter
 All sports	Alle Sportarten
 All the Feels	Gefühlskino
 All titles	Alle Titel
@@ -73,9 +70,7 @@ Also by {1}	Auch von {1}
 Also directed by {1}	Ebenfalls Regie: {1}
 Also on	Auch auf
 Also on %s	Auch auf %s
-Always hunting for the next gem.	Immer auf der Suche nach dem nächsten Juwel.
 An adult profile manages source settings.	Ein Erwachsenenprofil verwaltet die Quelleneinstellungen.
-An episode before coffee.	Eine Folge vor dem Kaffee.
 Animation	Animation
 Anime	Anime
 Anime only	Nur im Anime
@@ -100,15 +95,14 @@ Audience	Publikum
 Audio	Audio
 Audio language	Audiosprache
 Audio languages	Audiosprachen
-Audio not identified	Audio nicht erkannt
-Audio verified	Audio geprüft
-Audio: {1}	Audio: {1}
+audio not identified	audio nicht erkannt
+audio verified	audio geprüft
+AUDIO: {1}	AUDIO: {1}
 Auto scroll off	Automatisches Scrollen aus
 Auto scroll {1}	Automatisches Scrollen {1}
 Automatic	Automatisch
 Automatic trailers	Automatische Trailer
 Average IMDb rating	Durchschnittliche IMDb-Bewertung
-AWARDS	AUSZEICHNUNGEN
 Awards won	Gewonnene Auszeichnungen
 Back	Zurück
 Back 10 s	10 Sek. zurück
@@ -174,7 +168,6 @@ Choose Channels and enter a name or number, or explore Programmes.	Wähle Sender
 Choose folder…	Ordner wählen …
 Clear	Löschen
 CLEAR	LÖSCHEN
-Clear search	Suche löschen
 Clear selection	Auswahl aufheben
 Clear the catalogue cache	Katalog-Cache leeren
 Edit collection	Sammlung verwalten
@@ -192,13 +185,11 @@ Provider groups	Anbietergruppen
 Real-Debrid search found no version for this title	Die Real-Debrid-Suche fand keine Version für diesen Titel
 Real-Debrid search is temporarily unavailable	Die Real-Debrid-Suche ist vorübergehend nicht verfügbar
 Record this programme	Diese Sendung aufnehmen
-Search groups	Gruppen suchen
 Select all	Alle auswählen
 Select channels	Sender auswählen
 Servers	Server
 Set up the Sokoul server in Settings > Content sources.	Richte den Sokoul-Server unter Einstellungen > Inhaltsquellen ein.
 TV actions	TV-Funktionen
-Your languages	Deine Sprachen
 Search services	Suchdienste
 If no language matches	Wenn keine Sprache passt
 Play the file's own track	Audiospur der Datei abspielen
@@ -211,7 +202,6 @@ Colour	Farbe
 Colours the progress of what you watch: the player's bar and the cards of Continue Watching.	Färbt den Fortschritt dessen, was du schaust: die Leiste des Players und die Karten von Weiterschauen.
 Comedy	Komödie
 Coming up	Als Nächstes
-Compatible · {1}	Kompatibel · {1}
 Configure later	Später einrichten
 Configure your Sokoul server and access key in Credentials.	Richte deinen Sokoul-Server und seinen Schlüssel unter Zugangsdaten ein.
 Confirm delete	Löschen bestätigen
@@ -223,7 +213,6 @@ Could not start the download.	Der Download konnte nicht gestartet werden.
 Counting…	Wird gezählt …
 Create a collection	Sammlung erstellen
 Create and add	Erstellen und hinzufügen
-CREATED BY	ERDACHT VON
 Created by	Erdacht von
 Credentials and API keys	Zugangsdaten und API-Schlüssel
 Credits	Mitwirkende
@@ -242,7 +231,6 @@ Delete	Löschen
 Delete collection	Sammlung löschen
 Delete “{1}”?	„{1}“ löschen?
 DETAILS	DETAILS
-DIRECTED BY	REGIE
 Directed by	Regie
 Director	Regie
 Directors	Regisseure
@@ -282,8 +270,6 @@ Every week	Jede Woche
 Everyone plays the title with their own sources; play, pause and jumps stay in step.	Jeder spielt den Titel mit eigenen Quellen ab; Wiedergabe, Pause und Sprünge bleiben synchron.
 Everything	Alles
 Everywhere	Überall
-Excluded sources	Ausgeschlossene Quellen
-Excluded · {1}	Ausgeschlossen · {1}
 Exit full screen	Vollbild beenden
 Expires {1}	Läuft ab: {1}
 Explore	Entdecken
@@ -308,8 +294,6 @@ Film	Film
 Film Page	Filmseite
 Films	Filme
 Films and series	Filme und Serien
-Films and series: you take it all.	Filme und Serien: du nimmst alles mit.
-Films are your religion.	Filme sind deine Religion.
 Films That Twist Your Mind	Filme, die dein Hirn verdrehen
 Films, OVAs and more	Filme, OVAs und mehr
 Find something to watch	Finde etwas zum Schauen
@@ -362,7 +346,6 @@ Hide, order, parental code	Ausblenden, sortieren, Jugendschutz-PIN
 Hide, protect and reorder groups	Gruppen ausblenden, schützen und sortieren
 High Tension	Hochspannung
 Highest rated manga	Die bestbewerteten Mangas
-Hold OK	OK gedrückt halten
 Hold OK on a channel to add it to favorites or a collection.	Halte OK auf einem Sender gedrückt, um ihn zu Favoriten oder einer Sammlung hinzuzufügen.
 Home	Start
 Home rows	Zeilen der Startseite
@@ -373,7 +356,6 @@ Hoster {1}	Hoster {1}
 If you liked this	Wenn dir das gefallen hat
 If You Liked This Saga	Wenn dir diese Saga gefallen hat
 In %d min	In %d Min.
-In account	Im Konto
 In My List	In Meine Liste
 In the Same Universe	Im selben Universum
 Inactive	Inaktiv
@@ -393,7 +375,6 @@ Kids profile: off	Kinderprofil: aus
 Kids profile: on	Kinderprofil: an
 Korea	Korea
 Language	Sprache
-LANGUAGES	SPRACHEN
 Languages	Sprachen
 Large	Groß
 Last year	Letztes Jahr
@@ -408,8 +389,6 @@ Light novels	Light Novels
 Link entered	Eingegebener Link
 LIVE	LIVE
 Live	Live
-Live action	Realfilm
-Live and upcoming events	Live- und kommende Events
 Live preview	Live-Vorschau
 Live stream format	Live-Stream-Format
 Live TV	Live-TV
@@ -436,7 +415,6 @@ Prefer quality up to	Qualität bevorzugt bis
 Prefer size up to	Größe bevorzugt bis
 MB/s	MB/s
 Measuring the stream	Stream wird gemessen
-Menu · edit	Menü · bearbeiten
 Message	Nachricht
 Metacritic	Metacritic
 Mind Games	Kopfspiele
@@ -457,11 +435,9 @@ Movies, shows, cast and more	Filme, Serien, Besetzung und mehr
 Music	Musik
 Must-See Series	Serien, die man gesehen haben muss
 Must-sees this week.	Was du diese Woche sehen musst.
-My channels	Meine Sender
 My List	Meine Liste
 My reminders	Meine Erinnerungen
 My series	Meine Serien
-My space	Mein Bereich
 My TV	Mein TV
 Name	Name
 Name your collection	Benenne deine Sammlung
@@ -511,17 +487,14 @@ No source configured	Keine Quelle eingerichtet
 No source is available for this title.	Für diesen Titel ist keine Quelle verfügbar.
 No subtitles found online.	Keine Untertitel online gefunden.
 No upcoming programmes. Choose a future programme in the guide and select Remind me.	Keine kommenden Sendungen. Wähle eine im Programmführer und dann Erinnern.
-No version matches these filters. Reset them or refresh the sources.	Keine Version passt zu diesen Filtern. Setze sie zurück oder aktualisiere die Quellen.
 No {1} audio · Playing in {2}	Kein Audio auf {1} · Wiedergabe auf {2}
 Normal	Normal
-Not a single day off.	Kein einziger freier Tag.
 Not available	Nicht verfügbar
 Not available on a kids profile ({1})	Nicht verfügbar in einem Kinderprofil ({1})
 Not available to read here	Hier nicht lesbar
 Not Now	Nicht jetzt
 Not set	Nicht festgelegt
 Nothing announced this week.	Diese Woche ist nichts angekündigt.
-Nothing beats a good film.	Nichts schlägt einen guten Film.
 Nothing found.	Nichts gefunden.
 Nothing in your guide for this period. Try another tab.	Nichts in deinem Programmführer für diesen Zeitraum. Versuche einen anderen Tab.
 Nothing is what it seems.	Nichts ist, wie es scheint.
@@ -534,7 +507,6 @@ Off	Aus
 OK  Apply group   ·   Back  Cancel	OK  Gruppe übernehmen   ·   Zurück  Abbrechen
 OK  Watch · Menu  Actions · F  Favorite	OK  Ansehen · Menü  Aktionen · F  Favorit
 OK  Watch · Menu  Favorite	OK  Ansehen · Menü  Favorit
-OK opens in the guide · Back to guide	OK öffnet im Programmführer · Zurück zum Programmführer
 OK shows or hides a row; the arrows beside it change its place.	OK zeigt oder verbirgt eine Zeile; die Pfeile daneben ändern ihre Position.
 OK to change · Back to guide	OK zum Ändern · Zurück zum Programmführer
 OK to choose · Back to guide	OK zum Wählen · Zurück zum Programmführer
@@ -576,7 +548,6 @@ Part of the Collection	Teil der Sammlung
 Partly filler	Teilweise Filler
 Password	Passwort
 Picked from what you watch.	Ausgewählt nach dem, was du schaust.
-PICTURE	BILD
 Picture	Bild
 Picture and sound	Bild und Ton
 Picture format	Bildformat
@@ -593,7 +564,6 @@ Play in Sokoul	In Sokoul wiedergeben
 Play or pause	Wiedergabe oder Pause
 Playback failed.	Wiedergabe fehlgeschlagen.
 Playback paused after several episodes in a row without any action.	Die Wiedergabe wurde nach mehreren Folgen ohne Eingabe angehalten.
-Playback sources	Wiedergabequellen
 Playing	Läuft
 Popular	Beliebt
 Popular Films	Beliebte Filme
@@ -614,7 +584,6 @@ probably ready	wahrscheinlich bereit
 Profile	Profil
 Programme actions	Aktionen zur Sendung
 Programme guide unavailable for this channel.	Kein Programmführer für diesen Sender verfügbar.
-Programme information unavailable	Keine Angaben zur Sendung
 Programmes	Sendungen
 Protect with PIN	Mit PIN schützen
 Provider	Anbieter
@@ -651,7 +620,6 @@ Recordings	Aufnahmen
 Recordings could not be loaded. Reopen this panel to retry.	Die Aufnahmen konnten nicht geladen werden. Öffne dieses Fenster erneut.
 Recurring Cast	Wiederkehrende Besetzung
 Refresh	Aktualisieren
-Refresh servers	Server aktualisieren
 Refresh subscription	Abo aktualisieren
 Refresh TV guide	TV-Programmführer aktualisieren
 Release calendar	Veröffentlichungskalender
@@ -671,7 +639,6 @@ Rename	Umbenennen
 Rename collection	Sammlung umbenennen
 Reorder channel	Sender verschieben
 Replay	Replay
-Reset filters	Filter zurücksetzen
 Reset guide adjustment	Anpassung zurücksetzen
 Reset the default style	Standardstil wiederherstellen
 Reset the display settings	Anzeige zurücksetzen
@@ -729,16 +696,12 @@ Select	Auswählen
 SELECTION	AUSWAHL
 Send	Senden
 Series	Serien
-Series are your second family.	Serien sind deine zweite Familie.
-Series set the pace of your days.	Serien geben deinen Tagen den Takt vor.
 Series That Twist Your Mind	Serien, die dein Hirn verdrehen
 Server	Server
 Server, username and password are all required.	Server, Benutzername und Passwort sind erforderlich.
 Service	Dienst
-Services	Dienste
 Set adult PIN	Erwachsenen-PIN festlegen
 Set up	Eingerichtet
-Set up the Sokoul server in Settings > Credentials.	Richte den Sokoul-Server unter Einstellungen > Zugangsdaten ein.
 Settings	Einstellungen
 Settings always stays: it is how you get back here.	Einstellungen bleiben immer sichtbar: So kommst du hierher zurück.
 Setup	Einrichtung
@@ -761,7 +724,6 @@ Slice of life	Slice of Life
 Small	Klein
 Society and more	Gesellschaft und mehr
 Sort anime by category	Animes nach Kategorie sortieren
-SOUND	TON
 Sound	Ton
 Sound off	Ton aus
 Sound on	Ton an
@@ -770,7 +732,6 @@ Source preferences updated.	Quelleneinstellungen aktualisiert.
 Source status and playback preferences	Quellenstatus und Wiedergabeeinstellungen
 Source {1}	Quelle {1}
 Source: %s	Quelle: %s
-Sources are still arriving…	Quellen kommen noch …
 Space	Leertaste
 SPACE	LEERTASTE
 Speed	Geschwindigkeit
@@ -815,17 +776,11 @@ System	System
 S{1} · E{2}	S{1} · F{2}
 That PIN was not accepted.	Diese PIN wurde nicht akzeptiert.
 The address of the computer running the watch party server, for instance http://192.168.0.20:25566	Die Adresse des Computers, auf dem der Watch-Party-Server läuft, zum Beispiel http://192.168.0.20:25566
-The All-Rounder	Der Allrounder
 The anime	Der Anime
-The Binge-Watcher	Der Binge-Watcher
 The change could not be saved. Try again.	Die Änderung konnte nicht gespeichert werden. Versuche es erneut.
-The channel remains available to watch.	Der Sender bleibt weiterhin verfügbar.
-The Cinephile	Der Cineast
 The collection changed. Cancel and try again.	Die Sammlung hat sich geändert. Brich ab und versuche es erneut.
 The complete programme is scheduled, with a 2 minute lead-in and a 5 minute safety margin.	Die ganze Sendung ist geplant, mit 2 Minuten Vorlauf und 5 Minuten Puffer.
 The connection was interrupted.	Die Verbindung wurde unterbrochen.
-The Early Bird	Der Frühaufsteher
-The Explorer	Der Entdecker
 The Faces	Die Gesichter
 The Films	Die Filme
 The films everyone is watching.	Die Filme, die alle schauen.
@@ -833,10 +788,7 @@ The highest rated of all time.	Die bestbewerteten aller Zeiten.
 The Honors	Die Ehrungen
 The IPTV provider just refused a connection. Try again in %d s.	Der IPTV-Anbieter hat gerade eine Verbindung abgelehnt. Versuche es in %d s erneut.
 The IPTV server refused these credentials or did not respond.	Der IPTV-Server hat diese Zugangsdaten abgelehnt oder nicht geantwortet.
-The Machine	Die Maschine
 The manga	Der Manga
-The Movie Lover	Der Filmliebhaber
-The Night Owl	Die Nachteule
 The only version left is not as long as this episode.	Die einzige verbleibende Version hat nicht die Länge dieser Folge.
 The only version left seems to be a film, not this episode.	Die einzige verbleibende Version scheint ein Film zu sein, nicht diese Folge.
 The only version left seems to be another episode.	Die einzige verbleibende Version scheint eine andere Folge zu sein.
@@ -845,9 +797,7 @@ The playback engine was not found.	Die Wiedergabe-Engine wurde nicht gefunden.
 The provider stream could not be opened. Try again.	Der Stream des Anbieters konnte nicht geöffnet werden. Versuche es erneut.
 The recording could not be started.	Die Aufnahme konnte nicht gestartet werden.
 The recording is still growing	Die Aufnahme läuft noch
-The Series Addict	Der Serienjunkie
 The series everyone is talking about.	Die Serien, über die alle reden.
-The Series Fan	Der Serienfan
 The server refused this version (error %d).	Der Server hat diese Version abgelehnt (Fehler %d).
 The server requires an active VIP key.	Der Server erfordert einen aktiven VIP-Schlüssel.
 The server took too long to answer.	Der Server hat zu lange gebraucht.
@@ -905,7 +855,6 @@ Too many attempts. Try again in one minute.	Zu viele Versuche. Versuche es in ei
 Top 10 Films This Week	Top 10 Filme dieser Woche
 Top 10 Series This Week	Top 10 Serien dieser Woche
 Top Results	Top-Ergebnisse
-Torrent ready in Real-Debrid	Torrent in Real-Debrid bereit
 Total budget	Gesamtbudget
 Trailer	Trailer
 Trailers	Trailer
@@ -918,7 +867,6 @@ TV & Shows	TV & Serien
 TV guide	TV-Programmführer
 TV settings	TV-Einstellungen
 TV Show	Serie
-TYPE	TYP
 Type with your remote	Mit der Fernbedienung tippen
 Unable to load this page. Try refreshing.	Diese Seite konnte nicht geladen werden. Versuche zu aktualisieren.
 Unavailable	Nicht verfügbar
@@ -962,7 +910,6 @@ Watchlist	Merkliste
 Web	Web
 Weekdays	Werktags
 What's Next	Was als Nächstes kommt
-What's on	Was läuft
 Where to watch	Wo ansehen
 Which version	Welche Version
 White	Weiß
@@ -978,10 +925,8 @@ Yellow	Gelb
 You haven't added any movies or shows.	Du hast noch keine Filme oder Serien hinzugefügt.
 You joined	Du bist beigetreten
 You stopped at episode {1}: the story goes on at chapter {2}	Du hast bei Folge {1} aufgehört: Die Geschichte geht in Kapitel {2} weiter
-Your best sessions start after 10 pm.	Deine besten Sessions beginnen nach 22 Uhr.
 your busiest month	dein aktivster Monat
 Your channels, in your order	Deine Sender, in deiner Reihenfolge
-Your eras	Deine Epochen
 Your favorite channels belong here	Deine Lieblingssender gehören hierher
 your favourite hour	deine Lieblingsstunde
 Your genres	Deine Genres
@@ -992,7 +937,6 @@ Your live service, recordings and personal channel layout	Dein Live-Dienst, dein
 Your most watched	Am häufigsten gesehen
 Your name	Dein Name
 Your next binge starts here.	Dein nächster Binge beginnt hier.
-Your viewer profile	Dein Zuschauerprofil
 Your year in review	Dein Jahr im Rückblick
 Zapping, guide order, preview and your provider	Zapping, Reihenfolge, Vorschau und dein Anbieter
 Zoom in {1} %	Vergrößern {1} %
@@ -1020,11 +964,9 @@ Zoom out	Verkleinern
 {1} volumes	{1} Bände
 {1} · play/pause, next	{1} · Wiedergabe/Pause, weiter
 A second life	Ein zweites Leben
-Accounts	Konten
 Anime films	Animationsfilme
 Another world	Eine andere Welt
 Anti-heroes	Antihelden
-Appearance	Darstellung
 At war	Im Krieg
 Atkinson Hyperlegible	Atkinson Hyperlegible
 Blue	Blau
@@ -1033,10 +975,8 @@ Death games	Todesspiele
 Finished, to read in one go	Abgeschlossen, in einem Rutsch zu lesen
 Food on screen	Essen auf dem Bildschirm
 Found family	Wahlfamilie
-Hide the entries you never use.	Blende Einträge aus, die du nie nutzt.
 Highest rated	Bestbewertet
 How a title starts and which version comes first.	Wie ein Titel startet und welche Version zuerst kommt.
-How subtitles look, for every video.	Wie Untertitel aussehen, für jedes Video.
 Led by women	Von Frauen getragen
 Manhua from China	Manhua aus China
 Manhwa from Korea	Manhwa aus Korea
@@ -1055,15 +995,10 @@ Soft and soothing	Sanft und beruhigend
 Standard	Standard
 Still being published	Erscheint noch
 Superpowers	Superkräfte
-The colour of what shows your progress.	Die Farbe dessen, was deinen Fortschritt zeigt.
-The language of the interface.	Die Sprache der Oberfläche.
-The rows of the home page and what moves by itself.	Die Zeilen der Startseite und was sich von selbst bewegt.
-This app, its credits and a little housekeeping.	Diese App, ihre Mitwirkenden und ein wenig Aufräumen.
 This season	Diese Saison
 Top 10 Anime	Top 10 Anime
 Trending now	Gerade im Trend
 Tsundere alert	Tsundere-Alarm
-Who is watching, and the services Sokoul draws on.	Wer schaut, und die Dienste, die Sokoul nutzt.
 Best quality first	Beste Qualität zuerst
 At home on {1}	Zu Hause ab {1}
 Built-in key	Integrierter Schlüssel
@@ -1077,3 +1012,21 @@ Coming soon	Demnächst
 In cinemas on {1}	Im Kino ab {1}
 Recent searches	Letzte Suchen
 Speak	Sprechen
+Night viewer	Nachtschauer
+Most of your viewing happened after 10 pm.	Am meisten hast du nach 22 Uhr geschaut.
+Morning viewer	Frühaufsteher
+You often pressed play before 11 am.	Oft hast du schon vor 11 Uhr auf Play gedrückt.
+Marathon runner	Marathonläufer
+Four episodes or more in a day, more than once.	Vier Folgen oder mehr an einem Tag, und das mehrmals.
+Regular	Stammgast
+Ten days in a row or more with something on screen.	Zehn Tage oder mehr am Stück mit etwas auf dem Bildschirm.
+Curious	Neugierig
+Many titles, and no genre took over.	Viele Titel, und kein Genre hat überwogen.
+Film lover	Filmfan
+Films took most of your time.	Filme haben den Großteil deiner Zeit eingenommen.
+Series lover	Serienfan
+Series took most of your time.	Serien haben den Großteil deiner Zeit eingenommen.
+Eclectic	Vielseitig
+A bit of everything, at your own pace.	Von allem etwas, in deinem Tempo.
+Your viewing style	Deine Art zu schauen
+Your chapters	Deine Kapitel

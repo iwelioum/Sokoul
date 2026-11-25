@@ -1,5 +1,4 @@
 # العربية — english<TAB>translation, keyed by app/src/main/resources/i18n/source.tsv
-"One more episode" is your motto.	«حلقة أخرى فقط» هو شعارك.
 %1$d h %2$d min	%1$d س %2$d د
 %1$d min	%1$d د
 %1$s Originals	أعمال %1$s الأصلية
@@ -35,7 +34,6 @@ Accent colour	لون التمييز
 Account status, formats and guide time offset	حالة الحساب والصيغ وفارق توقيت الدليل
 Action	أكشن
 Action & Adventure	أكشن ومغامرة
-Actions	إجراءات
 Active	نشط
 Active collection	المجموعة النشطة
 Adaptations	اقتباسات
@@ -62,7 +60,6 @@ All channels	كل القنوات
 All formats	كل الصيغ
 All groups	كل المجموعات
 All languages	كل اللغات
-All providers	كل المزوّدين
 All sports	كل الرياضات
 All the Feels	مشاعر جيّاشة
 All titles	كل الأعمال
@@ -73,9 +70,7 @@ Also by {1}	أعمال أخرى لـ {1}
 Also directed by {1}	من إخراج {1} أيضًا
 Also on	متاح أيضًا على
 Also on %s	متاح أيضًا على %s
-Always hunting for the next gem.	تبحث دائمًا عن الجوهرة التالية.
 An adult profile manages source settings.	يدير ملف بالغ إعدادات المصدر.
-An episode before coffee.	حلقة قبل القهوة.
 Animation	رسوم متحركة
 Anime	أنمي
 Anime only	في الأنمي فقط
@@ -100,15 +95,14 @@ Audience	الجمهور
 Audio	الصوت
 Audio language	لغة الصوت
 Audio languages	لغات الصوت
-Audio not identified	الصوت غير محدد
-Audio verified	تم التحقق من الصوت
-Audio: {1}	الصوت: {1}
+audio not identified	الصوت غير محدد
+audio verified	تم التحقق من الصوت
+AUDIO: {1}	الصوت: {1}
 Auto scroll off	التمرير التلقائي متوقف
 Auto scroll {1}	التمرير التلقائي {1}
 Automatic	تلقائية
 Automatic trailers	إعلانات تلقائية
 Average IMDb rating	متوسط تقييم IMDb
-AWARDS	الجوائز
 Awards won	الجوائز المحرزة
 Back	رجوع
 Back 10 s	رجوع 10 ث
@@ -174,7 +168,6 @@ Choose Channels and enter a name or number, or explore Programmes.	اختر ال
 Choose folder…	اختيار مجلد…
 Clear	مسح
 CLEAR	مسح
-Clear search	مسح البحث
 Clear selection	إلغاء تحديد الكل
 Clear the catalogue cache	مسح ذاكرة الكتالوج المؤقتة
 Edit collection	إدارة المجموعة
@@ -192,13 +185,11 @@ Provider groups	مجموعات المزوّد
 Real-Debrid search found no version for this title	لم يعثر بحث Real-Debrid على نسخة لهذا العنوان
 Real-Debrid search is temporarily unavailable	بحث Real-Debrid غير متاح مؤقتًا
 Record this programme	تسجيل هذا البرنامج
-Search groups	البحث عن مجموعات
 Select all	تحديد الكل
 Select channels	اختيار القنوات
 Servers	الخوادم
 Set up the Sokoul server in Settings > Content sources.	اضبط خادم سوكول من الإعدادات > مصادر المحتوى.
 TV actions	خيارات التلفزيون
-Your languages	لغاتك
 Search services	خدمات البحث
 If no language matches	إذا لم تتطابق أي لغة
 Play the file's own track	تشغيل المسار الصوتي للملف
@@ -211,7 +202,6 @@ Colour	اللون
 Colours the progress of what you watch: the player's bar and the cards of Continue Watching.	يلوّن تقدّم ما تشاهده: شريط المشغل وبطاقات متابعة المشاهدة.
 Comedy	كوميديا
 Coming up	التالي
-Compatible · {1}	متوافقة · {1}
 Configure later	الإعداد لاحقًا
 Configure your Sokoul server and access key in Credentials.	اضبط خادم Sokoul ومفتاحه في بيانات الاعتماد.
 Confirm delete	تأكيد الحذف
@@ -223,7 +213,6 @@ Could not start the download.	تعذّر بدء التنزيل.
 Counting…	جارٍ العد…
 Create a collection	إنشاء مجموعة
 Create and add	إنشاء وإضافة
-CREATED BY	من ابتكار
 Created by	من ابتكار
 Credentials and API keys	بيانات الاعتماد ومفاتيح API
 Credits	الشارة
@@ -242,7 +231,6 @@ Delete	حذف
 Delete collection	حذف المجموعة
 Delete “{1}”?	حذف «{1}»؟
 DETAILS	التفاصيل
-DIRECTED BY	إخراج
 Directed by	إخراج
 Director	الإخراج
 Directors	المخرجون
@@ -282,8 +270,6 @@ Every week	كل أسبوع
 Everyone plays the title with their own sources; play, pause and jumps stay in step.	يشغّل كل شخص العمل من مصادره؛ ويبقى التشغيل والإيقاف والتقديم متزامنًا.
 Everything	كل شيء
 Everywhere	في كل مكان
-Excluded sources	المصادر المستبعدة
-Excluded · {1}	مستبعدة · {1}
 Exit full screen	الخروج من ملء الشاشة
 Expires {1}	ينتهي: {1}
 Explore	استكشاف
@@ -308,8 +294,6 @@ Film	فيلم
 Film Page	صفحة الفيلم
 Films	الأفلام
 Films and series	أفلام ومسلسلات
-Films and series: you take it all.	أفلام ومسلسلات: تأخذ كل شيء.
-Films are your religion.	السينما هي دينك.
 Films That Twist Your Mind	أفلام تلوي العقل
 Films, OVAs and more	أفلام وOVA والمزيد
 Find something to watch	اعثر على ما تشاهده
@@ -362,7 +346,6 @@ Hide, order, parental code	إخفاء، ترتيب، رمز الرقابة ال�
 Hide, protect and reorder groups	إخفاء المجموعات وحمايتها وإعادة ترتيبها
 High Tension	توتر عالٍ
 Highest rated manga	المانغا الأعلى تقييمًا
-Hold OK	اضغط مطولًا على OK
 Hold OK on a channel to add it to favorites or a collection.	اضغط مطولًا على OK فوق قناة لإضافتها إلى المفضلة أو إلى مجموعة.
 Home	الرئيسية
 Home rows	صفوف الرئيسية
@@ -373,7 +356,6 @@ Hoster {1}	الاستضافة {1}
 If you liked this	إن أعجبك هذا
 If You Liked This Saga	إن أعجبتك هذه السلسلة
 In %d min	خلال %d د
-In account	في الحساب
 In My List	في قائمتي
 In the Same Universe	في العالم نفسه
 Inactive	غير نشط
@@ -393,7 +375,6 @@ Kids profile: off	ملف الأطفال: معطّل
 Kids profile: on	ملف الأطفال: مفعّل
 Korea	كوريا
 Language	اللغة
-LANGUAGES	اللغات
 Languages	اللغات
 Large	كبير
 Last year	العام الماضي
@@ -408,8 +389,6 @@ Light novels	روايات خفيفة
 Link entered	الرابط المُدخل
 LIVE	مباشر
 Live	مباشر
-Live action	تمثيل حي
-Live and upcoming events	أحداث مباشرة وقادمة
 Live preview	معاينة مباشرة
 Live stream format	صيغة البث المباشر
 Live TV	البث المباشر
@@ -436,7 +415,6 @@ Prefer quality up to	تفضيل جودة حتى
 Prefer size up to	تفضيل حجم حتى
 MB/s	م.ب/ث
 Measuring the stream	جارٍ قياس البث
-Menu · edit	القائمة · تعديل
 Message	رسالة
 Metacritic	Metacritic
 Mind Games	ألعاب ذهنية
@@ -457,11 +435,9 @@ Movies, shows, cast and more	أفلام ومسلسلات وممثلون والم
 Music	موسيقى
 Must-See Series	مسلسلات لا تُفوّت
 Must-sees this week.	ما لا يُفوّت هذا الأسبوع.
-My channels	قنواتي
 My List	قائمتي
 My reminders	تذكيراتي
 My series	مسلسلاتي
-My space	مساحتي
 My TV	تلفازي
 Name	الاسم
 Name your collection	سمِّ مجموعتك
@@ -511,17 +487,14 @@ No source configured	لا مصدر مضبوط
 No source is available for this title.	لا يتوفر مصدر لهذا العمل.
 No subtitles found online.	لم يُعثر على ترجمات عبر الإنترنت.
 No upcoming programmes. Choose a future programme in the guide and select Remind me.	لا برامج قادمة. اختر برنامجًا في الدليل واختر ذكّرني.
-No version matches these filters. Reset them or refresh the sources.	لا نسخة تطابق هذه الفلاتر. أعد ضبطها أو حدّث المصادر.
 No {1} audio · Playing in {2}	لا صوت بـ{1} · التشغيل بـ{2}
 Normal	عادي
-Not a single day off.	ولا يوم راحة واحد.
 Not available	غير متاح
 Not available on a kids profile ({1})	غير متاح في ملف الأطفال ({1})
 Not available to read here	غير متاح للقراءة هنا
 Not Now	ليس الآن
 Not set	غير مضبوط
 Nothing announced this week.	لا شيء معلن هذا الأسبوع.
-Nothing beats a good film.	لا شيء يضاهي فيلمًا جيدًا.
 Nothing found.	لم يُعثر على شيء.
 Nothing in your guide for this period. Try another tab.	لا شيء في دليلك لهذه الفترة. جرّب علامة تبويب أخرى.
 Nothing is what it seems.	لا شيء كما يبدو.
@@ -534,7 +507,6 @@ Off	معطّل
 OK  Apply group   ·   Back  Cancel	OK  تطبيق المجموعة   ·   رجوع  إلغاء
 OK  Watch · Menu  Actions · F  Favorite	OK  مشاهدة · القائمة  إجراءات · F  مفضلة
 OK  Watch · Menu  Favorite	OK  مشاهدة · القائمة  مفضلة
-OK opens in the guide · Back to guide	OK يفتح في الدليل · العودة إلى الدليل
 OK shows or hides a row; the arrows beside it change its place.	OK يُظهر الصف أو يخفيه؛ والأسهم بجانبه تغيّر موضعه.
 OK to change · Back to guide	OK للتغيير · العودة إلى الدليل
 OK to choose · Back to guide	OK للاختيار · العودة إلى الدليل
@@ -576,7 +548,6 @@ Part of the Collection	جزء من المجموعة
 Partly filler	حشو جزئيًا
 Password	كلمة المرور
 Picked from what you watch.	مختارة حسب ما تشاهده.
-PICTURE	الصورة
 Picture	الصورة
 Picture and sound	الصورة والصوت
 Picture format	صيغة الصورة
@@ -593,7 +564,6 @@ Play in Sokoul	التشغيل في Sokoul
 Play or pause	تشغيل أو إيقاف مؤقت
 Playback failed.	فشل التشغيل.
 Playback paused after several episodes in a row without any action.	توقف التشغيل بعد عدة حلقات متتالية دون أي إجراء.
-Playback sources	مصادر التشغيل
 Playing	قيد التشغيل
 Popular	الأكثر شعبية
 Popular Films	أفلام رائجة
@@ -614,7 +584,6 @@ probably ready	جاهزة على الأرجح
 Profile	الملف
 Programme actions	إجراءات البرنامج
 Programme guide unavailable for this channel.	الدليل غير متاح لهذه القناة.
-Programme information unavailable	معلومات البرنامج غير متاحة
 Programmes	البرامج
 Protect with PIN	الحماية برمز
 Provider	المزوّد
@@ -651,7 +620,6 @@ Recordings	التسجيلات
 Recordings could not be loaded. Reopen this panel to retry.	تعذّر تحميل التسجيلات. أعد فتح هذه اللوحة للمحاولة مجددًا.
 Recurring Cast	الممثلون الدائمون
 Refresh	تحديث
-Refresh servers	تحديث الخوادم
 Refresh subscription	تحديث الاشتراك
 Refresh TV guide	تحديث دليل التلفاز
 Release calendar	تقويم الإصدارات
@@ -671,7 +639,6 @@ Rename	إعادة التسمية
 Rename collection	إعادة تسمية المجموعة
 Reorder channel	نقل القناة
 Replay	إعادة
-Reset filters	إعادة ضبط الفلاتر
 Reset guide adjustment	إعادة ضبط الدليل
 Reset the default style	استعادة النمط الافتراضي
 Reset the display settings	إعادة ضبط العرض
@@ -729,16 +696,12 @@ Select	اختيار
 SELECTION	اختيارات
 Send	إرسال
 Series	المسلسلات
-Series are your second family.	المسلسلات عائلتك الثانية.
-Series set the pace of your days.	المسلسلات تحدد إيقاع أيامك.
 Series That Twist Your Mind	مسلسلات تلوي العقل
 Server	الخادم
 Server, username and password are all required.	الخادم واسم المستخدم وكلمة المرور كلها مطلوبة.
 Service	الخدمة
-Services	الخدمات
 Set adult PIN	تعيين رمز البالغ
 Set up	مضبوط
-Set up the Sokoul server in Settings > Credentials.	اضبط خادم Sokoul في الإعدادات > بيانات الاعتماد.
 Settings	الإعدادات
 Settings always stays: it is how you get back here.	تبقى الإعدادات دائمًا: فمنها تعود إلى هنا.
 Setup	الإعداد
@@ -761,7 +724,6 @@ Slice of life	شريحة من الحياة
 Small	صغير
 Society and more	المجتمع والمزيد
 Sort anime by category	فرز الأنمي حسب الفئة
-SOUND	الصوت
 Sound	الصوت
 Sound off	الصوت مكتوم
 Sound on	الصوت مفعّل
@@ -770,7 +732,6 @@ Source preferences updated.	تم تحديث تفضيلات المصدر.
 Source status and playback preferences	حالة المصدر وتفضيلات التشغيل
 Source {1}	المصدر {1}
 Source: %s	المصدر: %s
-Sources are still arriving…	ما زالت المصادر تصل…
 Space	مسافة
 SPACE	مسافة
 Speed	السرعة
@@ -815,17 +776,11 @@ System	النظام
 S{1} · E{2}	م{1} · ح{2}
 That PIN was not accepted.	لم يُقبل هذا الرمز.
 The address of the computer running the watch party server, for instance http://192.168.0.20:25566	عنوان الحاسوب الذي يشغّل خادم حفلة المشاهدة، مثل http://192.168.0.20:25566
-The All-Rounder	المتعدد المواهب
 The anime	الأنمي
-The Binge-Watcher	مدمن المشاهدة المتواصلة
 The change could not be saved. Try again.	تعذّر حفظ التغيير. حاول مجددًا.
-The channel remains available to watch.	تبقى القناة متاحة للمشاهدة.
-The Cinephile	عاشق السينما
 The collection changed. Cancel and try again.	تغيّرت المجموعة. ألغِ وحاول مجددًا.
 The complete programme is scheduled, with a 2 minute lead-in and a 5 minute safety margin.	تمت جدولة البرنامج كاملًا بتقدم دقيقتين وهامش أمان 5 دقائق.
 The connection was interrupted.	انقطع الاتصال.
-The Early Bird	الطائر المبكر
-The Explorer	المستكشف
 The Faces	الوجوه
 The Films	الأفلام
 The films everyone is watching.	الأفلام التي يشاهدها الجميع.
@@ -833,10 +788,7 @@ The highest rated of all time.	الأعلى تقييمًا على الإطلاق
 The Honors	التكريمات
 The IPTV provider just refused a connection. Try again in %d s.	رفض مزوّد IPTV اتصالًا للتو. حاول مجددًا بعد %d ث.
 The IPTV server refused these credentials or did not respond.	رفض خادم IPTV بيانات الاعتماد هذه أو لم يستجب.
-The Machine	الآلة
 The manga	المانغا
-The Movie Lover	محب الأفلام
-The Night Owl	بومة الليل
 The only version left is not as long as this episode.	النسخة الوحيدة المتبقية ليست بطول هذه الحلقة.
 The only version left seems to be a film, not this episode.	تبدو النسخة الوحيدة المتبقية فيلمًا، لا هذه الحلقة.
 The only version left seems to be another episode.	تبدو النسخة الوحيدة المتبقية حلقة أخرى.
@@ -845,9 +797,7 @@ The playback engine was not found.	لم يُعثر على محرك التشغي�
 The provider stream could not be opened. Try again.	تعذّر فتح بث المزوّد. حاول مجددًا.
 The recording could not be started.	تعذّر بدء التسجيل.
 The recording is still growing	التسجيل ما زال جاريًا
-The Series Addict	مدمن المسلسلات
 The series everyone is talking about.	المسلسلات التي يتحدث عنها الجميع.
-The Series Fan	محب المسلسلات
 The server refused this version (error %d).	رفض الخادم هذه النسخة (الخطأ %d).
 The server requires an active VIP key.	يتطلب الخادم مفتاح VIP نشطًا.
 The server took too long to answer.	استغرق الخادم وقتًا طويلًا للرد.
@@ -905,7 +855,6 @@ Too many attempts. Try again in one minute.	محاولات كثيرة جدًا. 
 Top 10 Films This Week	أفضل 10 أفلام هذا الأسبوع
 Top 10 Series This Week	أفضل 10 مسلسلات هذا الأسبوع
 Top Results	أفضل النتائج
-Torrent ready in Real-Debrid	التورنت جاهز في Real-Debrid
 Total budget	الميزانية الإجمالية
 Trailer	الإعلان
 Trailers	الإعلانات
@@ -918,7 +867,6 @@ TV & Shows	التلفاز والمسلسلات
 TV guide	دليل التلفاز
 TV settings	إعدادات التلفاز
 TV Show	مسلسل
-TYPE	النوع
 Type with your remote	اكتب بجهاز التحكم
 Unable to load this page. Try refreshing.	تعذّر تحميل هذه الصفحة. حاول التحديث.
 Unavailable	غير متاح
@@ -962,7 +910,6 @@ Watchlist	للمشاهدة
 Web	الويب
 Weekdays	أيام الأسبوع
 What's Next	ما التالي
-What's on	ما يُعرض الآن
 Where to watch	أين تشاهد
 Which version	أي نسخة
 White	أبيض
@@ -978,10 +925,8 @@ Yellow	أصفر
 You haven't added any movies or shows.	لم تضف أي أفلام أو مسلسلات بعد.
 You joined	انضممت
 You stopped at episode {1}: the story goes on at chapter {2}	توقفت عند الحلقة {1}: تكمل القصة في الفصل {2}
-Your best sessions start after 10 pm.	أفضل جلساتك تبدأ بعد العاشرة مساءً.
 your busiest month	أكثر شهورك نشاطًا
 Your channels, in your order	قنواتك، بترتيبك
-Your eras	حقبك
 Your favorite channels belong here	قنواتك المفضلة مكانها هنا
 your favourite hour	ساعتك المفضلة
 Your genres	أنواعك
@@ -992,7 +937,6 @@ Your live service, recordings and personal channel layout	خدمتك المبا�
 Your most watched	الأكثر مشاهدة لديك
 Your name	اسمك
 Your next binge starts here.	ماراثونك القادم يبدأ هنا.
-Your viewer profile	ملفك كمشاهد
 Your year in review	عامك في لمحة
 Zapping, guide order, preview and your provider	التنقل وترتيب الدليل والمعاينة ومزوّدك
 Zoom in {1} %	تكبير {1}٪
@@ -1020,11 +964,9 @@ Zoom out	تصغير
 {1} volumes	{1} مجلدات
 {1} · play/pause, next	{1} · تشغيل/إيقاف، التالي
 A second life	حياة ثانية
-Accounts	الحسابات
 Anime films	أفلام الرسوم المتحركة
 Another world	عالم آخر
 Anti-heroes	أبطال مضادون
-Appearance	المظهر
 At war	في الحرب
 Atkinson Hyperlegible	Atkinson Hyperlegible
 Blue	أزرق
@@ -1033,10 +975,8 @@ Death games	ألعاب الموت
 Finished, to read in one go	منتهية، للقراءة دفعة واحدة
 Food on screen	الطعام على الشاشة
 Found family	عائلة مختارة
-Hide the entries you never use.	أخفِ العناصر التي لا تستخدمها أبدًا.
 Highest rated	الأعلى تقييمًا
 How a title starts and which version comes first.	كيف يبدأ العمل وأي نسخة تأتي أولًا.
-How subtitles look, for every video.	مظهر الترجمة لكل الفيديوهات.
 Led by women	بطولة نسائية
 Manhua from China	مانهوا من الصين
 Manhwa from Korea	مانهوا من كوريا
@@ -1055,15 +995,10 @@ Soft and soothing	هادئ ومريح
 Standard	قياسي
 Still being published	قيد النشر
 Superpowers	قوى خارقة
-The colour of what shows your progress.	لون ما يُظهر تقدمك.
-The language of the interface.	لغة الواجهة.
-The rows of the home page and what moves by itself.	صفوف الرئيسية وما يتحرك تلقائيًا.
-This app, its credits and a little housekeeping.	هذا التطبيق وشارته وبعض التنظيف.
 This season	هذا الموسم
 Top 10 Anime	أفضل 10 أنمي
 Trending now	الرائج الآن
 Tsundere alert	تنبيه تسونديري
-Who is watching, and the services Sokoul draws on.	من يشاهد، والخدمات التي يستخدمها Sokoul.
 Best quality first	أفضل جودة أولًا
 At home on {1}	في المنزل في {1}
 Built-in key	مفتاح مدمج
@@ -1077,3 +1012,21 @@ Coming soon	قريبًا
 In cinemas on {1}	في السينما في {1}
 Recent searches	عمليات البحث الأخيرة
 Speak	تحدّث
+Night viewer	مشاهد الليل
+Most of your viewing happened after 10 pm.	معظم مشاهداتك كانت بعد العاشرة مساءً.
+Morning viewer	مشاهد الصباح
+You often pressed play before 11 am.	كثيرًا ما بدأت المشاهدة قبل الحادية عشرة صباحًا.
+Marathon runner	عدّاء الماراثون
+Four episodes or more in a day, more than once.	أربع حلقات أو أكثر في يوم واحد، وأكثر من مرة.
+Regular	المواظب
+Ten days in a row or more with something on screen.	عشرة أيام متتالية أو أكثر أمام الشاشة.
+Curious	الفضولي
+Many titles, and no genre took over.	عناوين كثيرة، ولم يطغَ أي نوع.
+Film lover	محب الأفلام
+Films took most of your time.	استحوذت الأفلام على معظم وقتك.
+Series lover	محب المسلسلات
+Series took most of your time.	استحوذت المسلسلات على معظم وقتك.
+Eclectic	متنوع الأذواق
+A bit of everything, at your own pace.	قليل من كل شيء، على إيقاعك.
+Your viewing style	أسلوبك في المشاهدة
+Your chapters	فصولك

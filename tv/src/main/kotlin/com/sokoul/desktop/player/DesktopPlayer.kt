@@ -229,8 +229,8 @@ class DesktopPlayer private constructor() {
         val client = OkHttpDataSource.Factory(playbackHttp)
             .setUserAgent(req.userAgent ?: headers.entries.firstOrNull { it.key.equals("User-Agent", true) }?.value ?: "Mozilla/5.0")
             .setDefaultRequestProperties(headers)
-        // HLS segments may carry a small PNG envelope before their MPEG-TS payload.
-        val decoded = PngTsDataSource.Factory(client)
+        // HLS segments may hide behind a small picture before their MPEG-TS payload.
+        val decoded = DisguisedTsDataSource.Factory(client)
         val factory = DefaultMediaSourceFactory(androidx.media3.datasource.DefaultDataSource.Factory(com.sokoul.tv.TvApp.context, decoded))
         val video = factory.createMediaSource(item(req.url, req.mediaType, req.externalSubtitles))
         return req.audioUrl?.let { MergingMediaSource(video, factory.createMediaSource(item(it))) } ?: video
