@@ -22,7 +22,18 @@ fun main() {
             ?: if (config.lan) "loopback and private LAN only" else "loopback only",
     )
 
-    val services = Services(db)
+    val services = Services(db, vaultKeyFile = config.vaultKeyFile)
+    // The vault opens now: its key file is created on the first start, and a missing or wrong one stops the server here.
+    try {
+        services.vault
+    } catch (e: IllegalStateException) {
+        log.error("Credentials vault: {}", e.message)
+        exitProcess(3)
+    }
+    log.info("Credentials vault key file {}", config.vaultKeyFile)
+    if (config.vaultKeyFile.toPath().startsWith(db.file.absoluteFile.parentFile.toPath())) {
+        log.warn("The vault key file is in the data folder: keep its backup apart from the database's (docs/server.md)")
+    }
     if (!services.accounts.hasUsers()) {
         log.info("No account yet: create the owner from this PC with POST /api/setup (see docs/server.md)")
     }

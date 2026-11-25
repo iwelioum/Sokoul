@@ -193,6 +193,32 @@ object Migrations {
                 }
             },
         ),
+        Migration(
+            4, "credentials vault",
+            listOf(
+                // The server's one data key, wrapped (AES-GCM) by the master key of the vault key file. One row.
+                """
+                CREATE TABLE vault_keys (
+                    id INTEGER PRIMARY KEY CHECK (id = 1),
+                    wrapped BLOB NOT NULL,
+                    created_at INTEGER NOT NULL
+                )
+                """,
+                // One secret per user and service: version byte, 96-bit nonce, AES-256-GCM ciphertext and tag.
+                """
+                CREATE TABLE credentials (
+                    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    service TEXT NOT NULL,
+                    blob BLOB NOT NULL,
+                    hint TEXT NOT NULL,
+                    verdict TEXT NOT NULL CHECK (verdict IN ('accepted', 'refused', 'unreachable')),
+                    checked_at INTEGER NOT NULL,
+                    updated_at INTEGER NOT NULL,
+                    PRIMARY KEY (user_id, service)
+                )
+                """,
+            ),
+        ),
     )
 
     fun currentVersion(c: Connection): Int {

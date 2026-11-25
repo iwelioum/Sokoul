@@ -22,6 +22,14 @@ class ServerConfigTest {
         assertEquals(tmp.root.absoluteFile, c.dataDir)
     }
 
+    @Test fun `the vault key file sits next to the config unless set, even when the data folder moves`() {
+        val config = File(tmp.root, "server.properties")
+        assertEquals(File(tmp.root, "vault.key").absoluteFile, ServerConfig.from(props("dataDir" to "elsewhere"), emptyMap(), config).vaultKeyFile)
+        val set = File(tmp.root, "keys/master.key").path
+        assertEquals(File(set).absoluteFile, ServerConfig.from(props("vault.keyFile" to set), emptyMap(), config).vaultKeyFile)
+        assertEquals(File("env.key").absoluteFile, ServerConfig.from(props("vault.keyFile" to set), mapOf("SOKOUL_SERVER_VAULT_KEY_FILE" to "env.key"), config).vaultKeyFile)
+    }
+
     @Test fun `lan switches the bind address unless bind is set`() {
         assertEquals("0.0.0.0", ServerConfig.from(props("lan" to "true")).bind)
         assertEquals("192.168.0.10", ServerConfig.from(props("lan" to "true", "bind" to "192.168.0.10")).bind)

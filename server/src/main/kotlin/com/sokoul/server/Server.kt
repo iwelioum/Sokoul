@@ -1,5 +1,6 @@
 package com.sokoul.server
 
+import com.sokoul.credentials.ServiceCheck
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.kotlinx.json.json
@@ -26,6 +27,7 @@ import io.ktor.server.routing.RoutingResolveContext
 import io.ktor.server.routing.delete
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
+import io.ktor.server.routing.put
 import io.ktor.server.routing.route
 import io.ktor.server.routing.routing
 import io.ktor.util.AttributeKey
@@ -33,8 +35,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import okhttp3.OkHttpClient
 import org.slf4j.LoggerFactory
 import org.slf4j.event.Level
+import java.io.File
+import java.util.concurrent.TimeUnit
 
 @Serializable data class ErrorBody(val error: String)
 @Serializable data class HealthBody(val status: String, val version: String)
@@ -73,12 +78,16 @@ class Services(
     val nowMillis: () -> Long = System::currentTimeMillis,
     hasher: PassphraseHasher = PassphraseHasher(),
     syncLimits: SyncLimits = SyncLimits(),
+    /** The vault's master key file (`ServerConfig.vaultKeyFile`); read, or created, the first time the vault is used. */
+    vaultKeyFile: File,
+    credentialChecker: CredentialChecker = CredentialChecker(ServiceCheck(defaultCheckHttp())::check),
 ) {
     val accounts = Accounts(db, hasher, nowMillis)
     val sessions = SessionStore(db, nowMillis)
     val links = DeviceLinks(db, sessions, nowMillis)
     val limiter = FailureLimiter(nowMillis)
     val sync = SyncStore(db, nowMillis, syncLimits)
+    val vault: Vault by lazy { Vault.open(db, vaultKeyFile, credentialChecker, nowMillis) }
 }
 
 private val log = LoggerFactory.getLogger("com.sokoul.server.Server")
@@ -282,12 +291,45 @@ private fun Route.sessionRoutes(services: Services) {
         call.respond(io { services.sync.push(call.session.userId, body.changes) })
     }
 
+    // The caller's own credentials vault (Lot 5): masks and verdicts only; no route ever returns a stored value.
+    get("/credentials") {
+        call.respond(io { services.vault.list(call.session.userId) })
+    }
+
+    put("/credentials/{service}") {
+        val service = call.parameters["service"].orEmpty()
+        if (service !in Vault.SERVICES) throw ApiError(404, "unknown_service")
+        val length = call.request.headers[HttpHeaders.ContentLength]?.toLongOrNull() ?: throw ApiError(411, "length_required")
+        if (length > Vault.MAX_BODY_BYTES) throw ApiError(413, "too_large")
+        val body = call.receive<CredentialPutRequest>()
+        when (val r = withContext(Dispatchers.IO) { services.vault.put(call.session.userId, service, body.value) }) {
+            is Vault.PutResult.Stored -> call.respond(r.info)
+            is Vault.PutResult.Rejected -> {
+                val status = when (r.code) { "bad_format" -> 400; "refused" -> 422; else -> 502 }
+                call.respond(HttpStatusCode.fromValue(status), CredentialRefusedBody(r.code, r.reason))
+            }
+        }
+    }
+
+    delete("/credentials/{service}") {
+        val service = call.parameters["service"].orEmpty()
+        if (!io { services.vault.delete(call.session.userId, service) }) throw ApiError(404, "not_found")
+        call.respond(HttpStatusCode.NoContent)
+    }
+
     post("/link/confirm") {
         val body = call.receive<LinkConfirmRequest>()
         val name = io { services.links.confirm(body.userCode, call.session.userId) } ?: throw ApiError(404, "invalid_code")
         call.respond(LinkConfirmBody(name))
     }
 }
+
+/** The vault's checks: short timeouts, as a person waits for the answer. */
+fun defaultCheckHttp(): OkHttpClient = OkHttpClient.Builder()
+    .connectTimeout(10, TimeUnit.SECONDS)
+    .readTimeout(15, TimeUnit.SECONDS)
+    .callTimeout(30, TimeUnit.SECONDS)
+    .build()
 
 /** 1 000 changes with long overviews stay far below this. */
 private const val MAX_SYNC_BODY_BYTES = 8L * 1024 * 1024

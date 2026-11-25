@@ -38,7 +38,7 @@ class SyncTest {
 
     @Test fun `migration 3 adds the sync tables after 1 and 2`() {
         val (_, db) = store()
-        assertEquals(3, db.schemaVersion())
+        assertTrue(db.schemaVersion() >= 3)
         val tables = db.query("SELECT name FROM sqlite_master WHERE type = 'table'") { it.getString(1) }
         assertTrue(tables.containsAll(listOf("sync_cursor", "sync_profiles", "sync_resume", "sync_my_list", "sync_title_alerts", "users", "sessions")))
     }

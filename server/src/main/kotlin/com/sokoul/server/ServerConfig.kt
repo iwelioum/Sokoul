@@ -17,6 +17,7 @@ import java.util.Properties
  * | `dataDir`           | `SOKOUL_SERVER_DATA_DIR`             | the config file's folder      |
  * | `access.teamDomain` | `SOKOUL_SERVER_ACCESS_TEAM_DOMAIN`   | unset (local-only mode)       |
  * | `access.audience`   | `SOKOUL_SERVER_ACCESS_AUDIENCE`      | unset (local-only mode)       |
+ * | `vault.keyFile`     | `SOKOUL_SERVER_VAULT_KEY_FILE`       | `vault.key` next to the config |
  *
  * [toString] never prints the Access audience; nothing here should reach a log in clear.
  */
@@ -27,6 +28,8 @@ class ServerConfig(
     val dataDir: File,
     val access: AccessConfig?,
     val configFile: File?,
+    /** The credentials vault's master key (32 bytes, owner-only). Keep it out of the data folder's backups. */
+    val vaultKeyFile: File,
 ) {
     /** Cloudflare Access settings; present only when both the team domain and the audience are set. */
     class AccessConfig(val teamDomain: String, val audience: String) {
@@ -42,6 +45,7 @@ class ServerConfig(
         const val DEFAULT_PORT = 25570
         const val DEFAULT_BIND = "127.0.0.1"
         const val LAN_BIND = "0.0.0.0"
+        const val VAULT_KEY_FILE_NAME = "vault.key"
 
         private val ENV = mapOf(
             "port" to "SOKOUL_SERVER_PORT",
@@ -50,6 +54,7 @@ class ServerConfig(
             "dataDir" to "SOKOUL_SERVER_DATA_DIR",
             "access.teamDomain" to "SOKOUL_SERVER_ACCESS_TEAM_DOMAIN",
             "access.audience" to "SOKOUL_SERVER_ACCESS_AUDIENCE",
+            "vault.keyFile" to "SOKOUL_SERVER_VAULT_KEY_FILE",
         )
 
         private val HOST = Regex("^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$")
@@ -112,7 +117,9 @@ class ServerConfig(
                 !HOST.matches(teamDomain) -> throw IllegalArgumentException("access.teamDomain must be a host name")
                 else -> AccessConfig(teamDomain, audience)
             }
-            return ServerConfig(port, bind, lan, dataDir, access, configFile)
+            val vaultKeyFile = value("vault.keyFile")?.let(::File)
+                ?: File(configFile?.absoluteFile?.parentFile ?: dataDir, VAULT_KEY_FILE_NAME)
+            return ServerConfig(port, bind, lan, dataDir, access, configFile, vaultKeyFile.absoluteFile)
         }
     }
 }

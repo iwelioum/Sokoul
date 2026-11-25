@@ -31,6 +31,7 @@ file means every setting takes its default. Environment variables override the f
 | `dataDir` | `SOKOUL_SERVER_DATA_DIR` | the config file's folder | Holds `sokoul-server.db` and `backups/` |
 | `access.teamDomain` | `SOKOUL_SERVER_ACCESS_TEAM_DOMAIN` | unset | e.g. `myteam.cloudflareaccess.com` |
 | `access.audience` | `SOKOUL_SERVER_ACCESS_AUDIENCE` | unset | The Access application's AUD tag |
+| `vault.keyFile` | `SOKOUL_SERVER_VAULT_KEY_FILE` | `vault.key` next to the config file | The credentials vault's master key (see Credentials vault) |
 
 The two `access.*` keys must be set together. Set both, or leave both unset.
 
@@ -195,7 +196,43 @@ reaching the server directly on the LAN, while everything that arrives through t
 
 It installs nothing itself.
 
-## Backup
+## Credentials vault
+
+Each user brings their own keys: the server has no server-wide service key, and one user's keys are never used for
+another (openspec task 6, design D5). The routes need a session and only see the caller's own keys.
+
+- `GET /api/credentials` returns `[{"service","hint","verdict","checkedAt"}]`. The hint is a mask (`•••• 1234`, fewer
+  characters for short values, the password's end for an Xtream login).
+- `PUT /api/credentials/{service}` with `{"value":"…"}` checks the value with the real service first (the same
+  `com.sokoul.credentials.ServiceCheck` the apps use), then stores it and answers its hint and verdict. A refusal stores
+  nothing (an older accepted value stays) and answers `{"error","reason"}`: `400 bad_format` (not a value of that
+  service), `422 refused` (the service said no), `502 unreachable` (it did not answer, or asked to wait). `404
+  unknown_service`, `411 length_required`, `413 too_large` (8 KiB per body).
+- `DELETE /api/credentials/{service}`: `204`, or `404 not_found`.
+
+Services: `tmdb`, `realdebrid`, `omdb`, `fanart`, `tvdb`, `watchmode`, `tastedive`, `motn`, `opensubtitles`, `subdl`
+(a key of 1–256 visible ASCII characters), and `iptv`: an Xtream login as JSON
+(`{"server":"http://…","username":"…","password":"…"}`) or an http(s) M3U link, up to 2,048 characters. TVmaze needs
+no key. No route ever returns a stored value; server code reads one with `Vault.reveal(user, service)`. Values are never
+logged.
+
+Encryption: each value is sealed with AES-256-GCM under the server's data key, with a random 96-bit nonce and
+`user_id|service` as associated data (a blob copied to another row does not open). The data key is stored in
+`vault_keys`, wrapped by the master key: 32 random bytes in the key file, created on the first start with owner-only
+rights (0600, or a Windows ACL keeping only the owner). The server refuses to start when the database holds a data
+key and the key file is missing or is another one; it never makes new keys over old ones.
+
+> **Back up the key file, apart from the database.** Lose `vault.key` and every stored key is lost: users enter them
+> again. A database backup alone cannot be read; keep the key file somewhere else (a password manager, a USB stick).
+> By default the key file sits next to `server.properties`, which is also the default data folder: set `dataDir` or
+> `vault.keyFile` so the two live apart, and the server warns at start while they do not. To start the vault over
+> after losing the file, stop the server and run `DELETE FROM credentials; DELETE FROM vault_keys;` on the database.
+
+The apps: signed in to an account, Settings › Sources and keys also saves each key it accepted to the vault, and a card
+this device has not set up shows "In your account · •••• 1234" when the account has that key, so a new device knows
+which keys to enter. Keys never come back from the server.
+
+## Backup)
 
 `.\tools\server.ps1 backup [-To <folder>]` (or `tools/server.sh backup [folder]`) writes
 `sokoul-server-YYYYMMDD-HHMMSS.db` to `<dataDir>/backups` by default.
@@ -206,6 +243,9 @@ It installs nothing itself.
   copies the file, plus any leftover `-wal`/`-shm` files.
 
 To restore, stop the server and copy the backup over `sokoul-server.db`. Delete any `-wal`/`-shm` files next to it.
+
+The backup does not hold the vault key file (`vault.key`). Back that file up once, somewhere else: without it the
+stored keys of the database cannot be read (see Credentials vault).
 
 ## Database
 
@@ -221,10 +261,13 @@ There is one file, `sokoul-server.db`, set up as follows:
 - migration 3 adds `sync_cursor` (each account's sequence number) and one table per synced kind: `sync_profiles`,
   `sync_resume`, `sync_my_list` and `sync_title_alerts`, keyed by (user, profile, item), with `updated_at`, `deleted`
   and `seq`.
+- migration 4 adds the credentials vault: `vault_keys` (the wrapped data key, one row) and `credentials` (user, service,
+  sealed blob, hint, verdict, checked_at, updated_at; keyed by user and service).
 
 To change the schema, append a migration. Never edit a shipped one.
 
 ## Next
 
 - **Lot 4, still open**: passkeys, a real TV → phone link check, and the app side (task 5.4).
-- **Lot 5 onwards**: the credentials vault, streams, and the watch party.
+- **Lot 5, still open**: the "API et sources" settings page (6.4) and the OpenSubtitles user login (6.3b).
+- **Next lots**: streams and the watch party.

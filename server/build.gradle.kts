@@ -53,10 +53,14 @@ dependencies {
     implementation(libs.sqlite.jdbc)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.coroutines.core)
+    // The credentials vault checks keys with the apps' own ServiceCheck (core), over OkHttp.
+    implementation(project(":core"))
+    implementation(libs.okhttp)
     runtimeOnly(libs.slf4j.simple)
 
     testImplementation(libs.junit)
     testImplementation(libs.ktor.server.test.host)
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.okhttp.mockwebserver)
     testRuntimeOnly(libs.slf4j.simple)
 }

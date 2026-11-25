@@ -20,10 +20,15 @@ import org.junit.rules.TemporaryFolder
 import java.util.Properties
 
 /** One server on a fresh database with a hand-driven clock and cheap hashing (the iteration count is per user). */
-class TestServer(tmp: TemporaryFolder, val config: ServerConfig = ServerConfig.from(Properties())) {
+class TestServer(
+    tmp: TemporaryFolder,
+    val config: ServerConfig = ServerConfig.from(Properties()),
+    /** Accepts everything by default: no test reaches a real service. */
+    checker: CredentialChecker = CredentialChecker { _, _ -> com.sokoul.credentials.CheckResult(com.sokoul.credentials.Verdict.Accepted, 200) },
+) {
     var now: Long = 1_800_000_000_000L
     val db: Database = Database.open(tmp.newFolder())
-    val services = Services(db, { now }, PassphraseHasher(1_000))
+    val services = Services(db, { now }, PassphraseHasher(1_000), vaultKeyFile = java.io.File(tmp.newFolder(), "vault.key"), credentialChecker = checker)
 
     fun install(builder: ApplicationTestBuilder, access: AccessGate = AccessGate(config)) {
         builder.application { module(config, services, access) }

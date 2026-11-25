@@ -22,7 +22,7 @@ class ServerTest {
         access: AccessGate = AccessGate(config),
         sessions: SessionAuthenticator? = null,
     ) {
-        val services = Services(Database.open(tmp.newFolder()), hasher = PassphraseHasher(1_000))
+        val services = Services(Database.open(tmp.newFolder()), hasher = PassphraseHasher(1_000), vaultKeyFile = java.io.File(tmp.newFolder(), "vault.key"))
         application { module(config, services, access, sessions ?: services.sessions) }
     }
 
