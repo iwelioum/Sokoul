@@ -236,5 +236,5 @@ tasks.register<JavaExec>("syncRoundTrip") {
     classpath = dev.runtimeClasspath
     mainClass.set("com.sokoul.pc.dev.SyncRoundTripKt")
     jvmArgs("-Dfile.encoding=UTF-8")
-    args((project.findProperty("roundTrip") as String? ?: "").split("|").filter { it.isNotEmpty() })
+    args((System.getenv("SOKOUL_ROUNDTRIP") ?: "").split("@@").filter { it.isNotEmpty() })
 }
