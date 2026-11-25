@@ -70,6 +70,9 @@ android {
         // SQLite's native library ships in the APK and loads from the app's native folder (TvApp), so a recent target is
         // possible. At 28, Android's compatibility checks for an old target held a lock the app waited on 1,343 times in a
         // few seconds of scrolling (trace on the TV, 2026-11-08).
+        // Not 36 yet: on Android 16 a target of 36 stops delivering KEYCODE_BACK to dispatchKeyEvent (predictive back),
+        // which MainActivity maps to Escape for every screen. It needs Back moved to OnBackPressedDispatcher (or
+        // android:enableOnBackInvokedCallback="false" as a stopgap) and a check on an Android 16 device first.
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
