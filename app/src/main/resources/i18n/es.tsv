@@ -28,7 +28,10 @@
 30 minutes later	30 minutos después
 A film, not this episode	Una película, no este episodio
 A kids profile cannot start titles rated 16 or 18.	Un perfil infantil no puede reproducir títulos para mayores de 16 o 18 años.
-A Real-Debrid limit was reached. Try again shortly.	Se alcanzó un límite de Real-Debrid. Vuelve a intentarlo en un momento.
+Real-Debrid's daily traffic limit is reached.	Se alcanzó el límite de tráfico diario de Real-Debrid.
+Too many torrents are downloading on Real-Debrid. Wait for one to finish.	Hay demasiados torrents descargándose en Real-Debrid. Espera a que termine uno.
+Real-Debrid is getting too many requests. Try again in a minute: this is not a quota.	Real-Debrid recibe demasiadas solicitudes. Vuelve a intentarlo en un minuto: no es una cuota.
+The server is overloaded for this version. Try another one.	El servidor está saturado para esta versión. Prueba otra.
 A single provider connection is shared between playback and DVR	La reproducción y la grabación comparten una sola conexión del proveedor
 About	Acerca de
 Accent colour	Color de acento

@@ -173,6 +173,8 @@ class PlaybackSession(
     private val failed = HashSet<String>()
     private val quickTried = HashSet<String>()
     private val blocked = HashSet<VersionOrigin>()
+    /** Origins where only a version already in the account may be tried: see [StartPolicy.next]. */
+    private val readyOnly = HashSet<VersionOrigin>()
     private var lastFailure: PlayFailure? = null
     private var lastVersion: PlayVersion? = null
     private var streamOpen = false
@@ -872,6 +874,7 @@ class PlaybackSession(
         failed.clear()
         quickTried.clear()
         blocked.clear()
+        readyOnly.clear()
         failures.clear()
         lastFailure = null
         lastVersion = null
@@ -1018,7 +1021,7 @@ class PlaybackSession(
         if (first == null && search.value.versions.isEmpty()) {
             withTimeoutOrNull(budgets.searchMs) { search.first { it.done || it.versions.isNotEmpty() } }
         }
-        val next = StartPolicy.next(versions, playbackPrefs.startMode, failed, quickTried, blocked, failedHosts)?.version
+        val next = StartPolicy.next(versions, playbackPrefs.startMode, failed, quickTried, blocked, failedHosts, readyOnly)?.version
         if (next?.origin == VersionOrigin.Web && search.value.debridPending && VersionOrigin.Debrid !in blocked) {
             withTimeoutOrNull(budgets.debridSettleMs) {
                 // Done as soon as Real-Debrid has a version heard right that is not rejected: it then ranks before the site.
@@ -1079,6 +1082,7 @@ class PlaybackSession(
             // Only "not ready yet" leaves a version in the running, to be waited for. Everything is forgiven on Retry.
             if (outcome !is PlayFailure.NotReady || choice.keep) failed += sameFile(choice.version)
             if (outcome.blocksOrigin) blocked += choice.version.origin
+            if (outcome is PlayFailure.ServerBusy && choice.version.origin == VersionOrigin.Debrid) readyOnly += VersionOrigin.Debrid
             noteNetwork(choice.version, outcome)
         }
     }
@@ -1091,7 +1095,7 @@ class PlaybackSession(
     private suspend fun race(): Pair<PlayVersion, StreamRequest>? {
         val mode = prefs().startMode.takeIf { request?.chooseFirst != true } ?: StartMode.Ask
         val remembered = versions.filter { memory?.failure(memoryKey(it)) != null }.map { it.key }.toSet()
-        val group = StartPolicy.race(versions, mode, failed + remembered, quickTried, blocked, failedHosts, raceSize(), sameQuality = prefs().bestQualityFirst,
+        val group = StartPolicy.race(versions, mode, failed + remembered, quickTried, blocked, failedHosts, raceSize(), readyOnly = readyOnly, sameQuality = prefs().bestQualityFirst,
             heard = { VersionRanking.heard(it, prefs(), frenchSystem(), memory?.fact(memoryKey(it)), workLanguage) })
         if (group.isEmpty()) return null
         StartClock.note("race of " + group.size)
@@ -1126,6 +1130,7 @@ class PlaybackSession(
                             quickTried += v.key
                             if (f !is PlayFailure.NotReady) failed += sameFile(v)
                             if (f.blocksOrigin) blocked += v.origin
+                            if (f is PlayFailure.ServerBusy && v.origin == VersionOrigin.Debrid) readyOnly += VersionOrigin.Debrid
                             noteNetwork(v, f)
                             lastFailure = f
                             lastVersion = v
@@ -1145,14 +1150,14 @@ class PlaybackSession(
         val mode = prefs().startMode.takeIf { request?.chooseFirst != true } ?: StartMode.Ask
         // What failed for a lasting reason is not tried on its own again, unless nothing else is left.
         val remembered = versions.filter { memory?.failure(memoryKey(it)) != null }.map { it.key }.toSet()
-        StartPolicy.next(versions, mode, failed + remembered, quickTried, blocked, failedHosts)?.let { return it }
+        StartPolicy.next(versions, mode, failed + remembered, quickTried, blocked, failedHosts, readyOnly)?.let { return it }
         if (mode == StartMode.Ask) return null
         if (!search.value.done) {
             // Everything found so far failed, and a search service is still answering.
             withTimeoutOrNull(budgets.searchMs) { search.first { it.done } }
-            StartPolicy.next(versions, mode, failed + remembered, quickTried, blocked, failedHosts)?.let { return it }
+            StartPolicy.next(versions, mode, failed + remembered, quickTried, blocked, failedHosts, readyOnly)?.let { return it }
         }
-        StartPolicy.next(versions, mode, failed, quickTried, blocked, failedHosts)?.let { return it }
+        StartPolicy.next(versions, mode, failed, quickTried, blocked, failedHosts, readyOnly)?.let { return it }
         // Everything else failed: a version that played well but without French beats no episode at all. Seen on the TV
         // for a recent anime episode, which has no French version yet (2026-11-09).
         val heard = versions.firstOrNull { it.key in failed && failures[it.key] == PlayFailure.WrongLanguage } ?: return null

@@ -123,8 +123,17 @@ sealed interface PlayFailure {
     data object TimedOut : PlayFailure
     /** The stream ended long before the end of the film. */
     data object Cut : PlayFailure
-    /** Real-Debrid's limits: traffic, or too many downloads at once. */
+    /** Real-Debrid's traffic quota (codes 23, 36) or a file host's daily limit (18): it lasts until the next day. */
     data object DebridLimit : PlayFailure
+    /** Too many torrents downloading at once on the account (code 21). */
+    data object DebridDownloadsFull : PlayFailure
+    /**
+     * Real-Debrid asks to slow down (HTTP 429, code 34): a minute's wait, not a quota. Shown as "a limit is reached",
+     * it was taken for a used-up account with 68 GB spent in the month (2026-11-25).
+     */
+    data object DebridBusy : PlayFailure
+    /** A download server answers 429 or 509 for this one link: the next version may play, so the origin stays open. */
+    data object ServerBusy : PlayFailure
     data object KeyRefused : PlayFailure
     data object Network : PlayFailure
     /** The file is not in the language wanted, whatever its name announced. */
@@ -136,7 +145,8 @@ sealed interface PlayFailure {
     data object Unknown : PlayFailure
 
     /** Nothing from the same origin can work for now, so it is pointless to go through them all. */
-    val blocksOrigin: Boolean get() = this is KeyRefused || this is ConnectionsFull || this is Cooldown || this is DebridLimit
+    val blocksOrigin: Boolean get() = this is KeyRefused || this is ConnectionsFull || this is Cooldown || this is DebridLimit ||
+        this is DebridDownloadsFull || this is DebridBusy
 }
 
 class PlayFailureException(val failure: PlayFailure) : Exception(failure.toString())

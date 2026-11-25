@@ -28,7 +28,10 @@
 30 minutes later	بعد 30 دقيقة
 A film, not this episode	فيلم، وليس هذه الحلقة
 A kids profile cannot start titles rated 16 or 18.	لا يمكن لملف الأطفال تشغيل الأعمال المصنفة +16 أو +18.
-A Real-Debrid limit was reached. Try again shortly.	تم بلوغ أحد حدود Real-Debrid. حاول مجددًا بعد قليل.
+Real-Debrid's daily traffic limit is reached.	تم بلوغ حد الاستخدام اليومي لـ Real-Debrid.
+Too many torrents are downloading on Real-Debrid. Wait for one to finish.	هناك تورنتات كثيرة قيد التنزيل على Real-Debrid. انتظر حتى ينتهي أحدها.
+Real-Debrid is getting too many requests. Try again in a minute: this is not a quota.	يتلقى Real-Debrid طلبات كثيرة جدًا. حاول مجددًا بعد دقيقة: هذا ليس حدًّا للحصة.
+The server is overloaded for this version. Try another one.	الخادم مثقل بالنسبة لهذه النسخة. جرّب نسخة أخرى.
 A single provider connection is shared between playback and DVR	يتشارك التشغيل والتسجيل اتصالًا واحدًا لدى المزوّد
 About	حول
 Accent colour	لون التمييز

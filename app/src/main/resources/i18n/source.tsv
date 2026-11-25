@@ -28,7 +28,10 @@
 30 minutes later	30 minutes plus tard
 A film, not this episode	Un film, pas cet épisode
 A kids profile cannot start titles rated 16 or 18.	Un profil enfant ne peut pas lancer les titres déconseillés aux moins de 16 ou 18 ans.
-A Real-Debrid limit was reached. Try again shortly.	Une limite de Real-Debrid est atteinte. Réessaie dans un instant.
+Real-Debrid's daily traffic limit is reached.	Le quota de trafic Real-Debrid du jour est atteint.
+Too many torrents are downloading on Real-Debrid. Wait for one to finish.	Trop de torrents en cours de téléchargement sur Real-Debrid. Attends qu'un se termine.
+Real-Debrid is getting too many requests. Try again in a minute: this is not a quota.	Real-Debrid reçoit trop de demandes. Réessaie dans une minute : ce n'est pas un quota.
+The server is overloaded for this version. Try another one.	Le serveur est saturé pour cette version. Essaie-en une autre.
 A second life	Une seconde vie
 A single provider connection is shared between playback and DVR	Le direct et le DVR partagent une seule connexion fournisseur
 About	À propos

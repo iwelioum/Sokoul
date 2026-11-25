@@ -98,7 +98,7 @@ class DebridTransfers(
             // Never add a duplicate or silently change selected files on an already-ready account copy.
             if (readyCopyMissingFile) throw PlayFailureException(PlayFailure.NotReady(null))
             // Real-Debrid is pausing the account: an add would only be refused and lengthen the pause.
-            if (System.currentTimeMillis() < pausedUntil) throw PlayFailureException(PlayFailure.DebridLimit)
+            if (System.currentTimeMillis() < pausedUntil) throw PlayFailureException(PlayFailure.DebridBusy)
             return fromNew(hash, stream, query, keep, onProgress)
         } catch (e: RdException) {
             if (e.apiCode == TORRENT_ALREADY_ACTIVE) {
@@ -131,7 +131,7 @@ class DebridTransfers(
             if (failure == PlayFailure.Blocked && accountPaused()) {
                 pausedUntil = System.currentTimeMillis() + PAUSE_MS
                 StartClock.note("rd account paused: a free film is refused too")
-                throw PlayFailureException(PlayFailure.DebridLimit)
+                throw PlayFailureException(PlayFailure.DebridBusy)
             }
             throw PlayFailureException(failure)
         }
@@ -309,12 +309,13 @@ class DebridTransfers(
         /** Real-Debrid's documented codes. */
         fun failureOf(e: RdException): PlayFailure = when {
             e.code == 401 || e.apiCode == 8 || e.apiCode == 9 -> PlayFailure.KeyRefused
-            e.apiCode == 21 || e.apiCode == 23 || e.apiCode == 36 || e.apiCode == 18 -> PlayFailure.DebridLimit
+            e.apiCode == 23 || e.apiCode == 36 || e.apiCode == 18 -> PlayFailure.DebridLimit
+            e.apiCode == 21 -> PlayFailure.DebridDownloadsFull
             e.apiCode == 35 -> PlayFailure.Blocked
             e.apiCode == 28 || e.apiCode == 24 -> PlayFailure.DeadLink
             // Still "too many requests" after the API's own retries: Real-Debrid is to be left alone for now. Taken as a passing
             // network error, it had the player ask for every version in turn for three minutes (2026-11-08).
-            e.code == 429 || e.apiCode == 34 -> PlayFailure.DebridLimit
+            e.code == 429 || e.apiCode == 34 -> PlayFailure.DebridBusy
             e.code == 503 || e.apiCode == 25 || e.apiCode == 19 -> PlayFailure.Network
             else -> PlayFailure.Unknown
         }

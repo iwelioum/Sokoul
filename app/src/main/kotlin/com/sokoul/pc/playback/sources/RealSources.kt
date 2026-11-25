@@ -129,7 +129,8 @@ fun failureOf(probe: Probe?, film: Boolean): PlayFailure? {
     val p = probe ?: return null
     return when {
         p.code == 404 || p.code == 410 -> PlayFailure.DeadLink
-        p.code == 429 || p.code == 509 -> PlayFailure.DebridLimit
+        // One overloaded server, for one link: not a quota of the account, and other versions may play.
+        p.code == 429 || p.code == 509 -> PlayFailure.ServerBusy
         p.code in 400..499 -> PlayFailure.Refused(p.code)
         p.code in 500..599 -> PlayFailure.Network
         film && p.totalBytes != null && p.totalBytes < MIN_FILM_BYTES -> PlayFailure.FakeFile

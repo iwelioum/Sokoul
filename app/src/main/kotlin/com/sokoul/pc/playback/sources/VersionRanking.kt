@@ -177,6 +177,8 @@ object StartPolicy {
      * @param failed versions that must not be tried again
      * @param quickTried versions already tried without waiting
      * @param blocked origins that cannot work at the moment
+     * @param readyOnly origins where only a version already in the account is tried. After a Real-Debrid server
+     *   answered 509, the next tries added torrent after torrent, and many adds in a row get the account paused.
      */
     fun next(
         ranked: List<PlayVersion>,
@@ -185,10 +187,11 @@ object StartPolicy {
         quickTried: Set<String>,
         blocked: Set<VersionOrigin>,
         failedHosts: Set<String> = emptySet(),
+        readyOnly: Set<VersionOrigin> = emptySet(),
     ): StartChoice? {
         if (mode == StartMode.Ask) return null
         // A contradicted version (anime) is only ever played when the viewer picks it.
-        val open = ranked.filter { it.key !in failed && it.origin !in blocked && it.rejected == null }
+        val open = ranked.filter { it.key !in failed && it.origin !in blocked && it.rejected == null && (it.origin !in readyOnly || it.readiness == Readiness.Ready) }
         // After a service gave a bad link, its other links are likely as bad: those of other services come first.
         val usable = open.filter { it.providerHost == null || it.providerHost !in failedHosts } + open.filter { it.providerHost != null && it.providerHost in failedHosts }
         if (mode == StartMode.WaitBest) {
@@ -227,11 +230,12 @@ object StartPolicy {
          * last French ones and, quickest, won (Les Infiltrés, 2026-11-22).
          */
         heard: (PlayVersion) -> Int = { 0 },
+        readyOnly: Set<VersionOrigin> = emptySet(),
     ): List<PlayVersion> {
         if (size < 2) return emptyList()
-        val first = next(ranked, mode, failed, quickTried, blocked, failedHosts) ?: return emptyList()
+        val first = next(ranked, mode, failed, quickTried, blocked, failedHosts, readyOnly) ?: return emptyList()
         if (first.keep || first.version.origin != VersionOrigin.Debrid || first.version.readiness == Readiness.Ready) return emptyList()
-        val open = ranked.filter { it.key !in failed && it.origin !in blocked && it.rejected == null }
+        val open = ranked.filter { it.key !in failed && it.origin !in blocked && it.rejected == null && (it.origin !in readyOnly || it.readiness == Readiness.Ready) }
         val usable = open.filter { it.providerHost == null || it.providerHost !in failedHosts } + open.filter { it.providerHost != null && it.providerHost in failedHosts }
         val firstHeard = heard(first.version)
         val group = usable.filter {

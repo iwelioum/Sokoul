@@ -945,6 +945,23 @@ class PlaybackTest {
     }
 
     @Test
+    fun after_a_busy_server_only_versions_in_the_account_are_tried() {
+        val ranked = listOf(
+            v("cached", AudioLanguage.VF, VideoQuality.UHD_4K, Readiness.Likely),
+            v("unknown", AudioLanguage.VF, VideoQuality.UHD_4K),
+            v("held", AudioLanguage.VF, VideoQuality.FHD_1080, Readiness.Ready),
+            v("iptv", AudioLanguage.MULTI, null, Readiness.Ready, origin = VersionOrigin.Iptv),
+        )
+        val debrid = setOf(VersionOrigin.Debrid)
+        assertEquals("cached", StartPolicy.next(ranked, StartMode.ReadyFirst, emptySet(), emptySet(), emptySet())?.version?.key)
+        assertEquals("held", StartPolicy.next(ranked, StartMode.ReadyFirst, emptySet(), emptySet(), emptySet(), readyOnly = debrid)?.version?.key)
+        assertTrue("no race adds torrents", StartPolicy.race(ranked, StartMode.ReadyFirst, emptySet(), emptySet(), emptySet(), emptySet(), 3, readyOnly = debrid).isEmpty())
+        // Nothing in the account: another origin plays, and no Real-Debrid download starts.
+        assertEquals("iptv", StartPolicy.next(ranked, StartMode.ReadyFirst, setOf("held"), emptySet(), emptySet(), readyOnly = debrid)?.version?.key)
+        assertNull(StartPolicy.next(ranked, StartMode.WaitBest, setOf("held", "iptv"), emptySet(), emptySet(), readyOnly = debrid))
+    }
+
+    @Test
     fun a_ready_version_is_never_skipped_by_the_limit_of_tries() {
         val tried = (1..12).map { "t$it" }.toSet()
         val ranked = listOf(v("unknown", AudioLanguage.VF, VideoQuality.FHD_1080), v("iptv", AudioLanguage.MULTI, null, Readiness.Ready, origin = VersionOrigin.Iptv))
@@ -985,7 +1002,8 @@ class PlaybackTest {
     fun a_probe_tells_the_cause() {
         assertEquals(PlayFailure.DeadLink, failureOf(Probe(404, null), film = true))
         assertEquals(PlayFailure.Refused(403), failureOf(Probe(403, null), film = true))
-        assertEquals(PlayFailure.DebridLimit, failureOf(Probe(509, null), film = true))
+        assertEquals(PlayFailure.ServerBusy, failureOf(Probe(509, null), film = true))
+        assertFalse("one busy server leaves the other versions of the origin", PlayFailure.ServerBusy.blocksOrigin)
         assertEquals(PlayFailure.FakeFile, failureOf(Probe(206, 1_000_000), film = true))
         assertNull(failureOf(Probe(206, 1_000_000), film = false))
         assertNull(failureOf(Probe(206, 8_000_000_000), film = true))
@@ -1244,7 +1262,9 @@ class PlaybackTest {
     @Test
     fun real_debrid_codes_become_causes() {
         assertEquals(PlayFailure.KeyRefused, DebridTransfers.failureOf(RdException(401, "x")))
-        assertEquals(PlayFailure.DebridLimit, DebridTransfers.failureOf(RdException(403, "x", 21)))
+        assertEquals(PlayFailure.DebridDownloadsFull, DebridTransfers.failureOf(RdException(403, "x", 21)))
+        assertEquals(PlayFailure.DebridLimit, DebridTransfers.failureOf(RdException(403, "x", 36)))
+        assertEquals("asked to slow down is not a quota", PlayFailure.DebridBusy, DebridTransfers.failureOf(RdException(429, "x", 34)))
         // 35, "infringing_file" (HTTP 451): blocked by a rights holder, for good; remembered a month, not a day.
         assertEquals(PlayFailure.Blocked, DebridTransfers.failureOf(RdException(451, "x", 35)))
         assertEquals(PlayFailure.DeadLink, DebridTransfers.failureOf(RdException(403, "x", 28)))
