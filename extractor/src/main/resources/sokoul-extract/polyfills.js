@@ -1,3 +1,4 @@
+// Derived third-party code (CC BY-NC 4.0): see docs/third-party/README.md.
 (function () {
   "use strict";
   var G = globalThis;
@@ -13,8 +14,8 @@
     var b = u8(bytes);
     return b.byteOffset === 0 && b.byteLength === b.buffer.byteLength ? b.buffer : b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength);
   }
-  G.__movixU8 = u8;
-  G.__movixToBuffer = toBuffer;
+  G.__sokoulU8 = u8;
+  G.__sokoulToBuffer = toBuffer;
   G.window = G;
   G.self = G;
   G.top = G;
@@ -53,7 +54,7 @@
     if (timers.delete(id)) __n_clearTimer(id);
   };
   G.queueMicrotask = function (fn) { Promise.resolve().then(fn); };
-  G.__movixFireTimer = function (id) {
+  G.__sokoulFireTimer = function (id) {
     var t = timers.get(id);
     if (!t) return;
     if (t.interval) __n_setTimer(id, Math.max(t.ms, 4)); else timers.delete(id);
@@ -280,7 +281,7 @@
   URL.prototype.toJSON = function () { return this.href; };
   URL.canParse = function (u, b) { try { new URL(u, b); return true; } catch (e) { return false; } };
   URL.parse = function (u, b) { try { return new URL(u, b); } catch (e) { return null; } };
-  URL.createObjectURL = function () { return "blob:" + G.location.origin + "/movix-" + (++blobSeq); };
+  URL.createObjectURL = function () { return "blob:" + G.location.origin + "/sokoul-" + (++blobSeq); };
   URL.revokeObjectURL = function () {};
   G.URL = URL;
   var element = function () {
@@ -302,7 +303,7 @@
     removeEventListener: function () {},
     cookie: "",
   };
-  G.location = { href: "https://tv.movix.app/", protocol: "https:", host: "tv.movix.app", hostname: "tv.movix.app", port: "", origin: "https://tv.movix.app", pathname: "/", search: "", hash: "" };
+  G.location = { href: "https://sokoul.invalid/", protocol: "https:", host: "sokoul.invalid", hostname: "sokoul.invalid", port: "", origin: "https://sokoul.invalid", pathname: "/", search: "", hash: "" };
   G.navigator = { userAgent: __n_userAgent(), language: "fr-FR", languages: ["fr-FR", "fr", "en-US", "en"], platform: "Linux armv8l", onLine: true, hardwareConcurrency: 4 };
   function key(raw, algorithm, usages) { return { type: "secret", extractable: false, algorithm: algorithm, usages: usages || [], __raw: u8(raw).slice() }; }
   function algName(a) { return String(typeof a === "string" ? a : a && a.name).toUpperCase(); }

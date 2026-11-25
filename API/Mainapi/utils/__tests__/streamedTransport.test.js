@@ -12,7 +12,7 @@ const proxies = [
   { host: '192.0.2.2', port: 1080, type: 'socks5', auth: 'user:other-secret' },
 ];
 const curlResponse = (body, status = 200, redirect = '') => ({ stdout: Buffer.concat([
-  Buffer.from(body), Buffer.from(`\nMOVIX_STATUS:${status}\nMOVIX_REDIRECT:${redirect}`),
+  Buffer.from(body), Buffer.from(`\nSOKOUL_STATUS:${status}\nSOKOUL_REDIRECT:${redirect}`),
 ]) });
 
 function fixture(overrides = {}) {

@@ -1,7 +1,9 @@
 # Mainapi
 
-Sokoul's main server (port 25565), adapted from Movix. It handles accounts and profiles, sync of user state, catalogue
-and source routes, native extraction, live TV, and the community features inherited from Movix (comments, likes, shared
+Derived third-party code (CC BY-NC 4.0): see docs/third-party/README.md.
+
+Sokoul's main server (port 25565). It handles accounts and profiles, sync of user state, catalogue
+and source routes, native extraction, live TV, and the inherited community features (comments, likes, shared
 lists, wishboard, Top 10, wrapped, link submissions, VIP).
 
 `server.js` runs a cluster: the primary starts `NUM_WORKERS` workers, restarts them and shuts down gracefully. `app.js`

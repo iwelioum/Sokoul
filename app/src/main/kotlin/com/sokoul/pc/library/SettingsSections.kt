@@ -70,7 +70,7 @@ import com.sokoul.pc.ui.Label
 import com.sokoul.pc.ui.tvFocusable
 import kotlinx.coroutines.delay
 
-/** One service of the app and whether it is set up (Movix: the account and key panes). */
+/** One service of the app and whether it is set up: its account or key. */
 class ServiceInfo(val label: String, val configured: Boolean, val source: String?)
 
 /** What the settings need from the app besides the preferences: the menu, the services, and what a choice or an action does. */
@@ -278,7 +278,7 @@ private fun Swatch(c: AccentColor, selected: Boolean, onClick: () -> Unit) {
     }
 }
 
-/** The home page's rows, and the choices that belong to it (Movix: Accueil). */
+/** The home page's rows, and the choices that belong to it. */
 @Composable
 internal fun HomePane(prefs: DesktopPrefs, hooks: SettingsHooks) {
     RowGroup { SettingsRow(L("Home rows", "Rangées de l'accueil").text(), L("Order and hiding", "Ordre et masquage").text(), true, remember { FocusRequester() }, hooks.onHomeRows, "pref-home-rows") }
@@ -291,7 +291,7 @@ internal fun HomePane(prefs: DesktopPrefs, hooks: SettingsHooks) {
     }
 }
 
-/** Which entries of the top menu are shown (Movix: Menu de gauche). At least one stays. */
+/** Which entries of the top menu are shown. At least one stays. */
 @Composable
 internal fun MenuPane(prefs: DesktopPrefs, hooks: SettingsHooks, title: String? = null) {
     var rev by remember { mutableIntStateOf(0) }
@@ -429,7 +429,7 @@ private fun SourcePriorityRows(prefs: DesktopPrefs, anime: Boolean) {
     } }
 }
 
-/** Language, as a choice: the system's, French or English (Movix: language). */
+/** Language, as a choice: the system's, French or English. */
 @Composable
 internal fun LanguagePane(prefs: DesktopPrefs, hooks: SettingsHooks) {
     // A list to choose from, each language named in itself (Español, Deutsch, العربية): see InterfaceLanguageScreen.

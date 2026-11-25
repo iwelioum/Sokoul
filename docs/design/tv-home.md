@@ -8,7 +8,7 @@ Legend: **Done** (checked in code) · **Partial** · **To do** · **To check** (
 **Dropped** (deliberate choice).
 
 Rules that override the report: the look stays Apple TV's ([cartography.md](cartography.md), `theme/Theme.kt`); nothing is
-taken from Movix or Netflix in appearance.
+taken from other streaming services in appearance.
 
 ## 1. The report's principles and their status
 

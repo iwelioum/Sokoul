@@ -92,7 +92,7 @@ Réponds UNIQUEMENT avec ce format JSON (sans markdown, sans backticks):
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
           'HTTP-Referer': FRONTEND_BASE_URL,
-          'X-Title': 'Movix Shared List Moderation'
+          'X-Title': 'Sokoul Shared List Moderation'
         },
         timeout: 30000
       }

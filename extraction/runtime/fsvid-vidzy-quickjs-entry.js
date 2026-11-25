@@ -1,3 +1,4 @@
+// Derived third-party code (CC BY-NC 4.0): see docs/third-party/README.md.
 import RELEASE_SYNC from '@jitl/quickjs-wasmfile-release-sync';
 import {
   newQuickJSWASMModuleFromVariant,
@@ -42,8 +43,8 @@ let quickJsModulePromise;
 // parent/enfant, pourcentages relatifs au bloc conteneur, unités absolues et
 // relatives, `calc()`, padding/bordure, `display:none` et élément détaché à 0,
 // `html`/`body` posés sur une fenêtre de 1280 × 720.
-// This emulator is generated into the extension, userscript and native runtime from this source.
-export function movixCreateDomEmulator(fallback, viewportWidth, viewportHeight) {
+// This emulator is serialized into the QuickJS sandboxes (Mainapi worker and :extractor) from this source.
+export function sokoulCreateDomEmulator(fallback, viewportWidth, viewportHeight) {
   var BLOCK_TAGS = { html: 1, body: 1, div: 1, p: 1, section: 1, article: 1, main: 1, header: 1, footer: 1, nav: 1, aside: 1, ul: 1, ol: 1, li: 1, form: 1, h1: 1, h2: 1, h3: 1, h4: 1, h5: 1, h6: 1, pre: 1, blockquote: 1, figure: 1, table: 1, fieldset: 1, center: 1, dl: 1, dd: 1, dt: 1, hr: 1 };
   var HIDDEN_TAGS = { head: 1, script: 1, style: 1, meta: 1, link: 1, title: 1, template: 1, noscript: 1 };
   var REPLACED_SIZES = { img: [0, 0], video: [300, 150], canvas: [300, 150], iframe: [300, 150], object: [300, 150], embed: [300, 150], input: [153, 21], button: [0, 0], textarea: [182, 36], select: [0, 19] };
@@ -790,7 +791,7 @@ async function getQuickJsModule() {
     quickJsModulePromise = (async () => {
       // Node-based source tests keep using the package's local WASM. Real
       // extension runtimes download the immutable, hash-pinned CDN asset.
-      const nativeWasm = globalThis.MovixQuickJSWasm;
+      const nativeWasm = globalThis.SokoulQuickJSWasm;
       const variant = nativeWasm
         ? newVariant(RELEASE_SYNC, { wasmBinary: nativeWasm, log: () => {} })
         : extensionRuntime
@@ -821,25 +822,25 @@ export function createBootstrap(embedUrl) {
   const safeEmbedPort = JSON.stringify(urlObj.port || '');
   return `
     'use strict';
-    var __movixCandidates = [];
-    var __movixMaxCandidates = 64;
-    var __movixMaxString = ${MAX_MEDIA_URL_LENGTH};
-    var __movixSeen = new WeakSet();
-    function __movixCapture(value, depth) {
+    var __sokoulCandidates = [];
+    var __sokoulMaxCandidates = 64;
+    var __sokoulMaxString = ${MAX_MEDIA_URL_LENGTH};
+    var __sokoulSeen = new WeakSet();
+    function __sokoulCapture(value, depth) {
       depth = depth || 0;
-      if (depth > 6 || value == null || __movixCandidates.length >= __movixMaxCandidates) return;
+      if (depth > 6 || value == null || __sokoulCandidates.length >= __sokoulMaxCandidates) return;
       if (typeof value === 'string') {
-        if (value.length <= __movixMaxString && value.toLowerCase().indexOf('.m3u8') !== -1) {
-          __movixCandidates.push(value);
+        if (value.length <= __sokoulMaxString && value.toLowerCase().indexOf('.m3u8') !== -1) {
+          __sokoulCandidates.push(value);
         }
         return;
       }
-      if ((typeof value !== 'object' && typeof value !== 'function') || __movixSeen.has(value)) return;
-      __movixSeen.add(value);
+      if ((typeof value !== 'object' && typeof value !== 'function') || __sokoulSeen.has(value)) return;
+      __sokoulSeen.add(value);
       var keys;
       try { keys = Object.keys(value); } catch (_) { return; }
       for (var j = 0; j < keys.length && j < 64; j++) {
-        try { __movixCapture(value[keys[j]], depth + 1); } catch (_) {}
+        try { __sokoulCapture(value[keys[j]], depth + 1); } catch (_) {}
       }
     }
     function atob(input) {
@@ -878,32 +879,32 @@ export function createBootstrap(embedUrl) {
       }
       return output;
     }
-    var __movixChainTarget = function () {};
-    var __movixChain = new Proxy(__movixChainTarget, {
+    var __sokoulChainTarget = function () {};
+    var __sokoulChain = new Proxy(__sokoulChainTarget, {
       apply: function (_target, _thisArg, args) {
-        for (var i = 0; i < args.length; i++) __movixCapture(args[i], 0);
-        return __movixChain;
+        for (var i = 0; i < args.length; i++) __sokoulCapture(args[i], 0);
+        return __sokoulChain;
       },
       construct: function (_target, args) {
-        for (var i = 0; i < args.length; i++) __movixCapture(arguments[i], 0);
-        return __movixChain;
+        for (var i = 0; i < args.length; i++) __sokoulCapture(arguments[i], 0);
+        return __sokoulChain;
       },
       get: function (_target, property) {
         if (property === 'then') return undefined;
         if (property === Symbol.toPrimitive) return function () { return ''; };
-        return __movixChain;
+        return __sokoulChain;
       },
       set: function () { return true; }
     });
-    function __movixPlayerFactory() {
-      for (var i = 0; i < arguments.length; i++) __movixCapture(arguments[i], 0);
-      return __movixChain;
+    function __sokoulPlayerFactory() {
+      for (var i = 0; i < arguments.length; i++) __sokoulCapture(arguments[i], 0);
+      return __sokoulChain;
     }
-    __movixPlayerFactory.addLanguage = __movixPlayerFactory;
-    __movixPlayerFactory.getPlayers = function () { return {}; };
-    var __movixLooseObject = new Proxy(function () {}, {
-      apply: function () { return __movixLooseObject; },
-      construct: function () { return __movixLooseObject; },
+    __sokoulPlayerFactory.addLanguage = __sokoulPlayerFactory;
+    __sokoulPlayerFactory.getPlayers = function () { return {}; };
+    var __sokoulLooseObject = new Proxy(function () {}, {
+      apply: function () { return __sokoulLooseObject; },
+      construct: function () { return __sokoulLooseObject; },
       get: function (_target, property) {
         if (property === 'canPlayType') return function (type) { return type && (type.indexOf('hls') !== -1 || type.indexOf('mpegURL') !== -1 || type.indexOf('mp4') !== -1) ? 'probably' : 'maybe'; };
         if (property === 'getAttribute') return function (attr) { return attr === 'src' ? '' : 'true'; };
@@ -912,14 +913,14 @@ export function createBootstrap(embedUrl) {
         if (/^(?:offset|client|scroll)(?:Width|Height|Left|Top)$/.test(property)) return 0;
         if (property === 'then') return undefined;
         if (property === Symbol.toPrimitive) return function () { return ''; };
-        return __movixLooseObject;
+        return __sokoulLooseObject;
       },
       set: function () { return true; }
     });
     // Les lecteurs dérivent leur clé de la largeur d'éléments qu'ils créent :
     // un mini-DOM calcule ces mesures comme le ferait un navigateur.
-    var __movixDom = (${movixCreateDomEmulator.toString()})(__movixLooseObject, ${VIEWPORT_WIDTH}, ${VIEWPORT_HEIGHT});
-    var getComputedStyle = __movixDom.getComputedStyle;
+    var __sokoulDom = (${sokoulCreateDomEmulator.toString()})(__sokoulLooseObject, ${VIEWPORT_WIDTH}, ${VIEWPORT_HEIGHT});
+    var getComputedStyle = __sokoulDom.getComputedStyle;
     var innerWidth = ${VIEWPORT_WIDTH};
     var innerHeight = ${VIEWPORT_HEIGHT};
     var outerWidth = ${VIEWPORT_WIDTH};
@@ -940,13 +941,13 @@ export function createBootstrap(embedUrl) {
       protocol: 'https:'
     };
     var navigator = { userAgent: 'Mozilla/5.0 Chrome/140.0.0.0', language: 'fr-FR' };
-    var document = __movixDom.document;
-    var videojs = __movixPlayerFactory;
-    var player = __movixPlayerFactory;
-    var jwplayer = __movixPlayerFactory;
-    var fluidPlayer = __movixPlayerFactory;
-    var Playerjs = __movixPlayerFactory;
-    var Clappr = { Player: __movixPlayerFactory };
+    var document = __sokoulDom.document;
+    var videojs = __sokoulPlayerFactory;
+    var player = __sokoulPlayerFactory;
+    var jwplayer = __sokoulPlayerFactory;
+    var fluidPlayer = __sokoulPlayerFactory;
+    var Playerjs = __sokoulPlayerFactory;
+    var Clappr = { Player: __sokoulPlayerFactory };
     function setTimeout(callback) { if (typeof callback === 'function') callback(); return 1; }
     function clearTimeout() {}
     function setInterval() { return 0; }
@@ -983,7 +984,7 @@ export async function extractPlayerM3u8(html, embedUrl, provider) {
   try {
     QuickJS = await getQuickJsModule();
   } catch (error) {
-    console.warn('[MovixQuickJS] runtime unavailable:', error?.message || error);
+    console.warn('[SokoulQuickJS] runtime unavailable:', error?.message || error);
     return null;
   }
 
@@ -995,7 +996,7 @@ export async function extractPlayerM3u8(html, embedUrl, provider) {
   const context = runtime.newContext();
 
   try {
-    const bootstrapResult = context.evalCode(createBootstrap(embedUrl), 'movix-bootstrap.js');
+    const bootstrapResult = context.evalCode(createBootstrap(embedUrl), 'sokoul-bootstrap.js');
     if (bootstrapResult.error) {
       disposeResult(bootstrapResult);
       return null;
@@ -1012,11 +1013,11 @@ export async function extractPlayerM3u8(html, embedUrl, provider) {
       (function () {
         var names = ['sources', 'source', 'file', 'hls', 'hlsUrl', 'm3u8', 'config', 'playerConfig'];
         for (var i = 0; i < names.length; i++) {
-          try { __movixCapture(globalThis[names[i]]); } catch (_) {}
+          try { __sokoulCapture(globalThis[names[i]]); } catch (_) {}
         }
-        return JSON.stringify(__movixCandidates);
+        return JSON.stringify(__sokoulCandidates);
       })()
-    `, 'movix-result.js');
+    `, 'sokoul-result.js');
     if (captureResult.error) {
       disposeResult(captureResult);
       return null;
@@ -1037,4 +1038,4 @@ export async function extractPlayerM3u8(html, embedUrl, provider) {
   }
 }
 
-globalThis.MovixQuickJS = Object.freeze({ extractPlayerM3u8 });
+globalThis.SokoulQuickJS = Object.freeze({ extractPlayerM3u8 });

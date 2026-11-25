@@ -28,7 +28,7 @@ import org.json.JSONObject
 import kotlin.math.abs
 
 /*
- * Watch party, after Movix's: several people watch the same title together, each with their own source, kept on the
+ * Watch party: several people watch the same title together, each with their own source, kept on the
  * same moment through the Socket.IO server of API/watchpartyAPI (rooms, invitation code, chat, play/pause/seek).
  */
 

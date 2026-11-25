@@ -85,7 +85,7 @@ async function ready(operation) {
 }
 
 async function fixture(t) {
-  const cacheDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'movix-kisskh-e2e-'));
+  const cacheDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'sokoul-kisskh-e2e-'));
   const state = { clock: 1_000_000, requests: [], servers: [], pending: new Set(), listGate: null, status: 200, dramaId: 1001 };
   const now = () => state.clock;
   state.redis = redisDouble(now);

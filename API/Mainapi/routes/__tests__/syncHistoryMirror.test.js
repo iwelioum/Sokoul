@@ -19,7 +19,7 @@ function progress(position, duration, timestamp) {
 // Même chargement `vm` que syncPerformance.test.js, avec un faux magasin
 // d'historique injecté à la place de la base.
 async function fixture(t, profile, { historyStore, ensureImported } = {}) {
-  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'movix-sync-history-'));
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'sokoul-sync-history-'));
   const usersDir = path.join(dir, 'data', 'users');
   const accountPath = policy.getUserDataFilePath({ usersDir }, 'oauth', 'user');
   const profilePath = policy.getProfileFilePath(usersDir, 'oauth', 'user', 'profile-one');

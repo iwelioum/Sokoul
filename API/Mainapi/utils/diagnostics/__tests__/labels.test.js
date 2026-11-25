@@ -19,8 +19,8 @@ test('labels are bounded and survive malformed targets', () => {
   const label = httpLabel('%%%'.repeat(500));
   assert.ok(label.operation.length <= 240);
   assert.ok(label.example.length <= 512);
-  const redis = redisLabel({ name: 'GET', args: ['/var/cache/movix/user/12345678901234567890/abcdef0123456789abcdef0123456789'] });
-  assert.match(redis.operation, /var:cache:movix:user::id::hash/);
+  const redis = redisLabel({ name: 'GET', args: ['/var/cache/sokoul/user/12345678901234567890/abcdef0123456789abcdef0123456789'] });
+  assert.match(redis.operation, /var:cache:sokoul:user::id::hash/);
 });
 
 test('SQL labels fingerprint statements without comments or literal values', () => {

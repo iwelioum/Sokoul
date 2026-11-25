@@ -5,7 +5,7 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 /**
- * The home page as the user arranged it (Movix: "Rangées de l'accueil"): [order] lists row ids in the wanted order, the
+ * The home page as the user arranged it ("Rangées de l'accueil"): [order] lists row ids in the wanted order, the
  * rows it does not name follow in their default order, and [hidden] rows are not shown. Empty means the default page.
  */
 @Serializable
@@ -58,7 +58,7 @@ data class HomeLayout(val order: List<String> = emptyList(), val hidden: Set<Str
     }
 }
 
-/** Entries of the top menu: which can be hidden, and what is left shown (Movix: "Menu de gauche"). */
+/** Entries of the top menu: which can be hidden, and what is left shown ("Menu de gauche"). */
 object MenuEntries {
     /** At least one entry stays: a menu with nothing in it would leave no way to move around. */
     fun toggle(hidden: Set<String>, all: List<String>, id: String): Set<String> {

@@ -105,21 +105,21 @@ On macOS: `API/start-backend.sh` (options `--status`, `--stop`, `--with-web`, `-
 | Mainapi (Node, CommonJS) | 25565 | `API/Mainapi` |
 | Watch party (Node, ESM) | 25566 | `API/watchpartyAPI` |
 | proxiesembed (Python, aiohttp) | 25569 | `API/proxiesembed` |
-| Web site (optional, `--profile web`) | 8088 | Movix reference outside the repository, `SOKOUL_WEB_CONTEXT` |
+| Web site (optional, `--profile web`) | 8088 | Third-party web reference outside the repository, `SOKOUL_WEB_CONTEXT` |
 
 The PC app talks to `http://127.0.0.1:25565` by default; a TV or phone needs the PC's address on the local network
 (Settings > Accounts > Sokoul server).
 
-## Extension, userscript and extractor bundle
+## Extraction runtime and extractor bundle
 
-`extension/` holds the shared extraction runtime used by three consumers: the browser extension, the Mainapi native
-extraction and the `:extractor` Gradle module (QuickJS). Gradle rebuilds the bundle from `extension/runtime` and
-`extension/scripts` when they change; `npm install` in `extension/` is needed once.
+`extraction/` holds the shared extraction runtime used by two consumers: the Mainapi native extraction and the
+`:extractor` Gradle module (QuickJS). Gradle rebuilds the QuickJS bundle from `extraction/runtime` when it changes;
+`npm ci` in `extraction/` is needed once. Details in [extraction/README.md](../extraction/README.md).
 
 ```powershell
-cd extension; npm install
-npm run build:extractors    # QuickJS runtime and extractor bundle
+cd extraction; npm ci --no-audit --no-fund
+npm test                    # extractor fixtures
 npm run build:native        # bundle used by Mainapi's native extraction
 ```
 
-Load `extension/Chrome/` or `extension/Firefox/` as an unpacked extension during development.
+There is no browser extension or userscript any more.

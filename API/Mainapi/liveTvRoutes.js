@@ -669,7 +669,7 @@ const VAVOO_SLUG_TO_GROUP = Object.fromEntries(
 
 // `item.url` vaut « https://kool.to/kool-iptv/play/<id> » : on n'en garde que
 // le préfixe, l'id étant reconstruit à la résolution (les doublons de nom
-// portent un suffixe `~n` côté Movix qui n'existe pas en amont).
+// portent un suffixe `~n` côté Sokoul qui n'existe pas en amont).
 function extractVavooPlayPrefix(items) {
   for (const item of items) {
     const url = typeof item?.url === "string" ? item.url : "";
@@ -2031,7 +2031,7 @@ router.get("/manifest", async (req, res) => {
     manifest.catalogs = [...northliveCatalogs, ...manifest.catalogs];
     manifest.idPrefixes.push("northlive_");
 
-    // Vavoo (FREE — direct HLS, no extension/VIP). Groups are listed
+    // Vavoo (FREE — direct HLS, no VIP). Groups are listed
     // unconditionally (no upfront fetch); an empty group simply shows no channels.
     // Prepended so the vavoo pill sits before northlive.
     try {
@@ -2216,7 +2216,7 @@ router.get("/stream/:type/:channelId", async (req, res) => {
 
     // Block VIP-only sources immediately if not VIP.
     // Matches (match_/matches_) are free: the IP-locked native stream is resolved
-    // client-side by the extension/userscript (RESOLVE_FCTV), and free users without
+    // client-side (RESOLVE_FCTV), and free users without
     // it fall back to the embed player (see the match_ branch below). Only IPTV is
     // strictly VIP.
     if (channelId.startsWith("iptv_") && !isVip.vip) {
@@ -2389,8 +2389,8 @@ router.get("/stream/:type/:channelId", async (req, res) => {
         process.env.PUBLIC_API_BASE ||
         `${req.headers["x-forwarded-proto"] || req.protocol}://${req.get("host")}`;
 
-      // VIP -> server proxies the segments. Free -> "raw" mode: the browser
-      // extension / userscript injects the player Referer (no proxy needed).
+      // VIP -> server proxies the segments. Free -> "raw" mode:
+      // the client injects the player Referer (no proxy needed).
       const fctvNativeMode = isVip.vip ? "proxy" : "raw";
       const fctvPlayerBase = await getFctvPlayerBaseUrl();
       const fctvApiBase = await getFctvApiBase();
@@ -2420,7 +2420,7 @@ router.get("/stream/:type/:channelId", async (req, res) => {
             };
           }
           // Free: the stream is IP-locked, so it must be resolved in the user's
-          // browser by the extension/userscript (RESOLVE_FCTV). Empty url here;
+          // client (RESOLVE_FCTV). Empty url here;
           // the frontend fills it. Sans extension le stub est écarté et, le
           // repli « lecteur intégré » ayant été retiré, il ne reste aucun flux.
           return {
@@ -2447,7 +2447,7 @@ router.get("/stream/:type/:channelId", async (req, res) => {
           ),
         );
         // Le besoin de Referer ne donne pas accès au proxy : hors VIP,
-        // l'extension/userscript applique les en-têtes au flux direct.
+        // the client applies the headers to the direct stream.
         const proxyUrl = PROXY_SERVER_URL && isVip.vip
           ? buildProxyServerUrl(stream.url, { headers })
           : stream.url;
@@ -2508,7 +2508,7 @@ router.get("/fctv/playlist", async (req, res) => {
   const siteType = req.query.siteType || FCTV_DEFAULT_SITE_TYPE;
   const sportType = req.query.sportType || 1;
   // proxy = segments via PROXY_SERVER_URL (VIP). raw = bare CDN urls; the
-  // browser extension / userscript injects the player Referer (free users).
+  // the client injects the player Referer (free users).
   const mode = req.query.mode === "raw" ? "raw" : "proxy";
   res.set("Cache-Control", "private, no-store");
   if (!matchId || !streamId) {
@@ -2579,7 +2579,7 @@ router.get("/fctv/playlist", async (req, res) => {
         abs.searchParams.delete("token");
         const path = abs.pathname.replace(/^\/token-[^/]+/, "");
         const norm = `${resolved.origin}/token-${resolved.token}${path}${abs.search}`;
-        // raw mode (free + extension/userscript): bare CDN url; the extension
+        // raw mode (free): bare CDN url; the client
         // injects the player Referer on the request -> no proxy needed.
         if (mode === "raw") return norm;
         // Chaque segment porte sa propre signature : la playlist est du texte,

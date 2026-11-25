@@ -13,7 +13,7 @@ async function loadEngine() {
         const bundled = path.join(__dirname, '../generated/nativeExtractors/index.cjs');
         if (fs.existsSync(bundled)) return require(bundled);
         // Source-checkout launches build once outside the repository; Docker uses its bundled assets.
-        const script = path.resolve(__dirname, '../../../extension/scripts/build-native-extractors.mjs');
+        const script = path.resolve(__dirname, '../../../extraction/scripts/build-native-extractors.mjs');
         const output = fs.mkdtempSync(path.join(os.tmpdir(), 'sokoul-native-extractors-'));
         const { buildNativeExtractors } = await import(pathToFileURL(script).href);
         await buildNativeExtractors(output);

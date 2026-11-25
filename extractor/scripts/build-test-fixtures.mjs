@@ -1,4 +1,4 @@
-import { fixtures } from '../../extension/tests/fixtures.mjs';
+import { fixtures } from '../../extraction/tests/fixtures.mjs';
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 await mkdir(process.argv[2], { recursive: true });

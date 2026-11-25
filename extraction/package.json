@@ -1,0 +1,13 @@
+{
+  "name": "sokoul-extraction",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:native": "node scripts/build-native-extractors.mjs",
+    "test": "node --test tests/native-extractors.test.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.1",
+    "quickjs-emscripten": "0.32.0"
+  }
+}

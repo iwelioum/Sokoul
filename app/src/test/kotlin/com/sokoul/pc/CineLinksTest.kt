@@ -6,7 +6,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** The rows of links through people on a title page (Movix's CinéGraph zones, as rows). */
+/** The rows of links through people on a title page. */
 class CineLinksTest {
     private fun film(id: Int, votes: Int = 100) = TmdbItem(id = id, title = "F$id", originalTitle = null, year = null, poster = null, backdrop = null, rating = null, overview = null, voteCount = votes, mediaType = "movie")
 

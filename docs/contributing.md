@@ -10,7 +10,7 @@
 
 - Keep the Apple TV look: [design/cartography.md](design/cartography.md) and `theme/Theme.kt` are the source of truth.
 - Build with Sokoul's components (`ui/Controls.kt`, `ui/Cards.kt`, `ui/Panels.kt`, the player's glass panels). A feature
-  taken from Movix is redrawn with them, never with Movix's look.
+  taken from third-party code is redrawn with them, never with its original look.
 - Every screen works with a remote (D-pad focus, Back), a mouse and touch. On phones, read `Form` (`ui/FormFactor.kt`)
   rather than testing the platform.
 - Brand assets come from the Figma file `sokoul` (app icon node `15:2`, intro node `3:1461`).
@@ -41,6 +41,6 @@ check it on the device.
 
 ## Third-party code
 
-Code adapted from Movix is licensed CC BY-NC 4.0 ([third-party/MOVIX-LICENSE](third-party/MOVIX-LICENSE)); keep its
-attribution next to the adapted files (for example `tv/.../player/THIRD_PARTY.md`, `extractor/LICENSE-MOVIX`). The Movix
+Derived third-party code and its licences are listed in [third-party/README.md](third-party/README.md); a derived file
+carries at most one pointer line to it (`Derived third-party code (CC BY-NC 4.0): see docs/third-party/README.md.`). The
 reference sources themselves are kept outside the repository.

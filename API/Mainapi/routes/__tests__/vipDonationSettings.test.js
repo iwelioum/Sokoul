@@ -1013,8 +1013,8 @@ test('un don CryptoGate porte un libellé de don et la durée au taux réglé', 
   assert.equal(client.calls.length, 1);
   assert.equal(client.calls[0].amount, 7);
   assert.equal(client.calls[0].currency, 'EUR');
-  assert.equal(client.calls[0].label, 'Don Movix');
-  assert.equal(client.calls[0].description, 'Don à Movix - merci : 17 mois de VIP');
+  assert.equal(client.calls[0].label, 'Don Sokoul');
+  assert.equal(client.calls[0].description, 'Don à Sokoul - merci : 17 mois de VIP');
   assert.equal(state.insertParams[1], 7);
   assert.equal(state.insertParams[3], 1.42);
   assert.deepEqual(state.events[0], {
@@ -1027,7 +1027,7 @@ test('un don CryptoGate porte un libellé de don et la durée au taux réglé', 
 
   // Réglages lus une seule fois grâce au cache.
   await donate(pool, { amountEur: 10 }, client);
-  assert.equal(client.calls[1].description, 'Don à Movix - merci : 2 ans de VIP');
+  assert.equal(client.calls[1].description, 'Don à Sokoul - merci : 2 ans de VIP');
   assert.equal(state.settingsReads, 1);
 });
 
@@ -1039,10 +1039,10 @@ test('le taux et les bornes viennent des réglages enregistrés', async (t) => {
   const client = createCryptoGateClient();
 
   await donate(pool, { amountEur: 3 }, client);
-  assert.equal(client.calls[0].description, 'Don à Movix - merci : 9 mois de VIP');
+  assert.equal(client.calls[0].description, 'Don à Sokoul - merci : 9 mois de VIP');
   assert.equal(state.insertParams[3], 0.75);
   await donate(pool, { amountEur: 5 }, client);
-  assert.equal(client.calls[1].description, 'Don à Movix - merci : 15 mois de VIP');
+  assert.equal(client.calls[1].description, 'Don à Sokoul - merci : 15 mois de VIP');
   assert.equal(state.insertParams[3], 1.25);
 });
 
@@ -1225,7 +1225,7 @@ async function callRoute(router, method, routePath, { body = {} } = {}) {
     headers: {},
     ip: '203.0.113.7',
     protocol: 'https',
-    get: () => 'api.movix.test'
+    get: () => 'api.sokoul.test'
   };
   const res = {
     statusCode: 200,

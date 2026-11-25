@@ -25,10 +25,10 @@ parentPort.on('message',message=>{
 });
 const silent={log(){},warn(){},error(){}};
 console.log=console.warn=console.error=()=>{};
-globalThis.MovixQuickJSWasm=fs.readFileSync(path.join(__dirname,'quickjs.wasm'));
+globalThis.SokoulQuickJSWasm=fs.readFileSync(path.join(__dirname,'quickjs.wasm'));
 const quickjs=require('./quickjs.cjs');
 const {createExtractors}=require('./extractors-core.cjs');
-const environment={fetch:remoteFetch,crypto:webcrypto,console:silent,atob,btoa,MovixQuickJS:quickjs};
+const environment={fetch:remoteFetch,crypto:webcrypto,console:silent,atob,btoa,SokoulQuickJS:quickjs};
 const extractors=createExtractors(environment);
 (async()=>{
  try {

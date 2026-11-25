@@ -64,7 +64,17 @@ files are left out of the images: Mainapi and proxiesembed read only `local.env`
 `~/Library/Application Support/SokoulApi` on macOS), which `start-backend.ps1` / `start-backend.sh` pass through
 `SOKOUL_ENV_FILE`. On macOS, `start-backend.sh` also adds the keys of `API/local.env.template` that `local.env` lacks
 (TMDB, debrid, Xtream, optional sources, and personal-setup switches that turn off Discord reports and payments); values
-already in `local.env` are never changed. `SOKOUL_MAINAPI_CONTEXT`, `SOKOUL_PROXY_CONTEXT`, `SOKOUL_WATCHPARTY_CONTEXT` and `SOKOUL_WEB_CONTEXT`
+already in `local.env` are never changed.
+
+Mainapi variables that decide who may reach the private instance:
+
+| Variable | Effect |
+| --- | --- |
+| `SOKOUL_ALLOWED_ORIGINS` | Browser origins allowed with credentials, comma separated: full origins (`https://sokoul.example`, `http://192.168.0.10:8088`, matched exactly) or bare hosts (any scheme and port, no subdomains). Loopback origins (`localhost`, `127.0.0.1`, `[::1]`) are always allowed; empty means loopback only. One list for CORS and the Origin/Referer check (`API/Mainapi/utils/allowedOrigins.js`) |
+| `PUBLIC_SITE_URL` | Site that opens the TV link code (`<site>/tv?code=XXXXX`); empty means Mainapi's own origin as the TV reached it |
+| `SOKOUL_OAUTH_CLIENTS_JSON`, `SOKOUL_OAUTH_DEBUG` | Local OAuth client override and detailed OAuth logs |
+
+`SOKOUL_MAINAPI_CONTEXT`, `SOKOUL_PROXY_CONTEXT`, `SOKOUL_WATCHPARTY_CONTEXT` and `SOKOUL_WEB_CONTEXT`
 override the Docker build contexts in `API/docker-compose.yml`.
 
 ## Not in the repository
@@ -72,6 +82,6 @@ override the Docker build contexts in `API/docker-compose.yml`.
 | Item | Where it lives |
 | --- | --- |
 | libVLC binaries | Downloaded by `tools/fetch-vlc.ps1` |
-| Movix reference sources | `../Sokoul-reference/` next to the checkout; license kept in [third-party/MOVIX-LICENSE](third-party/MOVIX-LICENSE) |
+| Third-party reference sources | `../Sokoul-reference/` next to the checkout; licences in [third-party/README.md](third-party/README.md) |
 | `API/proxiesembed/drmproxy/` | Local only; never published |
 | Device connection notes, key files | `%USERPROFILE%\.sokoul-private` |

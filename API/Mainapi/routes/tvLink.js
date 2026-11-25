@@ -8,7 +8,7 @@
  *  1. la télé appelle POST /start et affiche `userCode` (+ QR) ;
  *  2. le site (utilisateur connecté) lit GET /info puis POST /confirm avec un
  *     profil : une vraie ligne `user_sessions` (deviceType 'tv') est créée et un
- *     JWT Movix normal est émis ;
+ *     JWT Sokoul normal est émis ;
  *  3. la télé interroge POST /poll et reçoit ce JWT une seule fois.
  *
  * Tout l'état vit dans Redis (12 workers recyclés : rien en mémoire de worker).
@@ -56,10 +56,9 @@ const USER_CODE_ATTEMPTS = 8;
 const DEVICE_CODE_PATTERN = /^[A-Za-z0-9_-]{43}$/;
 const CLIENT_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const DEVICE_NAME_MAX = 40;
-const DEFAULT_DEVICE_NAME = 'Movix TV';
+const DEFAULT_DEVICE_NAME = 'Sokoul TV';
 const MAX_WRONG_CODES = 5;
 const WRONG_CODE_WINDOW_SECONDS = 600;
-const DEFAULT_PUBLIC_SITE_URL = 'https://movix.luxe';
 
 const KEY_DEV = (hash) => `tvlink:dev:${hash}`;
 const KEY_CODE = (code) => `tvlink:code:${code}`;
@@ -158,9 +157,13 @@ function normalizeUserCode(value) {
   return USER_CODE_PATTERN.test(code) ? code : null;
 }
 
-function getPublicSiteUrl() {
+// Site that opens the code (`<site>/tv?code=…`): PUBLIC_SITE_URL, or else this
+// server's own origin as the request reached it. Never a third-party default.
+function getPublicSiteUrl(req) {
   const raw = String(process.env.PUBLIC_SITE_URL || '').trim().replace(/\/+$/, '');
-  return /^https?:\/\/[^\s]+$/i.test(raw) ? raw : DEFAULT_PUBLIC_SITE_URL;
+  if (/^https?:\/\/[^\s]+$/i.test(raw)) return raw;
+  const host = req?.get?.('host');
+  return host ? `${req.protocol}://${host}` : '';
 }
 
 function sendError(res, error, scope) {
@@ -288,7 +291,7 @@ router.post('/start', startRateLimit, async (req, res) => {
     return res.status(200).json({
       deviceCode,
       userCode,
-      verificationUrl: `${getPublicSiteUrl()}/tv?code=${userCode}`,
+      verificationUrl: `${getPublicSiteUrl(req)}/tv?code=${userCode}`,
       expiresIn: LINK_TTL_SECONDS,
       interval: POLL_INTERVAL_SECONDS,
     });
@@ -369,7 +372,7 @@ router.post('/confirm', siteRateLimit, async (req, res) => {
 
     const deviceName = link.entry.deviceName || DEFAULT_DEVICE_NAME;
     const sessionId = await getAuthRoutes().createUserSession(auth.userType, auth.userId, req, {
-      userAgent: 'Movix TV',
+      userAgent: 'Sokoul TV',
       clientId: link.entry.clientId,
       device: {
         version: 1,

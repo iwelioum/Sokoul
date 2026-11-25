@@ -36,7 +36,7 @@ function runFixture(env) {
 }
 
 test('cluster de deux workers conserve une échéance, un rapport et des snapshots cumulatifs', { timeout: 15000 }, async (t) => {
-  const reportDir = await fs.mkdtemp(path.join(os.tmpdir(), 'movix-probe-'));
+  const reportDir = await fs.mkdtemp(path.join(os.tmpdir(), 'sokoul-probe-'));
   t.after(() => fs.rm(reportDir, { recursive: true, force: true }));
   const { child, message } = await runFixture(cleanProbeEnv({ MAINAPI_PROBE_SECONDS: '2', MAINAPI_PROBE_DIR: reportDir }));
   t.after(() => { if (child.connected) child.disconnect(); if (!child.killed) child.kill(); });
@@ -57,7 +57,7 @@ test('cluster de deux workers conserve une échéance, un rapport et des snapsho
 
 test('worker sans callback IPC ne publie qu’une fois et stop reste borné', { timeout: 6000 }, async () => {
   class FakeProcess extends EventEmitter {
-    constructor() { super(); this.env = { MOVIX_WORKER_SLOT: '0' }; this.pid = 4242; this.connected = true; this.sends = 0; }
+    constructor() { super(); this.env = { SOKOUL_WORKER_SLOT: '0' }; this.pid = 4242; this.connected = true; this.sends = 0; }
     send() { this.sends += 1; }
     cpuUsage() { return { user: 0, system: 0 }; }
     memoryUsage() { return { rss: 1, heapTotal: 1, heapUsed: 1, external: 0, arrayBuffers: 0 }; }
@@ -77,7 +77,7 @@ test('worker sans callback IPC ne publie qu’une fois et stop reste borné', { 
 });
 
 test('master signale les workers attendus sans snapshot', { timeout: 5000 }, async (t) => {
-  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'movix-probe-expected-'));
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'sokoul-probe-expected-'));
   t.after(() => fs.rm(directory, { recursive: true, force: true }));
   const cluster = new EventEmitter();
   const pid = 8765;
@@ -93,7 +93,7 @@ test('master signale les workers attendus sans snapshot', { timeout: 5000 }, asy
 });
 
 test('un pic capture les workers et envoie un rapport intermédiaire sans bloquer le rapport final', { timeout: 5000 }, async (t) => {
-  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'movix-probe-alert-'));
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'sokoul-probe-alert-'));
   t.after(() => fs.rm(directory, { recursive: true, force: true }));
   const cluster = new EventEmitter();
   const calls = [];
@@ -138,7 +138,7 @@ test('un pic capture les workers et envoie un rapport intermédiaire sans bloque
 });
 
 test('échéance automatique finalise les workers sans arrêter le processus cluster', { timeout: 10000 }, async (t) => {
-  const reportDir = await fs.mkdtemp(path.join(os.tmpdir(), 'movix-probe-deadline-'));
+  const reportDir = await fs.mkdtemp(path.join(os.tmpdir(), 'sokoul-probe-deadline-'));
   t.after(() => fs.rm(reportDir, { recursive: true, force: true }));
   const { child, message } = await runFixture(cleanProbeEnv({ MAINAPI_PROBE_SECONDS: '1', MAINAPI_PROBE_DIR: reportDir, FIXTURE_PROBE_DEADLINE: '1' }));
   t.after(() => { if (child.connected) child.disconnect(); if (!child.killed) child.kill(); });
@@ -158,7 +158,7 @@ test('bridge inerte et worker de remplacement expiré ne créent pas de timer ou
 });
 
 test('analyse conserve la fenêtre commune et exclut la chauffe dans un vrai cluster avec remplacement', { timeout: 10000 }, async (t) => {
-  const reportDir = await fs.mkdtemp(path.join(os.tmpdir(), 'movix-probe-analysis-cluster-'));
+  const reportDir = await fs.mkdtemp(path.join(os.tmpdir(), 'sokoul-probe-analysis-cluster-'));
   t.after(() => fs.rm(reportDir, { recursive: true, force: true }));
   const { child, message } = await runFixture(cleanProbeEnv({ MAINAPI_PROBE_SECONDS: '2', MAINAPI_PROBE_MODE: 'analyse',
     MAINAPI_PROBE_DIR: reportDir, FIXTURE_ANALYSIS: '1', FIXTURE_PROBE_DEADLINE: '1' }));
@@ -178,7 +178,7 @@ test('analyse conserve la fenêtre commune et exclut la chauffe dans un vrai clu
 });
 
 test('répertoire de rapport invalide échoue ouvert via le bridge', async (t) => {
-  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'movix-probe-file-'));
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'sokoul-probe-file-'));
   const file = path.join(root, 'not-a-directory');
   await fs.writeFile(file, 'x');
   t.after(() => fs.rm(root, { recursive: true, force: true }));

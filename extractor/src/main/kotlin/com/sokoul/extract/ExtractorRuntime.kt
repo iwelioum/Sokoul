@@ -1,3 +1,4 @@
+// Derived third-party code (CC BY-NC 4.0): see docs/third-party/README.md.
 package com.sokoul.extract
 
 import com.dokar.quickjs.QuickJs
@@ -107,7 +108,7 @@ class ExtractorRuntime(
                 val engine = ensureStarted() ?: return@withTimeoutOrNull null
                 val done = CompletableDeferred<String>()
                 extractions[id] = done
-                evaluate(engine, "__movixExtract($id, ${JsonPrimitive(embedUrl)})")
+                evaluate(engine, "__sokoulExtract($id, ${JsonPrimitive(embedUrl)})")
                 done.await()
             }
             val elapsed = System.currentTimeMillis() - started
@@ -129,7 +130,7 @@ class ExtractorRuntime(
             val raw = withContext(loop) {
                 runCatching {
                     engine.evaluate<String>(
-                        "JSON.stringify(($arg).map(function (u) { try { return globalThis.MovixExtractors.detectEmbedType(u) || null } catch (e) { return null } }))",
+                        "JSON.stringify(($arg).map(function (u) { try { return globalThis.SokoulExtractors.detectEmbedType(u) || null } catch (e) { return null } }))",
                         "embed-types.js",
                     )
                 }.onFailure { log("warn", "types d'hébergeur illisibles : ${it.message?.take(200)}") }.getOrNull()
@@ -166,9 +167,9 @@ class ExtractorRuntime(
             evaluate(engine, resource("polyfills.js"), "polyfills.js")
             evaluate(engine, resource("host.js"), "host.js")
             loadUserscript(engine)
-            val ready = runCatching { engine.evaluate<Boolean>("typeof movixExtractM3u8 === 'function'") }.getOrDefault(false)
+            val ready = runCatching { engine.evaluate<Boolean>("typeof sokoulExtractM3u8 === 'function'") }.getOrDefault(false)
             if (!ready) {
-                log("error", "userscript non chargé : movixExtractM3u8 absent")
+                log("error", "userscript non chargé : sokoulExtractM3u8 absent")
                 engine.close()
                 return@withContext null
             }
@@ -234,7 +235,7 @@ class ExtractorRuntime(
                     val due = synchronized(timerQueue) {
                         timerQueue.peek()?.takeIf { it.dueNanos <= System.nanoTime() }?.also { timerQueue.poll() }
                     } ?: break
-                    evaluate(engine, "__movixFireTimer(${due.id})")
+                    evaluate(engine, "__sokoulFireTimer(${due.id})")
                 }
             }
         }
@@ -285,7 +286,7 @@ class ExtractorRuntime(
                 }
                 requestJobs.remove(id)
                 responses[id] = result
-                callback("__movixOnResponse($id)")
+                callback("__sokoulOnResponse($id)")
             }
             null
         }

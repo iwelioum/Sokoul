@@ -6,7 +6,7 @@ const path = require('node:path');
 const os = require('node:os');
 const { prepareBuildContext } = require('../prepare-build-context');
 
-test('materialized build contexts preserve source bytes and exclude credentials and caches', () => {
+test('materialized build contexts preserve source bytes and exclude credentials and caches', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sokoul-context-test-'));
   try {
     for (const service of ['Mainapi', 'proxiesembed', 'watchpartyAPI']) {
@@ -19,7 +19,9 @@ test('materialized build contexts preserve source bytes and exclude credentials 
       fs.writeFileSync(path.join(source, '.env.example'), 'SECRET=');
       fs.writeFileSync(path.join(source, 'node_modules', 'private.txt'), 'do-not-copy');
     }
-    const staged = prepareBuildContext(root, path.join(root, 'source'));
+    const built = [];
+    const staged = await prepareBuildContext(root, path.join(root, 'source'), { buildExtractors: async (_source, output) => built.push(output) });
+    assert.deepEqual(built, [path.join(staged, 'Mainapi/generated/nativeExtractors')]);
     for (const service of ['Mainapi', 'proxiesembed', 'watchpartyAPI']) {
       assert.equal(fs.readFileSync(path.join(staged, service, 'Dockerfile'), 'utf8'), 'FROM fixture\n# café 日本語\n');
       assert.ok(fs.existsSync(path.join(staged, service, '.env.example')));

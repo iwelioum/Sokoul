@@ -138,7 +138,7 @@ function getGiftPath(giftToken) {
 
 function hashIp(ipAddress) {
   if (!ipAddress) return null;
-  const secret = process.env.JWT_SECRET || 'movix-vip-ip';
+  const secret = process.env.JWT_SECRET || 'sokoul-vip-ip';
   return crypto.createHmac('sha256', secret).update(ipAddress).digest('hex');
 }
 
@@ -1561,8 +1561,8 @@ async function createCryptoGateVipInvoice(pool, payload, context = {}) {
       currency: 'EUR',
       email: normalizedEmail,
       orderId: publicId,
-      label: 'Don Movix',
-      description: `Don à Movix - merci : ${buildDurationLabel(pack.vipYears)} de VIP`
+      label: 'Don Sokoul',
+      description: `Don à Sokoul - merci : ${buildDurationLabel(pack.vipYears)} de VIP`
     });
   } catch (error) {
     const mapped = createVipInvoiceError(
@@ -1688,7 +1688,7 @@ async function createPayblisVipInvoice(pool, { pack, recipientMode, payerEmail, 
     sandbox: payblisMod.isPayblisSandbox(),
     amountEur: pack.amountEur,
     // Libellé signé par Payblis : rester en ASCII.
-    productName: `Don Movix - ${buildDurationLabel(pack.vipYears)} de VIP`,
+    productName: `Don Sokoul - ${buildDurationLabel(pack.vipYears)} de VIP`,
     refOrder,
     payerEmail: normalizedEmail,
     customerName,

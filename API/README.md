@@ -1,7 +1,7 @@
 # Sokoul backend services
 
-`API/` holds the server side of Sokoul, adapted from Movix (CC BY-NC 4.0, see
-[docs/third-party](../docs/third-party/README.md)). The native apps use three services; MySQL and Redis back them.
+`API/` holds the server side of Sokoul.
+Derived third-party code (CC BY-NC 4.0): see docs/third-party/README.md. The native apps use three services; MySQL and Redis back them.
 
 | Folder | Role | Port | Stack | Docs |
 | --- | --- | --- | --- | --- |
@@ -13,7 +13,7 @@ Root files:
 
 | File | Purpose |
 | --- | --- |
-| `docker-compose.yml` | MySQL, Redis and the three services; optional `web` profile (8088) built from the Movix reference kept outside the repository (`SOKOUL_WEB_CONTEXT`) |
+| `docker-compose.yml` | MySQL, Redis and the three services; optional `web` profile (8088) built from the third-party web reference kept outside the repository (`SOKOUL_WEB_CONTEXT`) |
 | `start-backend.ps1` | Starts, checks (`-Status`) and stops (`-Stop`) the local stack |
 | `prepare-build-context.js` | Copies source bytes into a temporary Docker build context (avoids OneDrive reparse points) |
 | `init-local-schema.js`, `seed-local-key.js` | Create missing tables, seed the local access key |

@@ -21,7 +21,7 @@ fun interface Translator {
 }
 
 /**
- * Subtitle translation as Movix's player does it: Google's public "gtx" endpoint, no key. The texts of a batch are
+ * Subtitle translation through Google's public "gtx" endpoint, no key. The texts of a batch are
  * joined by a separator and split again; when the count does not match, each text goes alone.
  */
 class GoogleTranslator(private val http: OkHttpClient, private val json: Json = Json) : Translator {

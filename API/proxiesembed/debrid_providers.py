@@ -1,4 +1,4 @@
-"""Liste des débrideurs présentés par l'interface Movix."""
+"""Liste des débrideurs présentés par l'interface Sokoul."""
 
 DEBRID_PROVIDERS = ('deepbrid', 'realdebrid', 'bestdebrid', 'debridr')
 DEFAULT_DEBRID_PROVIDERS = 'deepbrid'

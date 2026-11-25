@@ -29,7 +29,7 @@ import java.util.concurrent.Executors
 
 /**
  * The app's tools (AppBridge) as a Model Context Protocol server, so that an assistant, an editor or any MCP client
- * can search, open pages and drive the player, the way Movix offers its MCP server.
+ * can search, open pages and drive the player.
  *
  * Streamable HTTP transport, JSON responses only (no server-initiated messages), on the loopback interface only. Every
  * request needs the bearer token kept in `mcp-token.txt` of the data folder, and a browser page cannot reach it: any

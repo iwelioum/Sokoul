@@ -4,6 +4,8 @@
  * and JSON parse error handler.
  */
 
+const { isAllowedOrigin } = require('../utils/allowedOrigins');
+
 // Security headers (minimal set -- replaces Helmet)
 function securityHeaders(req, res, next) {
   res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -21,7 +23,8 @@ function keepAliveHeaders(req, res, next) {
   next();
 }
 
-// Middleware de restriction de domaine et réponse fake pour route spécifique
+// Domain restriction (allowlist: SOKOUL_ALLOWED_ORIGINS, see utils/allowedOrigins.js)
+// and decoy response for a specific route.
 function domainRestriction(req, res, next) {
   // Autoriser les endpoints LiveTV pour l'extension
   if (req.path.startsWith('/api/livetv/')) {
@@ -41,33 +44,6 @@ function domainRestriction(req, res, next) {
     return next();
   }
 
-  const allowedDomains = [
-    'localhost:3000',
-    'movix.blog',
-    'movix.rodeo',
-    'movix.club',
-    'movix.site',
-    'movix11.pages.dev',
-    'nakios.site',
-    'cinezo.site',
-    'cinezo.online',
-    'filmib.cc',
-    'movix.llc',
-    'movix.cash',
-    'movix.tax',
-    'movix.cloud',
-    'movix.golf',
-    'movix.chat',
-    'movix.date',
-    'movix.show',
-    'movix.fun',
-    'movix.men',
-    'movix.college',
-    'movix.luxe',
-    'movix.dog',
-    'movix.miami'
-  ];
-
   const origin = req.get('origin');
   const referer = req.get('referer');
 
@@ -81,21 +57,7 @@ function domainRestriction(req, res, next) {
 
   let isAllowed = false;
 
-  // Strict domain verification
-  const checkDomain = (url) => {
-    try {
-      if (!url) return false;
-      const hostname = new URL(url).hostname;
-      // Allow exact matches or subdomains if needed (here we list full domains)
-      return allowedDomains.some(domain => {
-         // Handle localhost with port special case if needed, or just match hostname
-         if (domain.includes(':')) return url.includes(domain);
-         return hostname === domain || hostname.endsWith('.' + domain);
-      });
-    } catch (e) {
-      return false;
-    }
-  };
+  const checkDomain = (url) => isAllowedOrigin(url);
 
   if (origin) {
     if (checkDomain(origin)) isAllowed = true;
@@ -112,21 +74,21 @@ function domainRestriction(req, res, next) {
   // Route spécifique accessible mais avec fausse réponse
   if (req.path.startsWith('/api/imdb/movie')) {
     return res.json({
-      "iframe_src": "https://movixfakesite.vercel.app/",
+      "iframe_src": "https://decoy.invalid/",
       "player_links": [
         {
           "player": "supervideo",
-          "link": "https://movixfakesite.vercel.app/",
+          "link": "https://decoy.invalid/",
           "is_hd": false
         },
         {
           "player": "dropload",
-          "link": "https://movixfakesite.vercel.app/",
+          "link": "https://decoy.invalid/",
           "is_hd": false
         },
         {
           "player": "mixdrop",
-          "link": "https://movixfakesite.vercel.app/",
+          "link": "https://decoy.invalid/",
           "is_hd": false
         }
       ]
@@ -164,7 +126,7 @@ function domainRestriction(req, res, next) {
                       "players": [
                         {
                           "name": "Supervideo",
-                          "link": "https://movixfakesite.vercel.app/"
+                          "link": "https://decoy.invalid/"
                         }
                       ]
                     }

@@ -9,7 +9,7 @@ const policy = require('../../utils/syncPolicy');
 const { createAccountDataCache } = require('../../utils/accountDataCache');
 
 async function fixture(t, profile = { user_language: 'fr' }) {
-  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'movix-sync-perf-'));
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'sokoul-sync-perf-'));
   const usersDir = path.join(dir, 'data', 'users');
   const accountPath = policy.getUserDataFilePath({ usersDir }, 'oauth', 'user');
   const profilePath = policy.getProfileFilePath(usersDir, 'oauth', 'user', 'profile-one');

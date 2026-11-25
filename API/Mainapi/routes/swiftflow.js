@@ -334,7 +334,7 @@ router.get('/tv/:id/season/:season', async (req, res) => {
 // Turnstile, une fois que l'utilisateur a vu la pub côté client.
 //
 // L'URL est servie telle quelle, sans relais : le CDN du partenaire autorise
-// les domaines Movix par `Referer` et le navigateur envoie le bon de lui-même.
+// les domaines Sokoul par `Referer` et le navigateur envoie le bon de lui-même.
 // La faire transiter par un proxy la casserait (mauvais Referer) autant que ça
 // coûterait — ces fichiers pèsent plusieurs gigaoctets.
 

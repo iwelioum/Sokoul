@@ -1,6 +1,6 @@
 # Native extraction runtime
 
-This shared Kotlin JVM module adapts the Movix TV QuickJS bridge from the Movix TV `app-tv/extractor` module (CC BY-NC 4.0, preserved in `LICENSE-MOVIX`). QuickJS Kotlin binding sources and native JNI binaries are pinned to `io.github.dokar3:quickjs-kt:1.0.15`, under the upstream Apache 2.0 license, copied to `LICENSE-QUICKJS-KT`: https://github.com/dokar3/quickjs-kt.
+This shared Kotlin JVM module runs the extraction runtime on QuickJS. Its QuickJS bridge is derived third-party code (CC BY-NC 4.0): see [docs/third-party/README.md](../docs/third-party/README.md). QuickJS Kotlin binding sources and native JNI binaries are pinned to `io.github.dokar3:quickjs-kt:1.0.15`, under the upstream Apache 2.0 license, copied to `LICENSE-QUICKJS-KT`: https://github.com/dokar3/quickjs-kt.
 
 The published Kotlin library requires Kotlin 2.4 metadata while Sokoul uses Kotlin 2.0.21. To retain the existing app toolchain and runtime interruption API, `src/quickjs/kotlin` rebuilds the upstream Maven 1.0.15 source JAR with Sokoul's compiler. The port flattens common/JNI expect/actual declarations into JVM declarations, copies inherited default arguments to the JNI implementation, and replaces Kotlin's newer AtomicBoolean with Java's equivalent. Native method names and JNI contracts remain unchanged. Only `jni/**` resources are extracted from the published JVM JAR; no Kotlin 2.4 classes or transitive standard library enter the app. Android builds separately extract ABI libraries from the same-version AAR and exclude desktop resources from the APK. The Android loader first calls `System.loadLibrary`, which uses the app's packaged JNI libraries.
 
@@ -14,7 +14,7 @@ Source artifacts inspected on 2026-11-15, under `https://repo.maven.apache.org/m
 
 The AAR declares Android API 23 minimum and contains arm64-v8a, armeabi-v7a, x86 and x86_64 native libraries. Sokoul TV's existing API 26 minimum and ARM ABI filters apply.
 
-The build reads `extension/runtime/extractors-core.js` and its dynamic Fsvid/Vidzy helper directly. It generates a private build resource using the local native sandbox instead of WASM. No upstream userscript copy or remote JavaScript download is needed. Canonical algorithms are explicit build inputs.
+The build reads `extraction/runtime/extractors-core.js` and its dynamic Fsvid/Vidzy helper directly. It generates a private build resource using the local native sandbox instead of WASM. No remote JavaScript download is needed. Canonical algorithms are explicit build inputs.
 
 `LocalExtractor.supports(embedUrl)` reads detector patterns generated from the canonical core without starting QuickJS. The eleven-host parity test reads the same Node fixtures as the server extraction tests; this includes SeekStreaming AES, Veev's LZW payload and Dood's secondary request. Additional native fixtures exercise dynamic Fsvid sandbox evaluation, cancellation cleanup and detector aliases.
 

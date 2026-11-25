@@ -36,12 +36,12 @@ Catalogue renders need a TMDB key (see [configuration.md](configuration.md)).
 - With `SOKOUL_MCP=1`, the app's tools are served over MCP (`control/McpServer.kt`).
 - `node tools/tv-perf.mjs` measures frame times on a connected TV.
 
-## Backend and extension
+## Backend and extraction runtime
 
 | Part | Command |
 | --- | --- |
 | Mainapi | `cd API/Mainapi; node --test routes/__tests__ utils/__tests__` (Node test runner); `node --check <file>` for a quick syntax check |
 | API scripts | `node --test API/tests` |
 | proxiesembed | `cd API/proxiesembed; python -m pytest tests` |
-| Extension | `cd extension; npm run test:extractors` |
+| Extraction runtime | `cd extraction; npm test` |
 | Private TV config | `python -m pytest tools/test_prepare_private_tv_config.py` |

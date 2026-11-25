@@ -6,8 +6,7 @@ import com.sokoul.iptv.data.net.TmdbItem
 data class LinkedTitle(val item: TmdbItem, val people: List<String>)
 
 /**
- * What ties a title to others through the people who made it, as Movix's CinéGraph does with its zones, laid out
- * here as rows: the same director with some of the same actors, at least two of the same actors, and the director's
+ * What ties a title to others through the people who made it, laid out as rows: the same director with some of the same actors, at least two of the same actors, and the director's
  * other works. Each title appears in one row only, the strongest link first.
  */
 data class CineLinks(

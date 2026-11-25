@@ -56,7 +56,7 @@ import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 
 /*
- * Screensaver, after Movix TV's: when nobody has touched the app for a while and nothing is playing, the backdrops of
+ * Screensaver: when nobody has touched the app for a while and nothing is playing, the backdrops of
  * the moment pass slowly across the screen. Any key or mouse move brings the app back, and that key does nothing else.
  */
 

@@ -1,5 +1,5 @@
 # The whole local Sokoul backend: MySQL, Redis, Mainapi (25565), proxiesembed (25569), the watch party (25566) and the
-# optional web site (8088, --profile web, built from the Movix reference kept outside the repository, see docs/building.md).
+# optional web site (8088, --profile web, built from the third-party web reference kept outside the repository, see docs/building.md).
 # Settings and secrets come from %LOCALAPPDATA%\SokoulApi\local.env (never committed, never baked into an image).
 #   powershell -ExecutionPolicy Bypass -File API\start-backend.ps1      (does everything below, in order)
 #   docker compose --env-file "$env:LOCALAPPDATA\SokoulApi\local.env" -f API\docker-compose.yml up -d --build
@@ -93,7 +93,7 @@ services:
 
   web:
     profiles: [web]
-    # The Movix web front end, served by its own Hono server (server/index.js). Only public values go into the bundle:
+    # The third-party web front end (see docs/third-party/README.md), served by its own Hono server (server/index.js). Only public values go into the bundle:
     # the addresses of the local services and the TMDB key the site uses in the browser.
     build:
       context: "${SOKOUL_WEB_CONTEXT:-../../Sokoul-reference/Sokoul a adapter}"
@@ -104,7 +104,7 @@ services:
         VITE_PROXIES_EMBED_API: ${PROXIESEMBED_PUBLIC_URL}
         VITE_TMDB_API_KEY: ${TMDB_API_KEY}
         VITE_ANALYTICS_PROVIDER: none
-        # No mirror list, ads or error reporting from Movix's own infrastructure.
+        # No mirror list, ads or error reporting from the upstream project's infrastructure.
         VITE_DEFAULT_MIRRORS: ""
         VITE_MIRRORS_CONFIG_URL: ""
     restart: unless-stopped

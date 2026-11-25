@@ -87,7 +87,7 @@ test('les mesures absentes ne deviennent pas un minimum nul, et un vrai zéro re
 });
 
 test('une heure en analyse finit après 65 minutes et un arrêt pendant la chauffe ne publie aucune mesure', async (t) => {
-  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'movix-probe-analysis-warmup-'));
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'sokoul-probe-analysis-warmup-'));
   t.after(() => fs.rm(directory, { recursive: true, force: true }));
   const cluster = Object.assign(new EventEmitter(), { workers: {} });
   let samples = 0;
@@ -110,7 +110,7 @@ test('une heure en analyse finit après 65 minutes et un arrêt pendant la chauf
 });
 
 test('analyse repart des compteurs après la chauffe, alerte ensuite et finalise automatiquement', { timeout: 5000 }, async (t) => {
-  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'movix-probe-analysis-measure-'));
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'sokoul-probe-analysis-measure-'));
   t.after(() => fs.rm(directory, { recursive: true, force: true }));
   const cluster = Object.assign(new EventEmitter(), { workers: {} });
   let baseline = null, samples = 0;

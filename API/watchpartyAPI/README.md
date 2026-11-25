@@ -1,6 +1,8 @@
 # Watch party service
 
-Real-time rooms for watching together (port 25566), adapted from Movix. One ESM file, `watchparty.js`, combines Express,
+Derived third-party code (CC BY-NC 4.0): see docs/third-party/README.md.
+
+Real-time rooms for watching together (port 25566). One ESM file, `watchparty.js`, combines Express,
 the HTTP server and a Socket.IO namespace. The Sokoul clients are `party/` in the app and `playback/PartyPlayback.kt`.
 
 It handles rooms with an invitation code, play/pause/seek sync (`classic` and `pro` modes), chat, reactions and

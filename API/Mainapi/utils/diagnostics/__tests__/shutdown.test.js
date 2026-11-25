@@ -17,7 +17,7 @@ async function until(predicate) {
   }
 }
 async function fixture(t, options = {}) {
-  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'movix-probe-stop-'));
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'sokoul-probe-stop-'));
   const cluster = Object.assign(new EventEmitter(), { workers: {} });
   const master = createMasterSession(cluster, {
     env: { MAINAPI_PROBE_SECONDS: '3600', MAINAPI_PROBE_DIR: directory },

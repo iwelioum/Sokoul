@@ -14,22 +14,15 @@ const require=createRequire(import.meta.url);
 const native=require(path.join(output,'index.cjs'));
 const source=await readFile(new URL('../runtime/extractors-core.js',import.meta.url),'utf8');
 const silent={log(){},warn(){},error(){}};
-const browserSources=await Promise.all(['Chrome','Firefox'].map(platform=>readFile(new URL(`../${platform}/extractors.js`,import.meta.url),'utf8')));
-const userscript=await readFile(new URL('../../userscript/movix.user.js',import.meta.url),'utf8');
-const userscriptCoreStart=userscript.indexOf(source);
-const userscriptAdapterEnd=userscript.indexOf('  // --- BEGIN extension/Chrome/background.js ---',userscriptCoreStart);
-const userscriptSource=userscript.slice(userscriptCoreStart,userscriptAdapterEnd);
-function browserCore(fetchImpl,script=source) {
+function bareCore(fetchImpl) {
  const context=vm.createContext({fetch:fetchImpl,console:silent,crypto:webcrypto,TextEncoder,TextDecoder,URL,URLSearchParams,AbortController,setTimeout,clearTimeout,atob,btoa});
- vm.runInContext(script,context);
- return context.MovixExtractors || context.MovixExtractionCore.createExtractors(context);
+ vm.runInContext(source,context);
+ return context.SokoulExtractionCore.createExtractors(context);
 }
 for(const fixture of fixtures) {
- test(`${fixture.source}: browser and Node extract the same media and playback headers`,async()=>{
-  for(const script of [...browserSources,userscriptSource]) {
-   const browser=await browserCore(fixtureFetch(fixture),script).extractSingle(fixture.source,fixture.url);
-   assert.equal(browser.success,true);assert.equal(browser.m3u8Url || browser.hlsUrl,fixture.expected);
-  }
+ test(`${fixture.source}: the bare core and the Node worker extract the same media and playback headers`,async()=>{
+  const core=await bareCore(fixtureFetch(fixture)).extractSingle(fixture.source,fixture.url);
+  assert.equal(core.success,true);assert.equal(core.m3u8Url || core.hlsUrl,fixture.expected);
   const requests=[];const result=await native.extract(fixture.url,{fetch:fixtureFetch(fixture,requests)});
   assert.equal(result.success,true,JSON.stringify(result));assert.equal(result.url,fixture.expected);assert.equal(result.source,fixture.source);
   assert.equal(result.format,fixture.expected.includes('.mp4')?'mp4':'hls');
@@ -53,11 +46,6 @@ test('ansembed.net, Anime-Sama\'s current host, uses the Vidmoly extractor',asyn
  assert.equal(native.detectHoster(url),'vidmoly');
  const result=await native.extract(url,{fetch:fixtureFetch({...base,url})});
  assert.equal(result.success,true,JSON.stringify(result));assert.equal(result.url,MEDIA);
-});
-test('browser distributables and generated userscript contain the canonical core',async()=>{
- for(const variant of ['Chrome','Firefox'])assert.ok((await readFile(new URL(`../${variant}/extractors.js`,import.meta.url),'utf8')).startsWith(source));
- const userscript=await readFile(new URL('../../userscript/movix.user.js',import.meta.url),'utf8');
- assert.ok(userscript.includes(source));assert.ok(userscript.includes('const fetch = gmFetch;'));assert.ok(userscript.includes('MovixQuickJS'));
 });
 test('unsupported URLs never open a transport',async()=>{
  let called=false;const result=await native.extract('https://unknown.test/player/1',{fetch:()=>{called=true;}});

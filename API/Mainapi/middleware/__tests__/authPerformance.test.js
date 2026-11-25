@@ -10,7 +10,7 @@ const policy = require('../../utils/syncPolicy');
 const { createAccountDataCache } = require('../../utils/accountDataCache');
 
 async function fixture(t) {
-  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'movix-auth-perf-'));
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'sokoul-auth-perf-'));
   t.after(() => fs.rm(dir, { recursive: true, force: true }));
   const accountPath = path.join(dir, 'user.json');
   await fs.writeFile(accountPath, '{"oauth_provider":"discord","profiles":[]}');

@@ -294,7 +294,7 @@ sealed interface RowSource {
     data class Anime(val query: com.sokoul.pc.data.anime.AniQuery) : RowSource
     data object Ghibli : RowSource
     data object AnimeToday : RowSource
-    /** Recommendations from the profile's history (ported from Movix). */
+    /** Recommendations from the profile's history. */
     data object ForYou : RowSource
 }
 

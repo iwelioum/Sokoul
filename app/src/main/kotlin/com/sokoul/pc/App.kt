@@ -158,7 +158,7 @@ class AppDeps(
     @Volatile var readerReport: com.sokoul.pc.anime.ReaderReport? = null
     /** What the block of a title page found, for the tools. */
     val reminders = com.sokoul.pc.live.Reminders(db)
-    /** Followed titles (Movix alerts): told when a film comes out or a new episode airs. */
+    /** Followed titles (alerts): told when a film comes out or a new episode airs. */
     val alerts = com.sokoul.pc.data.TitleAlerts(db) { profiles.key(com.sokoul.pc.data.TitleAlerts.SETTING) }
 
     /** Raised when a setting that changes what is on screen (menu, home rows, accent) was changed. */

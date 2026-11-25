@@ -22,7 +22,7 @@ data class AlertNews(val alert: TitleAlert, val season: Int?, val episode: Int?)
 }
 
 /**
- * Alerts on titles, after Movix's: a bell on a title page; the app says when the film comes out or when a new episode
+ * Alerts on titles: a bell on a title page; the app says when the film comes out or when a new episode
  * airs. Kept in the settings table, checked at start and every few hours, never more than once per piece of news.
  */
 class TitleAlerts(private val db: DesktopDb, private val key: () -> String = { SETTING }) {

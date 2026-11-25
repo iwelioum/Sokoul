@@ -60,12 +60,12 @@ import com.sokoul.pc.ui.PillButton
 import com.sokoul.pc.ui.tvFocusable
 
 /*
- * Player features brought over from Movix TV (PlayerPanel / PlayerController): picture format, subtitle style,
+ * Player features: picture format, subtitle style,
  * "Are you still watching?" and the coloured passages on the timeline. They follow Sokoul's own look: the same glass
  * panels, rows and pill buttons as the rest of the player.
  */
 
-/** How the picture fills the screen: Movix's Fit / Fill / Stretch. */
+/** How the picture fills the screen: Fit / Fill / Stretch. */
 fun VideoFormat.scale(): ContentScale = when (this) {
     VideoFormat.FIT -> ContentScale.Fit
     VideoFormat.FILL -> ContentScale.Crop
@@ -78,10 +78,10 @@ fun VideoFormat.label(): String = when (this) {
     VideoFormat.STRETCH -> L("Stretch", "Étirer").text()
 }
 
-/** Episodes that may follow one another with nobody touching anything before the player asks (Movix: 3). */
+/** Episodes that may follow one another with nobody touching anything before the player asks. */
 const val STILL_WATCHING_AFTER = 3
 
-/** Colours of the passages on the timeline, those of Movix's site (intro amber, end violet). */
+/** Colours of the passages on the timeline: intro amber, end violet. */
 private val OpeningColor = Color(0xFFFBBF24)
 private val EndingColor = Color(0xFFA78BFA)
 
@@ -191,7 +191,7 @@ internal fun SubtitleStylePanel(prefs: DesktopPrefs, modifier: Modifier = Modifi
         CycleRow(L("Background", "Fond").text(), backgroundLabel(prefs.subtitleBackground), "style-background", remember { FocusRequester() }) { prefs.subtitleBackground = next(SubtitleBackground.entries.toTypedArray(), prefs.subtitleBackground); bump() }
         CycleRow(L("Position", "Position").text(), positionLabel(prefs.subtitlePosition), "style-position", remember { FocusRequester() }) { prefs.subtitlePosition = next(SubtitlePosition.entries.toTypedArray(), prefs.subtitlePosition); bump() }
         CycleRow(L("Font", "Police").text(), prefs.subtitleFont.label(), "style-font", remember { FocusRequester() }) { prefs.subtitleFont = next(SubtitleFont.entries.toTypedArray(), prefs.subtitleFont); bump() }
-        // Translation of the subtitles found online (Movix: auto-translate), into the next language at each OK.
+        // Translation of the subtitles found online (auto-translate), into the next language at each OK.
         if (online != null && online.canTranslate() && online.active != null) {
             val targets = listOf<String?>(null) + com.sokoul.pc.data.providers.GoogleTranslator.TARGETS
             val now = online.translatedTo
@@ -249,7 +249,7 @@ internal fun FormatPanel(current: VideoFormat, onPick: (VideoFormat) -> Unit, mo
     }
 }
 
-/** "Are you still watching?" (from Movix): after several episodes in a row with nobody there, the next one waits for a yes. */
+/** "Are you still watching?": after several episodes in a row with nobody there, the next one waits for a yes. */
 @Composable
 internal fun StillWatchingPrompt(onContinue: () -> Unit, onStop: () -> Unit, requester: FocusRequester, modifier: Modifier = Modifier) {
     LaunchedEffect(Unit) {

@@ -82,7 +82,7 @@ for (const method of ['get', 'post']) {
   });
 }
 
-for (const token of ['invalid-token', 'movix-admin-turnstile-bypass']) {
+for (const token of ['invalid-token', 'sokoul-admin-turnstile-bypass']) {
   test(`refuse le jeton ${token} d'un visiteur`, async () => {
     const f = fixture();
     const res = await f.request({ token });

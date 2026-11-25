@@ -42,7 +42,7 @@ const VALID_SLUGS = new Set([
 const IP_SALT =
   process.env.TURNSTILE_IP_SALT ||
   process.env.JWT_SECRET ||
-  'movix-help-feedback-default-salt';
+  'sokoul-help-feedback-default-salt';
 
 function hashIp(req) {
   const ip =

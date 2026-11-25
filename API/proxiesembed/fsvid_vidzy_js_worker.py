@@ -1,3 +1,4 @@
+# Derived third-party code (CC BY-NC 4.0): see docs/third-party/README.md.
 """One-shot QuickJS worker. It must never import application code."""
 
 from __future__ import annotations
@@ -1386,7 +1387,7 @@ BOOTSTRAP = r"""
   globalThis.importScripts = undefined;
   globalThis.RTCPeerConnection = undefined;
 
-  globalThis.__movixRunPlayerScript = function (source) {
+  globalThis.__sokoulRunPlayerScript = function (source) {
     try {
       nativeEval(String(source));
       return null;
@@ -1395,7 +1396,7 @@ BOOTSTRAP = r"""
     }
   };
   // Fin du chargement : DOMContentLoaded puis load, comme une vraie page.
-  globalThis.__movixFinishLoading = function () {
+  globalThis.__sokoulFinishLoading = function () {
     documentNode.readyState = 'interactive';
     documentNode.dispatchEvent(new FakeEvent('readystatechange'));
     documentNode.dispatchEvent(new FakeEvent('DOMContentLoaded', { bubbles: true }));
@@ -1407,7 +1408,7 @@ BOOTSTRAP = r"""
   };
   // Joue les minuteries en attente (par délai croissant) ; true si au moins
   // une a tourné.
-  globalThis.__movixRunTimers = function () {
+  globalThis.__sokoulRunTimers = function () {
     let ran = false;
     while (timerQueue.length && timerRuns < 256 && candidates.length < 16) {
       timerQueue.sort((left, right) => left.delay - right.delay || left.id - right.id);
@@ -1418,7 +1419,7 @@ BOOTSTRAP = r"""
     }
     return ran;
   };
-  globalThis.__movixCandidatesJson = function () {
+  globalThis.__sokoulCandidatesJson = function () {
     return JSON.stringify(candidates.slice(0, 16));
   };
 })();
@@ -1530,7 +1531,7 @@ def main() -> None:
         )
         if location_patch:
             context.eval(location_patch)
-        run_script = context.get("__movixRunPlayerScript")
+        run_script = context.get("__sokoulRunPlayerScript")
         job_budget = [MAX_PENDING_JOBS]
         runtime_error = None
         for script in scripts:
@@ -1538,15 +1539,15 @@ def main() -> None:
             if error:
                 runtime_error = str(error)
             _drain_pending_jobs(context, job_budget)
-        context.get("__movixFinishLoading")()
+        context.get("__sokoulFinishLoading")()
         _drain_pending_jobs(context, job_budget)
-        run_timers = context.get("__movixRunTimers")
+        run_timers = context.get("__sokoulRunTimers")
         for _ in range(MAX_SETTLE_ROUNDS):
             progressed = bool(run_timers())
             progressed = _drain_pending_jobs(context, job_budget) or progressed
             if not progressed:
                 break
-        candidates_json = context.get("__movixCandidatesJson")()
+        candidates_json = context.get("__sokoulCandidatesJson")()
         candidates = json.loads(candidates_json)
     except Exception as error:
         error_text = str(error).lower()

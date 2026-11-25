@@ -1,5 +1,5 @@
 /**
- * Routes admin pour gérer les applications OAuth Movix.
+ * Routes admin pour gérer les applications OAuth Sokoul.
  * Mount : `app.use('/api/admin/oauth-apps', adminOauthAppsRouter)`.
  *
  * Toutes les routes sont protégées par `isAdmin` (table `admins`).

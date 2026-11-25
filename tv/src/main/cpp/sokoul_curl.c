@@ -9,7 +9,7 @@
 #ifdef __ANDROID__
 #include <android/multinetwork.h>
 #endif
-#define MOVIX_JNI(name) Java_com_sokoul_desktop_player_CurlImpersonate_##name
+#define SOKOUL_JNI(name) Java_com_sokoul_desktop_player_CurlImpersonate_##name
 
 #define BODY_CHUNK_BYTES (64 * 1024)
 
@@ -22,10 +22,10 @@ typedef struct {
     jbyteArray chunk;
     jlong network;
     int java_failed;
-} movix_transfer;
+} sokoul_transfer;
 
 static size_t on_header(char *data, size_t size, size_t count, void *userdata) {
-    movix_transfer *t = userdata;
+    sokoul_transfer *t = userdata;
     JNIEnv *env = t->env;
     size_t length = size * count;
     if (t->java_failed) return 0;
@@ -46,7 +46,7 @@ static size_t on_header(char *data, size_t size, size_t count, void *userdata) {
 }
 
 static size_t on_body(char *data, size_t size, size_t count, void *userdata) {
-    movix_transfer *t = userdata;
+    sokoul_transfer *t = userdata;
     JNIEnv *env = t->env;
     size_t length = size * count;
     size_t offset = 0;
@@ -73,7 +73,7 @@ static int on_progress(void *userdata, curl_off_t dltotal, curl_off_t dlnow,
     (void) dlnow;
     (void) ultotal;
     (void) ulnow;
-    movix_transfer *t = userdata;
+    sokoul_transfer *t = userdata;
     JNIEnv *env = t->env;
     if (t->java_failed) return 1;
     jboolean abort = (*env)->CallBooleanMethod(env, t->callback, t->should_abort);
@@ -85,7 +85,7 @@ static int on_progress(void *userdata, curl_off_t dltotal, curl_off_t dlnow,
 }
 
 static int on_socket(void *userdata, curl_socket_t fd, curlsocktype purpose) {
-    movix_transfer *t = userdata;
+    sokoul_transfer *t = userdata;
 #ifdef __ANDROID__
     if (purpose == CURLSOCKTYPE_IPCXN && t->network != 0 &&
         android_setsocknetwork((net_handle_t) t->network, fd) != 0) {
@@ -131,27 +131,27 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved) {
 }
 
 JNIEXPORT jlong JNICALL
-MOVIX_JNI(nativeCreate)(JNIEnv *env, jclass clazz) {
+SOKOUL_JNI(nativeCreate)(JNIEnv *env, jclass clazz) {
     (void) env;
     (void) clazz;
     return (jlong) (intptr_t) curl_easy_init();
 }
 
 JNIEXPORT void JNICALL
-MOVIX_JNI(nativeDestroy)(JNIEnv *env, jclass clazz, jlong handle) {
+SOKOUL_JNI(nativeDestroy)(JNIEnv *env, jclass clazz, jlong handle) {
     (void) env;
     (void) clazz;
     if (handle != 0) curl_easy_cleanup((CURL *) (intptr_t) handle);
 }
 
 JNIEXPORT jstring JNICALL
-MOVIX_JNI(nativeErrorText)(JNIEnv *env, jclass clazz, jint code) {
+SOKOUL_JNI(nativeErrorText)(JNIEnv *env, jclass clazz, jint code) {
     (void) clazz;
     return (*env)->NewStringUTF(env, curl_easy_strerror((CURLcode) code));
 }
 
 JNIEXPORT jint JNICALL
-MOVIX_JNI(nativePerform)(
+SOKOUL_JNI(nativePerform)(
     JNIEnv *env,
     jclass clazz,
     jlong handle,
@@ -173,7 +173,7 @@ MOVIX_JNI(nativePerform)(
     }
 
     jclass callbackClass = (*env)->GetObjectClass(env, callback);
-    movix_transfer transfer = {
+    sokoul_transfer transfer = {
         .env = env,
         .callback = callback,
         .on_header_line = (*env)->GetMethodID(env, callbackClass, "onHeaderLine", "([B)V"),

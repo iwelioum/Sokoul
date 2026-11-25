@@ -135,10 +135,10 @@ function createStreamedTransport({ pickProxy = async () => null, lookupImpl = lo
         '--connect-timeout', '5', '--max-time', '15',
         '--resolve', `${target.hostname}:443:${family === 6 ? `[${address}]` : address}`,
         '--header', `Referer: ${referer}`, '--header', `Origin: ${new URL(referer).origin}`,
-        '--user-agent', USER_AGENT, '--output', '-', '--write-out', '\nMOVIX_STATUS:%{http_code}\nMOVIX_REDIRECT:%{redirect_url}', '--', target.href,
+        '--user-agent', USER_AGENT, '--output', '-', '--write-out', '\nSOKOUL_STATUS:%{http_code}\nSOKOUL_REDIRECT:%{redirect_url}', '--', target.href,
       ], { encoding: 'buffer', maxBuffer: 32 * 1024 * 1024, timeout: 17000, windowsHide: true }, config);
-      const marker = stdout.lastIndexOf(Buffer.from('\nMOVIX_STATUS:'));
-      const info = marker >= 0 && stdout.subarray(marker).toString('utf8').match(/MOVIX_STATUS:(\d+)\nMOVIX_REDIRECT:(.*)$/s);
+      const marker = stdout.lastIndexOf(Buffer.from('\nSOKOUL_STATUS:'));
+      const info = marker >= 0 && stdout.subarray(marker).toString('utf8').match(/SOKOUL_STATUS:(\d+)\nSOKOUL_REDIRECT:(.*)$/s);
       if (!info) throw new Error('Réponse CDN invalide');
       const status = Number(info[1]);
       if ([301, 302, 303, 307, 308].includes(status) && info[2]) { url = info[2].trim(); continue; }

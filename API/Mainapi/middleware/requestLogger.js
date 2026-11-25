@@ -90,11 +90,11 @@ function triggerDdosAlert(ip, count, country, sampleUa, sampleUrls) {
       { name: 'Endpoints ciblés (échantillon)', value: `\`\`\`\n${truncate(urlsList, 500)}\`\`\``, inline: false },
     ],
     timestamp: new Date().toISOString(),
-    footer: { text: 'Movix Mainapi Security Monitor' },
+    footer: { text: 'Sokoul Mainapi Security Monitor' },
   };
 
   sendDiscordWebhook({
-    username: 'Movix DDoS Guard',
+    username: 'Sokoul DDoS Guard',
     embeds: [embed],
   });
 }
@@ -115,11 +115,11 @@ function flushLogBuffer() {
     color: 0x3498db, // Blue
     description: lines.join('\n').slice(0, 4000),
     timestamp: new Date().toISOString(),
-    footer: { text: 'Movix Mainapi Wiflix Monitor' },
+    footer: { text: 'Sokoul Mainapi Wiflix Monitor' },
   };
 
   sendDiscordWebhook({
-    username: 'Movix Request Logger',
+    username: 'Sokoul Request Logger',
     embeds: [embed],
   });
 }

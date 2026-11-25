@@ -109,7 +109,7 @@ const normalizeAnimeSamaUrls = (data) => {
 
     const replaceUrls = (obj, key = null) => {
     if (typeof obj === 'string') {
-      let cleanedUrl = obj.replace(/https:\/\/proxy\.movix\.(blog|club|site)\/proxy\//gi, '');
+      let cleanedUrl = obj.replace(/https:\/\/proxy\.[a-z0-9-]+\.[a-z]+\/proxy\//gi, '');
       return cleanedUrl.replace(/https?:\/\/anime-sama\.[a-z]+/gi, currentDomain);
     }
     if (Array.isArray(obj)) {

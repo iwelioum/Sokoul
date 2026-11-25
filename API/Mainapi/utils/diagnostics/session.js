@@ -47,7 +47,7 @@ function createWorkerSession(config, options = {}) {
   const snapshotMs = options.snapshotMs || SNAPSHOT_MS;
   const collector = createCollector({ paused: true });
   const restoreHttp = options.instrumentHttp === false ? () => {} : instrumentHttp(collector);
-  const cpu = createCpuSampler({ slot: Number(proc.env.MOVIX_WORKER_SLOT) || 0, rootDir: path.resolve(__dirname, '../..'), ...options.cpuOptions });
+  const cpu = createCpuSampler({ slot: Number(proc.env.SOKOUL_WORKER_SLOT) || 0, rootDir: path.resolve(__dirname, '../..'), ...options.cpuOptions });
   const lag = monitorEventLoopDelay({ resolution: 20 });
   let previousCpu, previousTick, previousElu;
   let previousGroups = new Map();
@@ -87,7 +87,7 @@ function createWorkerSession(config, options = {}) {
     if (!proc.connected || typeof proc.send !== 'function') { collector.warn('ipc_unavailable'); return Promise.resolve(); }
     const points = resources.slice();
     const payload = { type: MESSAGE, action: 'snapshot', runId: config.runId, pid: proc.pid,
-      slot: Number(proc.env.MOVIX_WORKER_SLOT) || 0, at: Date.now(), final,
+      slot: Number(proc.env.SOKOUL_WORKER_SLOT) || 0, at: Date.now(), final,
       metrics: collector.snapshot(), cpuProfile: cpu.snapshot(), resources: points };
     // One outstanding write, cumulative counters: a skipped snapshot never doubles totals.
     inFlight = new Promise((resolve) => {

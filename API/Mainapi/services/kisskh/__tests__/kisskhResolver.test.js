@@ -330,7 +330,7 @@ test('local sensitive cache expires at 600 seconds and evicts above 256 entries'
 });
 
 test('episode and subtitle payloads survive a new cache instance through the disk cache', async (t) => {
-  const cacheDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'movix-kisskh-cache-'));
+  const cacheDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'sokoul-kisskh-cache-'));
   t.after(() => fsp.rm(cacheDir, { recursive: true, force: true }));
   const nowState = { value: 1_000_000 };
   const deps = {
@@ -362,7 +362,7 @@ test('episode and subtitle payloads survive a new cache instance through the dis
 });
 
 test('a resolved TV request survives a new cache instance through the disk cache', async (t) => {
-  const cacheDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'movix-kisskh-resolution-cache-'));
+  const cacheDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'sokoul-kisskh-resolution-cache-'));
   t.after(() => fsp.rm(cacheDir, { recursive: true, force: true }));
   const { createKisskhCache } = require('../kisskhCache');
   const deps = { cacheDir, now: () => 1_000, sensitiveTtlSeconds: 600 };
@@ -381,7 +381,7 @@ test('a resolved TV request survives a new cache instance through the disk cache
 });
 
 test('catalogue snapshot persists atomically, can be read stale, and rejects invalid replacement', async (t) => {
-  const cacheDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'movix-kisskh-catalogue-cache-'));
+  const cacheDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'sokoul-kisskh-catalogue-cache-'));
   t.after(() => fsp.rm(cacheDir, { recursive: true, force: true }));
   const nowState = { value: 1_000 };
   const deps = { cacheDir, now: () => nowState.value };
@@ -423,7 +423,7 @@ test('catalogue retrieval progress is shared through Redis and can be cleared', 
 });
 
 test('catalogue snapshots reuse immutable items until publication, including after disk loading', async (t) => {
-  const cacheDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'movix-kisskh-catalogue-immutable-'));
+  const cacheDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'sokoul-kisskh-catalogue-immutable-'));
   t.after(() => fsp.rm(cacheDir, { recursive: true, force: true }));
   const { createKisskhCache } = require('../kisskhCache');
   const nowState = { value: 1_000 };
@@ -455,7 +455,7 @@ test('catalogue snapshots reuse immutable items until publication, including aft
 });
 
 test('workers reuse a refreshed shared catalogue instead of scraping it again after expiry', async (t) => {
-  const cacheDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'movix-kisskh-catalogue-workers-'));
+  const cacheDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'sokoul-kisskh-catalogue-workers-'));
   t.after(() => fsp.rm(cacheDir, { recursive: true, force: true }));
   const nowState = { value: 1_000 };
   let listCalls = 0;
@@ -478,7 +478,7 @@ test('workers reuse a refreshed shared catalogue instead of scraping it again af
 });
 
 test('concurrent cold catalogue reads share one immutable snapshot', async (t) => {
-  const cacheDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'movix-kisskh-catalogue-concurrent-'));
+  const cacheDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'sokoul-kisskh-catalogue-concurrent-'));
   t.after(() => fsp.rm(cacheDir, { recursive: true, force: true }));
   const { createKisskhCache } = require('../kisskhCache');
   await createKisskhCache({ cacheDir }).setCatalogSnapshot([{ id: 1, title: 'Signal' }]);
@@ -489,7 +489,7 @@ test('concurrent cold catalogue reads share one immutable snapshot', async (t) =
 });
 
 test('a delayed lock acquisition rechecks the catalogue published by the preceding owner', async (t) => {
-  const cacheDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'movix-kisskh-catalogue-lock-race-'));
+  const cacheDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'sokoul-kisskh-catalogue-lock-race-'));
   t.after(() => fsp.rm(cacheDir, { recursive: true, force: true }));
   const nowState = { value: 1_000 };
   let listCalls = 0;
@@ -531,7 +531,7 @@ test('a delayed lock acquisition rechecks the catalogue published by the precedi
 });
 
 test('failed stale catalogue reads are bounded and preserve the valid snapshot and shared file', async (t) => {
-  const cacheDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'movix-kisskh-catalogue-invalid-'));
+  const cacheDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'sokoul-kisskh-catalogue-invalid-'));
   t.after(() => fsp.rm(cacheDir, { recursive: true, force: true }));
   const file = path.join(cacheDir, 'catalog-v1.json');
   let now = 1_000;
@@ -559,7 +559,7 @@ test('failed stale catalogue reads are bounded and preserve the valid snapshot a
 });
 
 test('a local catalogue publication cannot be overwritten by an older disk read already in flight', async (t) => {
-  const cacheDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'movix-kisskh-catalogue-read-race-'));
+  const cacheDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'sokoul-kisskh-catalogue-read-race-'));
   t.after(() => fsp.rm(cacheDir, { recursive: true, force: true }));
   const file = path.join(cacheDir, 'catalog-v1.json');
   const { createKisskhCache } = require('../kisskhCache');
@@ -999,7 +999,7 @@ test('the tmdb-only match key never reuses a season-one drama for a distinct lat
 });
 
 test('TV and movie catalogue caches isolate identical TMDB coordinates on disk and Redis', async (t) => {
-  const cacheDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'movix-kisskh-media-cache-'));
+  const cacheDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'sokoul-kisskh-media-cache-'));
   t.after(() => fsp.rm(cacheDir, { recursive: true, force: true }));
   const redis = createRedisDouble();
   const { createKisskhCache } = require('../kisskhCache');
@@ -1512,7 +1512,7 @@ test('episode zero never replaces a numbered movie episode or a missing TV episo
 });
 
 test('explicit catalogue warm-up builds the complete disk snapshot independently of an episode match', async (t) => {
-  const cacheDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'movix-kisskh-explicit-catalogue-'));
+  const cacheDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'sokoul-kisskh-explicit-catalogue-'));
   t.after(() => fsp.rm(cacheDir, { recursive: true, force: true }));
   const listCalls = [];
   const setup = makeResolver({
@@ -1539,7 +1539,7 @@ test('explicit catalogue warm-up builds the complete disk snapshot independently
 });
 
 test('enhanced discovery builds every catalogue page and treats decimal episodes as bonuses', async (t) => {
-  const cacheDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'movix-kisskh-enhanced-catalogue-'));
+  const cacheDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'sokoul-kisskh-enhanced-catalogue-'));
   t.after(() => fsp.rm(cacheDir, { recursive: true, force: true }));
   const listCalls = [];
   const progressEvents = [];
@@ -1722,7 +1722,7 @@ test('legacy discovery remains selectable without reading or refreshing the cata
 });
 
 test('failed catalogue refresh keeps using the complete stale disk snapshot', async (t) => {
-  const cacheDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'movix-kisskh-stale-catalogue-'));
+  const cacheDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'sokoul-kisskh-stale-catalogue-'));
   t.after(() => fsp.rm(cacheDir, { recursive: true, force: true }));
   const nowState = { value: 1_000 };
   const setup = makeResolver(discoveryFixture({
@@ -1884,7 +1884,7 @@ test('catalogue discovery regularizes decimal bonuses before choosing an absolut
 });
 
 test('hourly partial catalogue refresh merges three recent pages across workers without delaying the 12h full refresh', async (t) => {
-  const cacheDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'movix-kisskh-hourly-catalogue-'));
+  const cacheDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'sokoul-kisskh-hourly-catalogue-'));
   t.after(() => fsp.rm(cacheDir, { recursive: true, force: true }));
   const nowState = { value: 1_000 };
   const calls = [];
@@ -1955,7 +1955,7 @@ test('failed or duplicated partial pages preserve the entire prior catalogue and
 });
 
 test('old catalogue files inherit their last-update date from the full refresh', async (t) => {
-  const cacheDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'movix-kisskh-old-catalogue-'));
+  const cacheDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'sokoul-kisskh-old-catalogue-'));
   t.after(() => fsp.rm(cacheDir, { recursive: true, force: true }));
   await fsp.writeFile(path.join(cacheDir, 'catalog-v1.json'), JSON.stringify({
     version: 1, refreshedAt: 1_000, items: [{ id: 1, title: 'Old catalogue' }],

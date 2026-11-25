@@ -6,7 +6,7 @@ package com.sokoul.desktop.data
 enum class SubtitleSize(val label: String, val vlcRelFontSize: Int) { SMALL("Petite", 20), NORMAL("Normale", 16), LARGE("Grande", 12), HUGE("Très grande", 8) }
 enum class SubtitleColor(val label: String, val vlcColor: Int) { WHITE("Blanc", 0xFFFFFF), YELLOW("Jaune", 0xFFFF00), CYAN("Cyan", 0x22D3EE), GREEN("Vert", 0x4ADE80) }
 
-/** The accent of progress bars (Movix: accent colour). WHITE is Sokoul's own look and the default. */
+/** The accent of progress bars. WHITE is Sokoul's own look and the default. */
 enum class AccentColor(val id: String, val argb: Long, val english: String, val french: String) {
     WHITE("white", 0xFFFFFFFF, "White", "Blanc"),
     RED("red", 0xFFFF453A, "Red", "Rouge"),
@@ -35,7 +35,7 @@ enum class SubtitleFont(val id: String, val english: String, val french: String,
     }
 }
 
-/** How the picture fills the screen (Movix: fit, fill, stretch). */
+/** How the picture fills the screen: fit, fill or stretch. */
 enum class VideoFormat { FIT, FILL, STRETCH }
 enum class SubtitleBackground(val label: String) { OUTLINE("Contour"), BOX("Fond noir"), NONE("Aucun") }
 enum class SubtitlePosition(val label: String, val marginPx: Int) { LOW("En bas", 0), HIGH("Plus haut", 120) }
@@ -208,7 +208,7 @@ class DesktopPrefs(private val db: DesktopDb) {
         get() = SubtitleFont.of(db.setting(K_SUB_FONT))
         set(v) = db.putSetting(K_SUB_FONT, v.id)
 
-    /** Ask who is watching at start, when there is more than one profile (Movix: "Ne plus demander"). */
+    /** Ask who is watching at start, when there is more than one profile ("Ne plus demander" turns it off). */
     var profilePrompt: Boolean
         get() = db.setting(K_PROFILE_PROMPT) != "0"
         set(v) = db.putSetting(K_PROFILE_PROMPT, if (v) "1" else "0")

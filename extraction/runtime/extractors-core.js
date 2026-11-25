@@ -1,6 +1,6 @@
-/* Shared extraction algorithms adapted from the existing Movix Chrome/Firefox/userscript sources.
- * Environment adapters supply transport, crypto, QuickJS and browser capabilities.
- * This is the canonical source; generate distributables with build-extractors.mjs.
+/* Derived third-party code (CC BY-NC 4.0): see docs/third-party/README.md.
+ * Shared extraction algorithms. Environment adapters supply transport, crypto, QuickJS and browser capabilities.
+ * This is the canonical source: the :extractor module and Mainapi build from it.
  */
 (function (root) {
 'use strict';
@@ -9,17 +9,14 @@ function createExtractors(environment) {
     const fetch = environment.fetch;
     const console = environment.console || { log() {}, warn() {}, error() {} };
     const crypto = environment.crypto;
-    const OffscreenCanvas = environment.OffscreenCanvas;
-    const document = environment.document;
     const navigator = environment.navigator;
     const screen = environment.screen;
     const devicePixelRatio = environment.devicePixelRatio;
     const atob = environment.atob || root.atob;
     const btoa = environment.btoa || root.btoa;
 /**
- * Movix Extension - Direct M3U8 Extractors
- * Replaces server.py extraction logic - runs entirely in the extension service worker.
- * No VIP check needed since it runs locally.
+ * Direct M3U8 extractors.
+ * Runs wherever the adapter supplies a transport (QuickJS in the apps, a worker in Mainapi).
  */
 
 // ===== Configuration =====
@@ -658,9 +655,9 @@ async function extractFsvidVidzyM3u8(html, embedUrl, provider) {
         provider,
     );
     if (staticCandidate) return staticCandidate;
-    if (!globalThis.MovixQuickJS?.extractPlayerM3u8) return null;
+    if (!globalThis.SokoulQuickJS?.extractPlayerM3u8) return null;
     try {
-        const dynamicCandidate = await globalThis.MovixQuickJS.extractPlayerM3u8(
+        const dynamicCandidate = await globalThis.SokoulQuickJS.extractPlayerM3u8(
             html,
             embedUrl,
             provider,
@@ -678,11 +675,10 @@ async function extractFsvidVidzyM3u8(html, embedUrl, provider) {
 // navigateur, puis l'ajoute au master ; le CDN la recopie ensuite dans les
 // URLs des variantes et des segments. La clé ne dépend ni de l'IP ni de la
 // vidéo, et les deux hébergeurs partagent la même : une seule sert partout.
-// La porte refuse (`{"ok":0}`) une empreinte sans canvas : faute de canvas
-// (service worker sans OffscreenCanvas, QuickJS), on envoie les largeurs que
-// mesure Chrome sous Windows.
-const FSVID_VIDZY_GATE_TEXT = 'Movix7Qm@Éédoà1l';
-const FSVID_VIDZY_GATE_FALLBACK_WIDTHS = { serif: 159.56, sans: 170.34 };
+// La porte refuse (`{"ok":0}`) une empreinte sans canvas. Aucun environnement
+// de Sokoul (QuickJS, worker Node) n'a de canvas : on envoie les largeurs que
+// mesure Chrome sous Windows pour la sonde de texte du lecteur.
+const FSVID_VIDZY_GATE_WIDTHS = { serif: 159.56, sans: 170.34 };
 const FSVID_VIDZY_GATE_URLS = {
     vidzy: 'https://v6.vidzy.cc/gate.php',
     fsvid: 'https://fsvid.lol/gk',
@@ -692,30 +688,8 @@ const FSVID_VIDZY_GATE_RETRY_AFTER_MS = 60 * 1000;
 let fsvidVidzyGateKey = null;
 let fsvidVidzyGateKeyPromise = null;
 
-function measureFsvidVidzyGateText() {
-    try {
-        const canvas = typeof OffscreenCanvas === 'function'
-            ? new OffscreenCanvas(16, 16)
-            : (typeof document !== 'undefined' ? document.createElement('canvas') : null);
-        const context = canvas?.getContext?.('2d');
-        if (context) {
-            const measure = (font) => {
-                context.textBaseline = 'top';
-                context.font = font;
-                return Math.round(context.measureText(FSVID_VIDZY_GATE_TEXT).width * 100) / 100;
-            };
-            const serif = measure('18px serif');
-            const sans = measure('18px sans-serif');
-            if (Number.isFinite(serif) && Number.isFinite(sans) && serif > 0 && sans > 0) {
-                return { serif, sans };
-            }
-        }
-    } catch {}
-    return FSVID_VIDZY_GATE_FALLBACK_WIDTHS;
-}
-
 function buildFsvidVidzyGateQuery() {
-    const { serif, sans } = measureFsvidVidzyGateText();
+    const { serif, sans } = FSVID_VIDZY_GATE_WIDTHS;
     const nav = typeof navigator !== 'undefined' ? navigator : {};
     const scr = typeof screen !== 'undefined' ? screen : {};
     const dpr = typeof devicePixelRatio === 'number' && devicePixelRatio > 0 ? devicePixelRatio : 1;
@@ -831,7 +805,7 @@ function extractUqloadMediaUrl(html) {
 }
 
 // Code ISO 639-1 déduit du libellé jwplayer ou du suffixe du fichier
-// (`abc_fre.vtt`), pour que le lecteur Movix range la piste dans la bonne langue.
+// (`abc_fre.vtt`), pour que le lecteur range la piste dans la bonne langue.
 const UQLOAD_SUBTITLE_LANGS = [
     ['fr', /\b(?:fr|fra|fre|french|fran[cç]ais|vf|vostfr)\b/i],
     ['en', /\b(?:en|eng|english|anglais)\b/i],
@@ -903,8 +877,8 @@ function extractUqloadSubtitles(html, pageUrl) {
 }
 
 /**
- * Télécharge le texte des sous-titres ici, avec le Referer Uqload : le site
- * Movix ne peut pas les lire lui-même (pas d'en-têtes CORS chez Uqload).
+ * Télécharge le texte des sous-titres ici, avec le Referer Uqload : un lecteur
+ * web ne peut pas les lire lui-même (pas d'en-têtes CORS chez Uqload).
  * Une piste qui échoue garde son URL seule, le lecteur tentera sa chance.
  */
 async function fetchUqloadSubtitleContents(subtitles, headers) {
@@ -2445,5 +2419,5 @@ return {
 }
 const core = Object.freeze({ createExtractors });
 if (typeof module !== 'undefined' && module.exports) module.exports = core;
-else root.MovixExtractionCore = core;
+else root.SokoulExtractionCore = core;
 })(globalThis);

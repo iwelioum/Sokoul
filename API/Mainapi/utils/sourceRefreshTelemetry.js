@@ -119,7 +119,7 @@ async function sendFailure(report, redis, key) {
       `${stage} (${elapsedMs} ms) — ${Object.entries(values).map(([name, value]) => `${name}=${formatValue(value)}`).join(' ; ')}`);
     const unavailable = ['content_not_found', 'requested_episode_missing', 'stream_not_found'].includes(report.reason);
     await axios.post(webhookUrl, {
-      username: 'Movix Sources Monitor',
+      username: 'Sokoul Sources Monitor',
       allowed_mentions: { parse: [] },
       embeds: [{
         title: `${report.source} : ${unavailable ? 'disponibilité du contenu' : 'actualisation à vérifier'}`,

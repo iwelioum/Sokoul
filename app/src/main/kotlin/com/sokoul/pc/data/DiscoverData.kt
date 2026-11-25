@@ -29,7 +29,7 @@ class DiscoverData(private val db: DesktopDb, private val catalog: Catalog) {
             rows.sumOf { (if (it.finished && it.durationMs > 0) it.durationMs else it.positionMs) / 1000 }
         }
 
-    /** Ported from Movix: taste profile from the history, then TMDB candidates scored against it. */
+    /** Taste profile from the history, then TMDB candidates scored against it. */
     suspend fun forYou(): List<TmdbItem> = coroutineScope {
         forYouCache[Unit]?.takeIf { System.currentTimeMillis() - it.first < 12 * HOUR }?.let { return@coroutineScope it.second }
         val k = catalog.key()
@@ -86,7 +86,7 @@ class DiscoverData(private val db: DesktopDb, private val catalog: Catalog) {
         episodeReleases + filmReleases
     }
 
-    /** The year in review of the history (ported from Movix): genres of the 40 most watched titles from TMDB. */
+    /** The year in review of the history: genres of the 40 most watched titles from TMDB. */
     suspend fun review(year: Int): com.sokoul.iptv.discovery.YearSummary? = coroutineScope {
         val k = catalog.key()
         val history = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { db.history(5000) }

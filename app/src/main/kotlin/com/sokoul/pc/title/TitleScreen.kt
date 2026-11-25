@@ -751,7 +751,7 @@ private fun HeroText(
                         if (it) onOtherButton()
                     },
                 )
-                // Alerts (from Movix): told when the film comes out or a new episode airs.
+                // Alerts: told when the film comes out or a new episode airs.
                 val alertKind = item.mediaType ?: kind
                 val following = deps.alerts.contains(alertKind, item.id)
                 val alertScope = androidx.compose.runtime.rememberCoroutineScope()
@@ -834,7 +834,7 @@ private fun Sections(
         }
     }
     val similar by produceState(emptyList<TmdbItem>(), item.kind(), item.id) { value = deps.catalog.similar(item.kind(), item.id) }
-    // Links through the people who made it (Movix's CinéGraph, as rows): asked once the details name them.
+    // Links through the people who made it, as rows: asked once the details name them.
     val links by produceState<com.sokoul.pc.data.CineLinks?>(null, item.kind(), item.id, info?.directorId, info?.cast?.size) {
         value = null
         val i = info ?: return@produceState

@@ -3,7 +3,7 @@ function isNorthliveRefreshOwner(env = process.env) {
   // catalogue. Cluster workers receive an explicit role from the primary.
   if (env.NORTHLIVE_REFRESH_OWNER === '1') return true;
   if (env.NORTHLIVE_REFRESH_OWNER === '0') return false;
-  return env.MOVIX_WORKER_SLOT === undefined;
+  return env.SOKOUL_WORKER_SLOT === undefined;
 }
 
 function createWorkerSlotManager(workerCount) {
@@ -14,7 +14,7 @@ function createWorkerSlotManager(workerCount) {
     environmentFor(slot) {
       const stableSlot = Math.max(0, Math.min(count - 1, Number(slot) || 0));
       return {
-        MOVIX_WORKER_SLOT: String(stableSlot),
+        SOKOUL_WORKER_SLOT: String(stableSlot),
         NORTHLIVE_REFRESH_OWNER: stableSlot === 0 ? '1' : '0',
       };
     },

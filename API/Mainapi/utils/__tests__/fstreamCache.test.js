@@ -43,7 +43,7 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const playable = (url) => ({ success: true, total: 1, players: { VF: [{ url }] } });
 const drainRepairs = (...stores) => Promise.all(stores.flatMap(store => [...store.repairs.values()]));
 async function fixture(t, options = {}) {
-  const cacheDir = await fs.mkdtemp(path.join(os.tmpdir(), 'movix-fstream-regression-'));
+  const cacheDir = await fs.mkdtemp(path.join(os.tmpdir(), 'sokoul-fstream-regression-'));
   const stores = [];
   t.after(async () => {
     await drainRepairs(...stores);
@@ -363,7 +363,7 @@ test('business responses expire, remain byte bounded and obey purge generations'
 });
 
 test('FStream cache reads a fresh Redis value without scraping', async () => {
-  const cacheDir = await fs.mkdtemp(path.join(os.tmpdir(), 'movix-fstream-cache-'));
+  const cacheDir = await fs.mkdtemp(path.join(os.tmpdir(), 'sokoul-fstream-cache-'));
   const redis = createRedis();
   const store = createFStreamCacheStore({ cacheDir, redis, refreshMs: 40 * 60 * 1000 });
   const payload = { success: true, players: { VF: [{ url: 'https://player.example' }] }, total: 1 };
@@ -387,7 +387,7 @@ test('FStream cache reads a fresh Redis value without scraping', async () => {
 });
 
 test('FStream cache falls back to fresh JSON when Redis has no value at startup', async () => {
-  const cacheDir = await fs.mkdtemp(path.join(os.tmpdir(), 'movix-fstream-disk-'));
+  const cacheDir = await fs.mkdtemp(path.join(os.tmpdir(), 'sokoul-fstream-disk-'));
   const redis = createRedis();
   const payload = { success: true, players: { VF: [{ url: 'https://disk.example' }] }, total: 1 };
   let scrapes = 0;
@@ -413,7 +413,7 @@ test('FStream cache falls back to fresh JSON when Redis has no value at startup'
 });
 
 test('FStream cache refreshes a stale entry once and writes JSON plus Redis', async () => {
-  const cacheDir = await fs.mkdtemp(path.join(os.tmpdir(), 'movix-fstream-refresh-'));
+  const cacheDir = await fs.mkdtemp(path.join(os.tmpdir(), 'sokoul-fstream-refresh-'));
   const redis = createRedis();
   const store = createFStreamCacheStore({ cacheDir, redis, refreshMs: 1 });
   let scrapes = 0;
@@ -439,7 +439,7 @@ test('FStream cache refreshes a stale entry once and writes JSON plus Redis', as
 });
 
 test('FStream cache serializes two workers and preserves playable data after a failed refresh', async () => {
-  const cacheDir = await fs.mkdtemp(path.join(os.tmpdir(), 'movix-fstream-workers-'));
+  const cacheDir = await fs.mkdtemp(path.join(os.tmpdir(), 'sokoul-fstream-workers-'));
   const redis = createRedis();
   const one = createFStreamCacheStore({ cacheDir, redis, refreshMs: 1, lockTtlMs: 1000, lockWaitMs: 1000 });
   const two = createFStreamCacheStore({ cacheDir, redis, refreshMs: 1, lockTtlMs: 1000, lockWaitMs: 1000 });
@@ -472,7 +472,7 @@ test('FStream cache serializes two workers and preserves playable data after a f
 });
 
 test('FStream cache invalidation clears local, Redis and disk entries', async () => {
-  const cacheDir = await fs.mkdtemp(path.join(os.tmpdir(), 'movix-fstream-invalidate-'));
+  const cacheDir = await fs.mkdtemp(path.join(os.tmpdir(), 'sokoul-fstream-invalidate-'));
   const redis = createRedis();
   const store = createFStreamCacheStore({ cacheDir, redis });
 
@@ -489,7 +489,7 @@ test('FStream cache invalidation clears local, Redis and disk entries', async ()
 });
 
 test('FStream local cache remains bounded for frequent keys', async () => {
-  const cacheDir = await fs.mkdtemp(path.join(os.tmpdir(), 'movix-fstream-local-'));
+  const cacheDir = await fs.mkdtemp(path.join(os.tmpdir(), 'sokoul-fstream-local-'));
   const store = createFStreamCacheStore({ cacheDir, redis: createRedis(), localLimit: 2 });
   const payload = { success: true, players: { VF: [{ url: 'https://player.example' }] }, total: 1 };
 

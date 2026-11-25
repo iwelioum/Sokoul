@@ -673,7 +673,7 @@ const appReady = (async () => {
       app.use("/api/top10", top10Router);
       console.log("Top 10 routes initialized successfully");
 
-      // Initialize Wrapped routes (Movix Wrapped 2026 data collection)
+      // Initialize Wrapped routes (Sokoul Wrapped 2026 data collection)
       const {
         router: wrappedRouter,
         initWrappedRoutes,

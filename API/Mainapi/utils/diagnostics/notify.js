@@ -60,7 +60,7 @@ async function gzipReport(jsonFile, outputFile, maxBytes, { signal } = {}) {
   }
 }
 function multipartBody(payload, files) {
-  const boundary = `----movix-probe-${Math.random().toString(16).slice(2)}`;
+  const boundary = `----sokoul-probe-${Math.random().toString(16).slice(2)}`;
   const pieces = [];
   const add = (value) => pieces.push(Buffer.isBuffer(value) ? value : Buffer.from(value));
   add(`--${boundary}\r\nContent-Disposition: form-data; name="payload_json"\r\nContent-Type: application/json\r\n\r\n`);

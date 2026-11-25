@@ -355,7 +355,7 @@ class WebSources(
         const val SOURCE_MS = 20_000L
         const val WEB_RIP_RANK = 3
         /**
-         * The CDN of PurStream refuses a request without the site as Referer (Movix sends the same header). The source
+         * The CDN of PurStream refuses a request without the site as Referer. The source
          * gives the site of the day; this one is only for an answer without it.
          */
         val REFERRERS = mapOf("PurStream" to "https://purstream.gg/")

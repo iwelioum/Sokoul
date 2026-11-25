@@ -132,7 +132,7 @@ test('une lecture ancienne ne remplace pas le catalogue que le propriétaire vie
 });
 
 test('la publication atomique garde le fichier complet précédent si elle échoue avant remplacement', async (t) => {
-  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'movix-northlive-'));
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'sokoul-northlive-'));
   t.after(() => fs.rm(directory, { recursive: true, force: true }));
   const file = path.join(directory, 'catalog.json');
   await fs.writeFile(file, JSON.stringify([{ id: 'northlive_old' }]), 'utf8');

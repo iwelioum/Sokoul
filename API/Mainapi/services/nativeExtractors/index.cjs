@@ -1,4 +1,4 @@
-// Node environment adapter for the shared browser/userscript extraction algorithms.
+// Node environment adapter for the shared extraction algorithms (extraction/runtime).
 'use strict';
 const path = require('node:path');
 const { Worker } = require('node:worker_threads');

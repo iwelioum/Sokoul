@@ -79,7 +79,7 @@ fun ProfileAvatar(p: Profile, size: androidx.compose.ui.unit.Dp, modifier: Modif
 }
 
 /**
- * "Who is watching?", after Movix's profile picker: the profiles in a row, then Add and Edit. Editing turns the row
+ * "Who is watching?", the profile picker: the profiles in a row, then Add and Edit. Editing turns the row
  * into a form for the chosen one (name, kids, colour, delete).
  */
 @Composable

@@ -385,7 +385,7 @@ test('Cpasmal keeps playable cached links when a background refresh is empty', a
   const redisPath = path.join(__dirname, '..', '..', 'config', 'redis.js');
   const tmdbCachePath = path.join(__dirname, '..', '..', 'utils', 'tmdbCache.js');
   const redisLockPath = path.join(__dirname, '..', '..', 'utils', 'redisLock.js');
-  const cacheDir = await fs.mkdtemp(path.join(os.tmpdir(), 'movix-cpasmal-cache-'));
+  const cacheDir = await fs.mkdtemp(path.join(os.tmpdir(), 'sokoul-cpasmal-cache-'));
   const cacheKey = 'movie_42';
   const cacheFile = path.join(cacheDir, `${cacheKey}.json`);
   const cached = {
@@ -471,7 +471,7 @@ test('Cpasmal cannot overwrite a concurrently refreshed playable cache with an o
   const redisPath = path.join(__dirname, '..', '..', 'config', 'redis.js');
   const tmdbCachePath = path.join(__dirname, '..', '..', 'utils', 'tmdbCache.js');
   const redisLockPath = path.join(__dirname, '..', '..', 'utils', 'redisLock.js');
-  const cacheDir = await fs.mkdtemp(path.join(os.tmpdir(), 'movix-cpasmal-race-'));
+  const cacheDir = await fs.mkdtemp(path.join(os.tmpdir(), 'sokoul-cpasmal-race-'));
   const cacheKey = 'movie_42';
   const cacheFile = path.join(cacheDir, `${cacheKey}.json`);
   const playable = {
@@ -557,7 +557,7 @@ test('Cpasmal cannot overwrite a concurrently refreshed playable cache with an o
 
 async function createFStreamBusinessHarness(t, type) {
   const { createFStreamCacheStore } = require('../../utils/fstreamCache');
-  const cacheDir = await fs.mkdtemp(path.join(os.tmpdir(), 'movix-fstream-business-'));
+  const cacheDir = await fs.mkdtemp(path.join(os.tmpdir(), 'sokoul-fstream-business-'));
   const store = createFStreamCacheStore({ cacheDir, redis: null, refreshMs: 1, retryMs: 10000 });
   const routePath = path.join(ROUTES_DIR, 'fstream.js');
   const utilsDir = path.join(__dirname, '..', '..', 'utils');
@@ -680,7 +680,7 @@ for (const { id, season, title, originalTitle, year, pageId } of [
 ]) {
   test(`FStream conserve et publie la fiche originale de ${title} S${season}`, async (t) => {
     const { createFStreamCacheStore } = require('../../utils/fstreamCache');
-    const cacheDir = await fs.mkdtemp(path.join(os.tmpdir(), 'movix-fstream-titles-'));
+    const cacheDir = await fs.mkdtemp(path.join(os.tmpdir(), 'sokoul-fstream-titles-'));
     const store = createFStreamCacheStore({ cacheDir, redis: null });
     const key = `tv_${id}_s${season}`;
     const routePath = path.join(ROUTES_DIR, 'fstream.js');
@@ -781,7 +781,7 @@ for (const { id, season, title, originalTitle, year, pageId } of [
 
 test('FStream route rejects fresh incompatible titles/seasons and never falls back to them on error', async (t) => {
   const { createFStreamCacheStore } = require('../../utils/fstreamCache');
-  const cacheDir = await fs.mkdtemp(path.join(os.tmpdir(), 'movix-fstream-selection-'));
+  const cacheDir = await fs.mkdtemp(path.join(os.tmpdir(), 'sokoul-fstream-selection-'));
   const store = createFStreamCacheStore({ cacheDir, redis: null });
   let tmdbFails = false;
   const routePath = path.join(ROUTES_DIR, 'fstream.js');

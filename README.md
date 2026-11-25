@@ -3,8 +3,8 @@
 A media centre for films, series, anime and live TV, with an Apple TV look. One Kotlin codebase runs on:
 
 - **Windows PC** — Compose Desktop, playback through libVLC, mouse, keyboard and remote;
-- **Android TV and phones** — the same screens with Media3; D-pad focus on TV, touch on phones (bottom tabs upright,
-  full-screen landscape player).
+- **Android TV and phones** — the same screens with Media3; D-pad focus on TV, touch on phones (all navigation in the top menu
+  behind the avatar, full-screen landscape player).
 
 Optional services in [`API/`](API/README.md) add accounts, server-side sources, a signed media proxy and watch parties.
 
@@ -51,7 +51,7 @@ Keys (TMDB, Real-Debrid…) are never in the repository: type them in **Settings
 | Document | Content |
 | --- | --- |
 | [Architecture](docs/architecture.md) | Modules, PC/Android split, form factors, packages, playback flow |
-| [Building and running](docs/building.md) | PC, TV and phone (Wi-Fi ADB), backend, extension |
+| [Building and running](docs/building.md) | PC, TV and phone (Wi-Fi ADB), backend, extraction runtime |
 | [Configuration](docs/configuration.md) | Keys, environment variables, secrets policy |
 | [Data](docs/data.md) | Where the apps and the backend store data |
 | [Testing](docs/testing.md) | Unit tests, screen renders, live checks |
@@ -61,10 +61,8 @@ Keys (TMDB, Real-Debrid…) are never in the repository: type them in **Settings
 | [Third-party](docs/third-party/README.md) | Licences and attributions |
 
 Module notes: [parser](parser/README.md), [core](core/README.md), [extractor](extractor/README.md),
-[app](app/README.md), [tv](tv/README.md), [API](API/README.md), [extension](extension/README.md),
-[userscript](userscript/README.md).
+[app](app/README.md), [tv](tv/README.md), [API](API/README.md), [extraction](extraction/README.md).
 
 ## Licence
 
-Sokoul includes code adapted from Movix, licensed CC BY-NC 4.0 ([docs/third-party](docs/third-party/README.md)): it may
-not be used commercially.
+Third-party code and its licences (some of it CC BY-NC 4.0, not for commercial use): see [docs/third-party](docs/third-party/README.md).

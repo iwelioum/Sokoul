@@ -25,14 +25,14 @@
       if (signal) signal.addEventListener('abort', abort, { once: true });
     });
   };
-  G.MovixExtractors = G.MovixExtractionCore.createExtractors(G);
-  G.movixExtractM3u8 = async function (_, url) {
-    var source = G.MovixExtractors.detectEmbedType(url);
+  G.SokoulExtractors = G.SokoulExtractionCore.createExtractors(G);
+  G.sokoulExtractM3u8 = async function (_, url) {
+    var source = G.SokoulExtractors.detectEmbedType(url);
     if (!source) return { success: false, error: 'unsupported_host' };
-    var result = await G.MovixExtractors.extractSingle(source, url);
+    var result = await G.SokoulExtractors.extractSingle(source, url);
     var media = result.m3u8Url || result.hlsUrl || result.url;
     if (!result.success || !media) return { success: false, error: 'no_media' };
-    var rule = await G.MovixExtractors.setupHeadersForService(source, media, result.referer || url);
+    var rule = await G.SokoulExtractors.setupHeadersForService(source, media, result.referer || url);
     result.headers = Object.assign({}, rule && rule.headers);
     if (result.referer) result.headers.Referer = result.referer;
     if (result.origin) result.headers.Origin = result.origin;

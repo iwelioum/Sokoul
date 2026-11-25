@@ -1,8 +1,9 @@
+// Derived third-party code (CC BY-NC 4.0): see docs/third-party/README.md.
 (function () {
   "use strict";
   var G = globalThis;
-  var u8 = G.__movixU8;
-  var toBuffer = G.__movixToBuffer;
+  var u8 = G.__sokoulU8;
+  var toBuffer = G.__sokoulToBuffer;
   var requests = new Map();
   var requestSeq = 0;
 
@@ -32,7 +33,7 @@
     };
   }
 
-  G.__movixOnResponse = function (id) {
+  G.__sokoulOnResponse = function (id) {
     var d = requests.get(id);
     if (!d) { __n_dropResponse(id); return; }
     requests.delete(id);
@@ -73,7 +74,7 @@
   G.GM_setValue = function (k, v) { store.set(k, v); };
   G.GM_deleteValue = function (k) { store.delete(k); };
   G.GM_listValues = function () { return Array.from(store.keys()); };
-  G.GM_info = { script: { name: "Movix", version: "tv" }, scriptHandler: "MovixTV", version: "1" };
+  G.GM_info = { script: { name: "Sokoul", version: "tv" }, scriptHandler: "Sokoul", version: "1" };
   G.GM = {
     xmlHttpRequest: GM_xmlhttpRequest,
     getValue: function (k, f) { return Promise.resolve(G.GM_getValue(k, f)); },
@@ -102,21 +103,21 @@
   Runtime.prototype.setInterruptHandler = function (deadline) { this._deadline = typeof deadline === "number" ? deadline : 0; };
   Runtime.prototype.newContext = function () { return new Context(this); };
   Runtime.prototype.dispose = function () {};
-  G.__movixNativeQJS = {
+  G.__sokoulNativeQJS = {
     getQuickJS: function () { return Promise.resolve({ newRuntime: function () { return new Runtime(); } }); },
     shouldInterruptAfterDeadline: function (deadline) { return Number(deadline) || 0; },
   };
-  G.__movixExtract = function (id, url) {
+  G.__sokoulExtract = function (id, url) {
     Promise.resolve()
       .then(function () {
-        if (typeof G.movixExtractM3u8 !== "function") throw new Error("Userscript non chargé");
-        return G.movixExtractM3u8(null, url);
+        if (typeof G.sokoulExtractM3u8 !== "function") throw new Error("Userscript non chargé");
+        return G.sokoulExtractM3u8(null, url);
       })
       .then(function (r) {
         var prep = r && r.headers ? { url: r.url || r.hlsUrl || r.m3u8Url, headers: r.headers } : null;
         var stream = r && r.success !== false ? r.url || r.hlsUrl || r.m3u8Url || (r.hlsCandidates && r.hlsCandidates[0] && r.hlsCandidates[0].url) : null;
-        if (!prep && stream && typeof G.__MOVIX_PREPARE_CAST_SOURCE__ === "function") {
-          try { prep = G.__MOVIX_PREPARE_CAST_SOURCE__({ type: "CAST_PREPARE_SOURCE", url: stream }); } catch (e) { prep = null; }
+        if (!prep && stream && typeof G.__SOKOUL_PREPARE_CAST_SOURCE__ === "function") {
+          try { prep = G.__SOKOUL_PREPARE_CAST_SOURCE__({ type: "CAST_PREPARE_SOURCE", url: stream }); } catch (e) { prep = null; }
         }
         __n_extractDone(id, JSON.stringify({ result: r || null, stream: stream || null, prepared: prep }));
       })

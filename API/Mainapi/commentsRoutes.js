@@ -23,7 +23,7 @@ const webpush = require("web-push");
 const VAPID_CONFIGURED = !!(process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY);
 if (VAPID_CONFIGURED) {
   webpush.setVapidDetails(
-    process.env.VAPID_SUBJECT || "mailto:contact@movix.blog",
+    process.env.VAPID_SUBJECT || "mailto:owner@sokoul.invalid",
     process.env.VAPID_PUBLIC_KEY,
     process.env.VAPID_PRIVATE_KEY
   );
@@ -263,7 +263,7 @@ flagged doit être un booléen. Si flagged=false, reason doit être null. Si fla
           "Content-Type": "application/json",
           Authorization: `Bearer ${OPENROUTER_API_KEY}`,
           "HTTP-Referer": FRONTEND_BASE_URL,
-          "X-Title": "Movix Comment Moderation",
+          "X-Title": "Sokoul Comment Moderation",
         },
         timeout: 30000,
       },
@@ -735,9 +735,9 @@ async function sendPushToUser(userId, userType, payload) {
           : "/";
         pushPayload = {
           ...payload,
-          title: `${payload.title || "Movix"} · ${siteUrl.host}`,
-          icon: new URL(payload.icon || "/movix.png", siteUrl.origin).href,
-          badge: new URL("/movix.png", siteUrl.origin).href,
+          title: `${payload.title || "Sokoul"} · ${siteUrl.host}`,
+          icon: new URL(payload.icon || "/sokoul.png", siteUrl.origin).href,
+          badge: new URL("/sokoul.png", siteUrl.origin).href,
           data: { ...payload.data, url: new URL(pathname, siteUrl.origin).href },
         };
       }
@@ -816,9 +816,9 @@ async function createNotification(
       report_dismissed: `Votre signalement a été rejeté`,
     };
     sendPushToUser(toUserId, toUserType, {
-      title: "Movix",
+      title: "Sokoul",
       body: pushMessages[notificationType] || "Nouvelle notification",
-      icon: "/movix.png",
+      icon: "/sokoul.png",
       data: { contentType, contentId, notificationType },
     });
   } catch (error) {

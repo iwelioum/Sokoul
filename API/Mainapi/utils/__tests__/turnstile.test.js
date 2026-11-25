@@ -31,7 +31,7 @@ function load(env, { admin = false } = {}) {
 const ENV = {
   TURNSTILE_SECRET_KEY: 'secret-1',
   TURNSTILE_INVISIBLE_SECRETKEY: 'invisible-1',
-  TURNSTILE_DOMAINS_2: 'movix.new, https://Other.Mirror/',
+  TURNSTILE_DOMAINS_2: 'sokoul.example, https://Other.Mirror/',
   TURNSTILE_SECRET_KEY_2: 'secret-2',
   TURNSTILE_INVISIBLE_SECRETKEY_2: 'invisible-2',
 };
@@ -40,7 +40,7 @@ const from = (origin) => ({ headers: origin ? { origin } : {}, ip: '192.0.2.1' }
 
 test('le groupe 1 sert les domaines qu\'aucun groupe ne revendique', () => {
   const { turnstile } = load(ENV);
-  for (const origin of ['https://movix.site', 'https://notmovix.new', 'null', undefined]) {
+  for (const origin of ['https://sokoul-other.example', 'https://notsokoul.example', 'null', undefined]) {
     assert.equal(turnstile.turnstileSecretFor(from(origin)), 'secret-1');
     assert.equal(turnstile.turnstileSecretFor(from(origin), 'invisible'), 'invisible-1');
   }
@@ -48,7 +48,7 @@ test('le groupe 1 sert les domaines qu\'aucun groupe ne revendique', () => {
 
 test('un domaine listé et ses sous-domaines prennent les clés de leur groupe', () => {
   const { turnstile } = load(ENV);
-  for (const origin of ['https://movix.new', 'https://www.movix.new', 'https://other.mirror:8443']) {
+  for (const origin of ['https://sokoul.example', 'https://www.sokoul.example', 'https://other.mirror:8443']) {
     assert.equal(turnstile.turnstileSecretFor(from(origin)), 'secret-2');
     assert.equal(turnstile.turnstileSecretFor(from(origin), 'invisible'), 'invisible-2');
   }
@@ -56,7 +56,7 @@ test('un domaine listé et ses sous-domaines prennent les clés de leur groupe',
 
 test('le Referer prend le relais quand l\'Origin manque', () => {
   const { turnstile } = load(ENV);
-  const req = { headers: { referer: 'https://movix.new/watch/42' } };
+  const req = { headers: { referer: 'https://sokoul.example/watch/42' } };
   assert.equal(turnstile.turnstileSecretFor(req), 'secret-2');
 });
 
@@ -80,28 +80,28 @@ test('les groupes au-delà de 10 sont ignorés', () => {
 test('verifyTurnstileFromRequest vérifie avec la clé du groupe et du type de widget', async () => {
   const { turnstile, checks } = load(ENV);
   // Objets du contexte vm : on les recopie pour comparer sans leur prototype.
-  const result = await turnstile.verifyTurnstileFromRequest(from('https://movix.new'), 'valid-token', 'invisible');
+  const result = await turnstile.verifyTurnstileFromRequest(from('https://sokoul.example'), 'valid-token', 'invisible');
   assert.deepEqual({ ...result }, { valid: true });
   assert.equal(checks[0].secret, 'invisible-2');
 
-  const refused = await turnstile.verifyTurnstileFromRequest(from('https://movix.new'), 'wrong-token');
+  const refused = await turnstile.verifyTurnstileFromRequest(from('https://sokoul.example'), 'wrong-token');
   assert.equal(refused.status, 403);
   assert.equal(checks[1].secret, 'secret-2');
 });
 
 test('sans clé au groupe 1, la vérification reste désactivée même avec d\'autres groupes', async () => {
   const { turnstile, checks } = load({
-    TURNSTILE_DOMAINS_2: 'movix.new',
+    TURNSTILE_DOMAINS_2: 'sokoul.example',
     TURNSTILE_SECRET_KEY_2: 'secret-2',
     TURNSTILE_INVISIBLE_SECRETKEY_2: 'invisible-2',
   });
-  assert.deepEqual({ ...await turnstile.verifyTurnstileFromRequest(from('https://movix.new'), undefined) }, { valid: true });
+  assert.deepEqual({ ...await turnstile.verifyTurnstileFromRequest(from('https://sokoul.example'), undefined) }, { valid: true });
   assert.equal(checks.length, 0);
 });
 
 test('la dispense admin s\'applique aussi aux autres groupes', async () => {
   const { turnstile, checks } = load(ENV, { admin: true });
-  const result = await turnstile.verifyTurnstileFromRequest(from('https://movix.new'), undefined, 'invisible');
+  const result = await turnstile.verifyTurnstileFromRequest(from('https://sokoul.example'), undefined, 'invisible');
   assert.deepEqual({ ...result }, { valid: true, bypassed: true });
   assert.equal(checks.length, 0);
 });

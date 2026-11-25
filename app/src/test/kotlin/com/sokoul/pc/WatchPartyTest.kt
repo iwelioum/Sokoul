@@ -54,7 +54,7 @@ class WatchPartyTest {
         assertEquals(episode, back)
         val film = PartyMedia("movie", 27205, null, null, "Inception", null)
         assertEquals(film, PartyMedia.fromServer(buildJsonObject { put("src", film.src); put("title", "Inception") }))
-        // A room created by Movix's website carries a stream address, not a Sokoul title.
+        // A room created by a web client carries a stream address, not a Sokoul title.
         assertNull(PartyMedia.fromServer(buildJsonObject { put("src", JsonPrimitive("https://example.com/v.m3u8")) }))
     }
 }

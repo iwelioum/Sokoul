@@ -29,7 +29,7 @@ if (cluster.isPrimary) {
   let stopping = false;
   const workerEndsAt = [];
   const workerStartsAt = [];
-  const fork = (slot) => cluster.fork({ ...probe.workerEnv, MOVIX_WORKER_SLOT: String(slot), MAINAPI_PROBE_DISCORD_ENABLED: 'false' });
+  const fork = (slot) => cluster.fork({ ...probe.workerEnv, SOKOUL_WORKER_SLOT: String(slot), MAINAPI_PROBE_DISCORD_ENABLED: 'false' });
   fork(0); fork(1);
   async function finishFixture() {
     send({ type: 'fixture-result', runDir: probe.runDir, endsAt: probe.state.endsAt, reason: probe.state.reason,
@@ -72,12 +72,12 @@ if (cluster.isPrimary) {
   const at = Date.now();
   const duplicate = {
     type: MESSAGE, action: 'snapshot', runId: process.env.MAINAPI_PROBE_RUN_ID, pid: process.pid,
-    slot: Number(process.env.MOVIX_WORKER_SLOT) || 0, at, final: false,
+    slot: Number(process.env.SOKOUL_WORKER_SLOT) || 0, at, final: false,
     metrics: probe.collector.snapshot(), cpuProfile: probe.cpu?.snapshot?.() || { windows: 0, functions: [], errors: 0, active: true, truncatedFunctions: 0 },
     resources: probe.collector.recording ? [{ at, elapsedMs: 1, cpuUsageUs: 0, cpuPercent: 0, memory: process.memoryUsage(), eventLoopUtilization: 0, eventLoopP99Ms: 0, eventLoopMaxMs: 0, operations: [] }] : [],
   };
   send(duplicate); send(duplicate);
-  send({ type: 'fixture-ready', pid: process.pid, slot: Number(process.env.MOVIX_WORKER_SLOT), endsAt: Number(process.env.MAINAPI_PROBE_ENDS_AT), startsAt: Number(process.env.MAINAPI_PROBE_STARTS_AT) });
+  send({ type: 'fixture-ready', pid: process.pid, slot: Number(process.env.SOKOUL_WORKER_SLOT), endsAt: Number(process.env.MAINAPI_PROBE_ENDS_AT), startsAt: Number(process.env.MAINAPI_PROBE_STARTS_AT) });
   process.on('message', async (message) => {
     if (message?.type === 'fixture-teardown') { await probe.stop(); process.exit(0); }
   });

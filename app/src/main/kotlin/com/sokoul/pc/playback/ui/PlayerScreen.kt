@@ -1299,7 +1299,7 @@ private fun ProgressLine(
                 .focusable(),
         ) {
             Box(Modifier.fillMaxHeight().fillMaxWidth(fraction).background(if (focused) com.sokoul.pc.theme.AccentTheme.color else com.sokoul.pc.theme.AccentTheme.rest))
-            // Opening and ending passages, coloured over the line as on Movix.
+            // Opening and ending passages, coloured over the line.
             SegmentMarks(skips, lengthMs, thick)
             if (seekTarget != null && lengthMs > 0) {
                 Box(Modifier.fillMaxHeight().fillMaxWidth((seekTarget.toFloat() / lengthMs).coerceIn(0f, 1f))) {

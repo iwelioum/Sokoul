@@ -12,7 +12,7 @@ const nativeFs = require('node:fs');
 const { notifyReport, defaultTransport, gzipReport } = require('../notify');
 
 async function reportDir(json = '{"ok":true}') {
-  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'movix-probe-'));
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'sokoul-probe-'));
   await fs.writeFile(path.join(dir, 'report.md'), '# Rapport\n');
   await fs.writeFile(path.join(dir, 'report.json'), json);
   return dir;

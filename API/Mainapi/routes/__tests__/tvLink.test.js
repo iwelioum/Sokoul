@@ -185,7 +185,7 @@ test('start → info → confirm → poll : le jeton est remis une seule fois', 
   assert.equal(started.status, 200);
   assert.match(started.body.deviceCode, /^[A-Za-z0-9_-]{43}$/);
   assert.match(started.body.userCode, /^[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{5}$/);
-  assert.equal(started.body.verificationUrl, `https://movix.luxe/tv?code=${started.body.userCode}`);
+  assert.equal(started.body.verificationUrl, `${new URL(baseUrl).origin}/tv?code=${started.body.userCode}`);
   assert.equal(started.body.expiresIn, 600);
   assert.equal(started.body.interval, 5);
 
@@ -334,7 +334,7 @@ test('entrées invalides au start : 400', async () => {
   const unnamed = await start({ clientId: CLIENT_ID });
   assert.equal(unnamed.status, 200);
   const info = await call('GET', `/info?code=${unnamed.body.userCode}`, { token: 'user-alice' });
-  assert.equal(info.body.deviceName, 'Movix TV');
+  assert.equal(info.body.deviceName, 'Sokoul TV');
 });
 
 test('session impossible à créer : 503 et le code reste utilisable', async () => {

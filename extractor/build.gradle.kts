@@ -29,7 +29,7 @@ val extractAndroidNatives by tasks.registering(Sync::class) {
 sourceSets.main { resources.srcDir(extractJvmNatives) }
 val generatedCore = layout.buildDirectory.dir("generated/core")
 val generateCore by tasks.registering(Exec::class) {
-    inputs.files("../extension/runtime/extractors-core.js", "../extension/runtime/fsvid-vidzy-quickjs-entry.js", "scripts/build-native-core.mjs", "src/main/resources/sokoul-extract/adapter.js")
+    inputs.files("../extraction/runtime/extractors-core.js", "../extraction/runtime/fsvid-vidzy-quickjs-entry.js", "scripts/build-native-core.mjs", "src/main/resources/sokoul-extract/adapter.js")
     outputs.dir(generatedCore)
     commandLine("node", "scripts/build-native-core.mjs", generatedCore.get().asFile.absolutePath)
 }
@@ -37,7 +37,7 @@ sourceSets.main { resources.srcDir(generatedCore) }
 tasks.processResources { dependsOn(generateCore) }
 val generatedFixtures = layout.buildDirectory.dir("generated/fixtures")
 val generateFixtures by tasks.registering(Exec::class) {
-    inputs.files("../extension/tests/fixtures.mjs", "scripts/build-test-fixtures.mjs")
+    inputs.files("../extraction/tests/fixtures.mjs", "scripts/build-test-fixtures.mjs")
     outputs.dir(generatedFixtures)
     commandLine("node", "scripts/build-test-fixtures.mjs", generatedFixtures.get().asFile.absolutePath)
 }

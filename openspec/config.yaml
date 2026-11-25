@@ -2,7 +2,7 @@ schema: spec-driven
 
 context: |
   Sokoul is a Kotlin media centre: Compose Desktop (app/) and Android TV (tv/, which compiles app sources minus the syncShared exclusions).
-  Keep the Apple TV look (docs/design/cartography.md, theme/Theme.kt); never restyle after Movix or Netflix.
+  Keep the Apple TV look (docs/design/cartography.md, theme/Theme.kt); never restyle after other streaming services.
   Code, comments and artifacts in English; French only as the French half of a UI translation (L("en", "fr")).
   Use English research queries and prefer primary sources worldwide. Record source links and version applicability.
   Record decisions in design.md and checks, blockers and next actions in tasks.md.

@@ -185,7 +185,7 @@ test('admin serializer preserves nullable callback contract without authenticati
     paygate_callback_reference: PAYGATE_FIXTURE.callbackReference,
     paygate_callback_nonce: PAYGATE_FIXTURE.callbackNonce,
     paygate_ipn_token: PAYGATE_FIXTURE.ipnTokenEncoded,
-    paygate_callback_url: `https://api.movix.example/api/vip/paygate/callback?reference=${PAYGATE_FIXTURE.callbackReference}&nonce=${PAYGATE_FIXTURE.callbackNonce}`
+    paygate_callback_url: `https://api.sokoul.example/api/vip/paygate/callback?reference=${PAYGATE_FIXTURE.callbackReference}&nonce=${PAYGATE_FIXTURE.callbackNonce}`
   });
 
   const response = serializeAdminInvoice(invoice);

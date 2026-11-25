@@ -11,7 +11,7 @@ The Android app for TVs and phones (`com.sokoul.tv`, min SDK 26, target 35). It 
 | `com/sokoul/tv/RecordingService.kt`, `RecordingWakeReceiver.kt` | Recordings in the background and at a scheduled time |
 | `com/sokoul/tv/A11yGate.kt`, `TvDebug.kt`, `TvTrailers.kt` | Accessibility cost control, debug tools, trailer streams |
 | `com/sokoul/pc/Platform.kt`, `com/sokoul/pc/ui/VideoFill.kt` | Android counterparts of the PC files |
-| `com/sokoul/desktop/player/` | Media3 player, curl-impersonate transport, cookie jar, PNG-wrapped TS (see `THIRD_PARTY.md`) |
+| `com/sokoul/desktop/player/` | Media3 player, curl-impersonate transport, cookie jar, PNG-wrapped TS (derived third-party code, see `docs/third-party/README.md`) |
 | `FontShim.kt`, `ResShim.kt`, `Shims.kt` | Compose shims for APIs the shared code takes from Compose Desktop |
 
 Build: `powershell -NoProfile -File tools/build-tv.ps1` (needs `ANDROID_HOME`). Install over Wi-Fi:

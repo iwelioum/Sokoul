@@ -6,7 +6,7 @@ const os = require('node:os');
 const { createAccountDataCache } = require('../accountDataCache');
 
 async function fixture(t, options = {}) {
-  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'movix-account-cache-'));
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'sokoul-account-cache-'));
   t.after(() => fs.rm(dir, { recursive: true, force: true }));
   let reads = 0;
   const cache = createAccountDataCache({

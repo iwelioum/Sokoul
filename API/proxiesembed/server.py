@@ -975,8 +975,8 @@ FSVID_VIDZY_CLIENT_HINTS = {
 # l'IP (le relais SOCKS tiré au hasard la garde) ni de la vidéo, et les deux
 # hébergeurs partagent la même. La porte refuse (`{"ok":0}`) une empreinte
 # sans canvas : on envoie les largeurs que mesure Chrome sous Windows, comme
-# l'User-Agent ci-dessus. Même logique dans extension/*/extractors.js et
-# userscript/movix.user.js.
+# l'User-Agent ci-dessus. Même logique dans le runtime d'extraction
+# (extraction/runtime).
 FSVID_VIDZY_GATE_URLS = {
     'vidzy': 'https://v6.vidzy.cc/gate.php',
     'fsvid': 'https://fsvid.lol/gk',
@@ -2059,7 +2059,7 @@ class ProxyServer:
         return {
             'Authorization': f'Bearer {REAL_DEBRID_API_KEY}',
             'Accept': 'application/json',
-            'User-Agent': 'movix-proxiesembed/1.0',
+            'User-Agent': 'sokoul-proxiesembed/1.0',
         }
 
     async def _unlock_with_deepbrid(self, link: str, password: str) -> Response:
@@ -2232,7 +2232,7 @@ class ProxyServer:
             try:
                 headers = {
                     'Accept': 'text/html,application/xhtml+xml',
-                    'User-Agent': 'Movix/1.0 (+https://movix.online)',
+                    'User-Agent': 'Sokoul/1.0',
                 }
                 timeout = ClientTimeout(total=15)
                 async with aiohttp.ClientSession(headers=headers, timeout=timeout) as session:
@@ -2382,7 +2382,7 @@ class ProxyServer:
 
         headers = {
             'Accept': 'text/html,application/xhtml+xml',
-            'User-Agent': 'Movix/1.0 (+https://movix.online)',
+            'User-Agent': 'Sokoul/1.0',
         }
         timeout = ClientTimeout(total=DEBRIDR_REQUEST_TIMEOUT)
 

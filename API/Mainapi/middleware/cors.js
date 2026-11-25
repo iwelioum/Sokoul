@@ -1,50 +1,13 @@
 /**
  * CORS middleware configuration.
- * Extracted from server.js -- restricted origin policy.
+ * Extracted from server.js -- restricted origin policy. Allowed browser origins
+ * come from SOKOUL_ALLOWED_ORIGINS (see utils/allowedOrigins.js); loopback only
+ * by default.
  */
 
 const cors = require("cors");
 const { isOAuthCorsOriginAllowed } = require('../utils/oauthClients');
-
-const STATIC_ALLOWED_DOMAINS = [
-    'localhost:3000',
-    'movix.blog',
-    'movix.rodeo',
-    'movix.club',
-    'movix.site',
-    'movix11.pages.dev',
-    'nakios.site',
-    'cinezo.site',
-    'cinezo.online',
-    'filmib.cc',
-    'movix.llc',
-    'movix.cash',
-    'movix.tax',
-    'movix.cloud',
-    'movix.golf',
-    'movix.chat',
-    'movix.date',
-    'movix.show',
-    'movix.fun',
-    'movix.men',
-    'movix.college',
-    'movix.luxe',
-    'movix.dog',
-    'movix.miami'
-];
-
-function isAllowedStaticOrigin(origin) {
-  try {
-    const parsedOrigin = new URL(origin);
-    const hostname = parsedOrigin.hostname;
-
-    return STATIC_ALLOWED_DOMAINS.some((domain) => (
-      hostname === domain || hostname.endsWith(`.${domain}`)
-    ));
-  } catch {
-    return false;
-  }
-}
+const { isAllowedOrigin } = require('../utils/allowedOrigins');
 
 function isAllowedOAuthOrigin(origin) {
   return isOAuthCorsOriginAllowed(origin);
@@ -55,12 +18,7 @@ const corsMiddleware = cors({
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
 
-    // Allow all localhost requests in development only
-    if (process.env.NODE_ENV !== 'production' && origin.match(/^https?:\/\/localhost(:[0-9]+)?$/)) {
-      return callback(null, true);
-    }
-
-    if (isAllowedStaticOrigin(origin) || isAllowedOAuthOrigin(origin)) {
+    if (isAllowedOrigin(origin) || isAllowedOAuthOrigin(origin)) {
       callback(null, true);
     } else {
       callback(new Error("Not allowed by CORS"));
@@ -79,7 +37,7 @@ const corsMiddleware = cors({
     "sentry-trace",
     "x-profile-id",
     "x-access-key",
-    "x-movix-client-id",
+    "x-sokoul-client-id",
     "x-turnstile-token",
   ],
   credentials: true,

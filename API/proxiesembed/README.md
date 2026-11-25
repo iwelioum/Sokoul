@@ -1,6 +1,8 @@
 # proxiesembed
 
-Python media proxy (aiohttp, port 25569), adapted from Movix: a generic stream proxy, per-host extractors and proxies,
+Derived third-party code (CC BY-NC 4.0): see docs/third-party/README.md.
+
+Python media proxy (aiohttp, port 25569): a generic stream proxy, per-host extractors and proxies,
 debrid unlocking, and the bounded direct-egress transport used by Mainapi's native extraction. It is built for load:
 concurrent connections, memory caches with TTL eviction, request coalescing and SOCKS5 pools.
 
@@ -80,7 +82,7 @@ addresses travel as signed `url_token`s issued by `/api/ftv/search`; a forged, a
 
 ## Native extraction transport
 
-The shared extraction core (`extension/runtime`) runs inside Mainapi and fetches through this service. `native-fetch`
+The shared extraction core (`extraction/runtime`) runs inside Mainapi and fetches through this service. `native-fetch`
 accepts public HTTP(S) destinations on standard ports, checks every redirect, resolves through a public-only DNS
 resolver and never forwards the internal or VIP headers; bodies are base64 and capped at 4 MiB, and a `Range: bytes=0-0`
 probe reads one byte then closes upstream.

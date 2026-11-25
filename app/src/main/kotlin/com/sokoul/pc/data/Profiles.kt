@@ -20,7 +20,7 @@ data class Profile(
 }
 
 /**
- * Local profiles, after Movix's (no account, no server): each has its own resume points and history, its list and its
+ * Local profiles (no account, no server): each has its own resume points and history, its list and its
  * alerts. Playback settings, IPTV and keys stay shared. A kids profile cannot start titles rated for adults.
  */
 class Profiles(private val db: DesktopDb) {

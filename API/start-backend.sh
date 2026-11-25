@@ -166,16 +166,16 @@ for port in 25565 25566 25569; do
     done < <(lsof -nP -t -iTCP:"$port" -sTCP:LISTEN 2>/dev/null | sort -u)
 done
 
-# The Node helpers need the dependencies of Mainapi (mysql2) and of the extension (esbuild): installed once.
+# The Node helpers need the dependencies of Mainapi (mysql2) and of the extraction runtime (esbuild): installed once.
 # --ignore-scripts: the host only runs pure-JS helpers; Mainapi's native modules (better-sqlite3...) are built inside
 # its Docker image, and their old node-gyp fails on recent Node/Python versions.
 if [[ ! -d "$root/Mainapi/node_modules/mysql2" ]]; then
     echo "Installing Mainapi dependencies for the helper scripts (once)..."
     (cd "$root/Mainapi" && npm ci --ignore-scripts --no-audit --no-fund --loglevel=error)
 fi
-if [[ ! -d "$root/../extension/node_modules/esbuild" ]]; then
-    echo "Installing extension build dependencies (once)..."
-    (cd "$root/../extension" && npm ci --ignore-scripts --no-audit --no-fund --loglevel=error)
+if [[ ! -d "$root/../extraction/node_modules/esbuild" ]]; then
+    echo "Installing extraction runtime dependencies (once)..."
+    (cd "$root/../extraction" && npm ci --ignore-scripts --no-audit --no-fund --loglevel=error)
 fi
 
 echo "Database and cache..."

@@ -46,10 +46,10 @@ test('la révocation ou modification de la liste et les overrides invalident imm
   f.update([client('test', 'https://new.example')]);
   assert.equal(f.api.isOAuthCorsOriginAllowed('https://client.example'), false);
   assert.equal(f.api.isOAuthCorsOriginAllowed('https://new.example'), true);
-  f.env.MOVIX_OAUTH_CLIENTS_JSON = JSON.stringify([client('test', 'https://override.example')]);
+  f.env.SOKOUL_OAUTH_CLIENTS_JSON = JSON.stringify([client('test', 'https://override.example')]);
   assert.equal(f.api.isOAuthCorsOriginAllowed('https://new.example'), false);
   assert.equal(f.api.isOAuthCorsOriginAllowed('https://override.example'), true);
-  delete f.env.MOVIX_OAUTH_CLIENTS_JSON;
+  delete f.env.SOKOUL_OAUTH_CLIENTS_JSON;
   f.update([]);
   assert.equal(f.api.getOAuthClient('test'), null);
   assert.equal(f.api.isOAuthCorsOriginAllowed('https://override.example'), false);

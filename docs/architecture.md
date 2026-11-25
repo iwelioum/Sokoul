@@ -10,11 +10,11 @@ add accounts, server-side sources, a media proxy and watch parties.
 | --- | --- |
 | `parser/` | `:parser` — M3U, XMLTV and Xtream parsing, release-title tags. Plain JVM |
 | `core/` | `:core` — TMDB, Xtream, IntroDB, Real-Debrid and anime clients, discovery logic. Plain JVM, depends on `:parser` |
-| `extractor/` | `:extractor` — host extraction runtime on QuickJS, built from `extension/runtime` |
+| `extractor/` | `:extractor` — host extraction runtime on QuickJS, built from `extraction/runtime` |
 | `app/` | `:app` — the shared screens and the Windows app (Compose Desktop, libVLC); dev tools in `app/src/dev` |
 | `tv/` | `:tv` — the Android app (TV and phone): activity, Media3 player, Android counterparts of PC-only files |
 | `API/` | Backend services: Mainapi (Node), watch party (Node), proxiesembed (Python) |
-| `extension/`, `userscript/` | Browser tooling and the canonical extraction runtime |
+| `extraction/` | The canonical extraction runtime, its build scripts and tests ([README](../extraction/README.md)) |
 | `openspec/` | Specs and change proposals |
 | `docs/` | This documentation |
 | `tools/` | Build, install and live-check scripts ([tools.md](tools.md)) |
@@ -27,7 +27,7 @@ flowchart LR
   core --> tv[":tv (Android)"]
   extractor --> tv
   app -. "sources copied by syncShared" .-> tv
-  ext["extension/runtime"] -. "QuickJS bundle" .-> extractor
+  ext["extraction/runtime"] -. "QuickJS bundle" .-> extractor
   ext -. "native bundle" .-> mainapi
   app -- "HTTP 25565" --> mainapi["Mainapi"]
   tv -- "HTTP 25565 (LAN)" --> mainapi
@@ -62,8 +62,8 @@ The Android APK serves TVs and phones. `MainActivity` sets `ui/Form.current` (`F
 
 - `ui/ScaledRoot.kt` scales the whole interface: on PC and TV one dp is one pixel of a 1920-wide capture; on a phone the
   short side of the screen is 640 dp, so text reads at phone sizes in both orientations.
-- `shell/NavShell.kt`: on TV the top bar hides itself (immersive); on a phone it stays, and upright the sections move to a
-  bottom tab bar.
+- `shell/NavShell.kt`: on TV the top bar hides itself (immersive); on a phone it stays. There is no bottom bar: on every form
+  factor all navigation is in the top menu behind the avatar/icon.
 - The player turns a phone sideways and hides the system bars (`Platform.playerFullscreen`); taps show the controls, a
   double tap on a side skips ±10 s and a horizontal swipe seeks.
 
@@ -75,7 +75,7 @@ player contract (its name predates the TV app).
 | Package | Purpose |
 | --- | --- |
 | `pc` | `App.kt` (navigation between sections and overlays), `AppSetup.kt` (dependency wiring), `Main.kt`, `Platform.kt` |
-| `pc.shell` | Navigation shell: top bar, bottom tabs on phones |
+| `pc.shell` | Navigation shell: top bar and its menu behind the avatar (every form factor) |
 | `pc.home` | Home page, rows, screensaver, title alerts |
 | `pc.title` | Title page and hero |
 | `pc.search` | Search |

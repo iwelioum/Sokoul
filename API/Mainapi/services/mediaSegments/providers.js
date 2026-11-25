@@ -36,7 +36,7 @@ const JSON_HEADERS = { 'User-Agent': USER_AGENT, Accept: 'application/json' };
 /**
  * Filtre commun applique a toute proposition, quel que soit le fournisseur.
  *
- * C'est le garde-fou central de la fonctionnalite. Les sources de Movix sont
+ * C'est le garde-fou central de la fonctionnalite. Les sources de Sokoul sont
  * scrapees chez des hosters differents : pub en tete, recap absent, encodage
  * plus court de quelques secondes. Appliquer tel quel un timestamp releve sur
  * un autre encodage ferait sauter l'utilisateur en plein milieu d'une scene.
@@ -274,7 +274,7 @@ const introdb = {
 };
 
 // ===========================================================================
-// TheIntroDB — series et films, indexe par TMDB (le plus precis pour Movix,
+// TheIntroDB — series et films, indexe par TMDB (le plus precis pour Sokoul,
 // qui raisonne deja en TMDB). Distingue `credits` de `outro`.
 //
 // L'endpoint public repond 401 sans cle : le fournisseur reste inactif tant que
@@ -345,15 +345,15 @@ const theintrodb = {
 };
 
 // ===========================================================================
-// Movix — propositions de la communaute adoptees (score >= 3).
+// Sokoul — propositions de la communaute adoptees (score >= 3).
 //
 // Pas d'appel reseau : les releves sont dans notre propre base. Le filtrage
 // par duree de reference est fait cote SQL, et `accept` repasse dessus pour
 // appliquer exactement les memes regles qu'aux sources externes.
 // ===========================================================================
-const movix = {
-  id: 'movix',
-  label: 'Movix',
+const sokoul = {
+  id: 'sokoul',
+  label: 'Sokoul',
   requires: null,
   supportsMovies: true,
   isConfigured: () => true,
@@ -372,7 +372,7 @@ const movix = {
   },
 };
 
-const PROVIDERS = [movix, aniskip, skipdb, introdb, theintrodb];
+const PROVIDERS = [sokoul, aniskip, skipdb, introdb, theintrodb];
 const PROVIDERS_BY_ID = new Map(PROVIDERS.map((provider) => [provider.id, provider]));
 
 module.exports = { PROVIDERS, PROVIDERS_BY_ID, accept };

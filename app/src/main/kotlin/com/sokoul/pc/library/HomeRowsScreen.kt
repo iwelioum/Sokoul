@@ -56,7 +56,7 @@ import com.sokoul.pc.ui.SectionPill
 import com.sokoul.pc.ui.tvFocusable
 
 /**
- * The home page's rows as a list the user arranges (Movix: "Rangées de l'accueil"): OK shows or hides a row, the two round
+ * The home page's rows as a list the user arranges ("Rangées de l'accueil"): OK shows or hides a row, the two round
  * buttons beside it move it up or down, and the last button goes back to the default page. Every change is kept at once.
  */
 @Composable

@@ -1,7 +1,7 @@
 -- ============================================
--- Movix Wrapped 2026 - Database Tables
+-- Sokoul Wrapped 2026 - Database Tables
 -- ============================================
--- Run this SQL file to create the required tables for Movix Wrapped data collection.
+-- Run this SQL file to create the required tables for Sokoul Wrapped data collection.
 -- These tables store viewing data and page visit statistics for the annual Wrapped summary.
 -- ============================================
 

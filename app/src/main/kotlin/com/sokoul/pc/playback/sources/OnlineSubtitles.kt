@@ -27,7 +27,7 @@ class OnlineSubtitles(
     private val scope: CoroutineScope,
     private val translator: com.sokoul.pc.data.providers.Translator? = null,
 ) {
-    /** The language the lines are shown in, or null for the file's own (Movix: subtitle translation). */
+    /** The language the lines are shown in, or null for the file's own (subtitle translation). */
     var translatedTo by mutableStateOf<String?>(null)
         private set
     var translating by mutableStateOf(false)

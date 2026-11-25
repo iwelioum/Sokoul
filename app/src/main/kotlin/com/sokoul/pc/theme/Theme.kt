@@ -31,7 +31,7 @@ object Palette {
 }
 
 /**
- * The accent of progress bars (Movix: accent colour). White is Sokoul's own look; another colour is the user's choice in the
+ * The accent of progress bars. White is Sokoul's own look; another colour is the user's choice in the
  * settings. A state, so what draws with it follows a change at once.
  */
 object AccentTheme {

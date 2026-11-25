@@ -111,7 +111,7 @@ const DEFAULT_VIP_DONATION_SETTINGS = deepFreeze({
     eneba: { enabled: true, url: 'https://www.eneba.com/fr/store/eneba-gift-cards' }
   },
   contacts: {
-    email: 'movixstreaming@gmail.com',
+    email: '',
     discordUsername: 'mysticsaba_alt',
     discordUrl: 'https://discord.com/users/1516102413835305021',
     telegramUsername: 'MysticSaba',
