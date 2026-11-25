@@ -62,7 +62,7 @@ val copyCurlNatives = tasks.register<Copy>("copyCurlNatives") {
 
 android {
     namespace = "com.sokoul.tv"
-    ndkVersion = "27.1.12297006"
+    ndkVersion = "28.2.13676358"
     compileSdk = 36
     defaultConfig {
         applicationId = "com.sokoul.tv"
