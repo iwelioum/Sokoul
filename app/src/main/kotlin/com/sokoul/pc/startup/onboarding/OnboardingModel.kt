@@ -12,7 +12,10 @@ import com.sokoul.desktop.data.PlaylistType
 import com.sokoul.desktop.data.ProviderConfig
 import com.sokoul.desktop.data.RealDebridAuth
 import com.sokoul.desktop.data.Settings
+import com.sokoul.credentials.ServiceCheck
 import com.sokoul.iptv.data.debrid.RealDebridOAuth
+import com.sokoul.pc.account.AccountResult
+import com.sokoul.pc.account.AccountVault
 import com.sokoul.pc.data.CredentialValidator
 import com.sokoul.pc.data.Verdict
 import com.sokoul.pc.startup.SetupState
@@ -52,6 +55,8 @@ class OnboardingModel(
     private val oauth: RealDebridOAuth,
     private val scope: CoroutineScope,
     private val now: () -> Long = System::currentTimeMillis,
+    /** The signed-in account's vault: accepted keys are saved there too, and its masks show what the account has. */
+    private val vault: AccountVault? = null,
 ) {
     private val prefs = DesktopPrefs(db)
     private val rdAuth = RealDebridAuth(db, oauth)
@@ -68,8 +73,30 @@ class OnboardingModel(
         private set
     private var linkJob: Job? = null
 
+    /** The masks of the keys the account's vault holds, by service: empty signed out, offline, or with no vault. */
+    val vaultHints = mutableStateMapOf<String, String>()
+
     init {
         refreshSaved()
+        refreshVault()
+    }
+
+    /** Reads which keys the account has (never the keys). Quiet when it fails: the page simply shows none. */
+    fun refreshVault() {
+        val v = vault?.takeIf { it.signedIn } ?: return
+        scope.launch {
+            val listed = (v.list() as? AccountResult.Ok)?.value ?: return@launch
+            vaultHints.clear()
+            listed.forEach { (service, entry) -> vaultHints[service] = entry.hint }
+        }
+    }
+
+    /** After this device's check accepted [value], the account keeps it too; the server checks it again first. */
+    private fun saveToVault(service: String, value: String) {
+        val v = vault?.takeIf { it.signedIn } ?: return
+        scope.launch {
+            (v.save(service, value) as? AccountResult.Ok)?.value?.let { vaultHints[service] = it.hint }
+        }
     }
 
     fun goTo(next: OnboardingStep) {
@@ -118,6 +145,7 @@ class OnboardingModel(
                 val id = db.upsertPlaylist(Playlist(saved?.id ?: 0, saved?.name ?: "IPTV", PlaylistType.XTREAM, url, username.trim(), password, saved?.epgUrl, saved?.userAgent))
                 db.putSetting(Settings.ACTIVE_PLAYLIST, id.toString())
                 sources[SourceKind.Iptv] = SourceView(SourceStatus.Ready, Copy.iptvSummary(check.expiresAt, check.maxConnections, check.trial))
+                saveToVault(ServiceCheck.IPTV, ServiceCheck.xtreamValue(url, username.trim(), password))
                 true
             }
             Verdict.Refused -> problem(SourceKind.Iptv, Copy.iptvRefused)
@@ -134,6 +162,7 @@ class OnboardingModel(
                 val id = db.upsertPlaylist(Playlist(saved?.id ?: 0, saved?.name ?: "IPTV", PlaylistType.M3U, url, null, null, saved?.epgUrl, saved?.userAgent))
                 db.putSetting(Settings.ACTIVE_PLAYLIST, id.toString())
                 sources[SourceKind.Iptv] = SourceView(SourceStatus.Ready, Copy.m3uReady)
+                saveToVault(ServiceCheck.IPTV, url)
                 true
             }
             Verdict.Refused -> problem(SourceKind.Iptv, Copy.m3uRefused)
@@ -184,6 +213,7 @@ class OnboardingModel(
             rdAuth.signOut()
             ProviderConfig.setKey(db, "realdebrid", token.trim())
             refreshSaved()
+            saveToVault("realdebrid", token.trim())
         }
         return ok
     }
@@ -221,6 +251,7 @@ class OnboardingModel(
             Verdict.Accepted -> {
                 ProviderConfig.setKey(db, id, key.trim())
                 refreshSaved()
+                saveToVault(id, key.trim())
                 true
             }
             Verdict.Refused -> { keyErrors[id] = Copy.keyRefused; refreshSaved(); false }

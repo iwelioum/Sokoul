@@ -344,7 +344,8 @@ private fun StateLine(state: SourceCardState, ink: Color, soft: Color) {
                 Label(Copy.statusChecking, SrcType.Secondary, soft, maxLines = 1)
             }
             SourceStatus.Problem -> Label(Copy.statusProblem, SrcType.Secondary.copy(fontWeight = FontWeight.SemiBold), ink, maxLines = 1)
-            SourceStatus.Empty -> Label(L("Not added", "Non ajouté").text(), SrcType.Secondary, soft, maxLines = 1)
+            // Not on this device; the account may still have it ("In your account · •••• 1234").
+            SourceStatus.Empty -> Label(state.value ?: L("Not added", "Non ajouté").text(), SrcType.Secondary, soft, Modifier.widthIn(max = 380.dp), maxLines = 1)
         }
     }
 }

@@ -812,6 +812,7 @@ private fun MainInterface(deps: AppDeps, onProfiles: () -> Unit = {}, onSourcesS
             val model = remember {
                 com.sokoul.pc.startup.onboarding.OnboardingModel(
                     deps.db, deps.validator, com.sokoul.iptv.data.debrid.RealDebridOAuth(okhttp3.OkHttpClient()), sourcesScope,
+                    vault = com.sokoul.pc.account.AccountVault(deps.account),
                 )
             }
             val iptvAtOpen = remember { model.sources[com.sokoul.pc.startup.onboarding.SourceKind.Iptv] }

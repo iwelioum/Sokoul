@@ -48,7 +48,7 @@ object SourcesPage {
             model.keyErrors[card.id]?.let { return SourceCardState(SourceStatus.Problem, status?.hint, it) }
             return when {
                 card.entry == SourceEntry.None -> SourceCardState(SourceStatus.Ready, noKeyNeeded.text())
-                status?.configured != true -> SourceCardState(SourceStatus.Empty, null)
+                status?.configured != true -> SourceCardState(SourceStatus.Empty, inAccount(model, card.id))
                 status.source == builtInLabel() -> SourceCardState(SourceStatus.Ready, builtIn.text())
                 else -> SourceCardState(SourceStatus.Ready, status.hint)
             }
@@ -61,7 +61,24 @@ object SourcesPage {
                 .mapNotNull { (id, name) -> model.keyStatus(id)?.takeIf { it.configured }?.let { name } }.joinToString(" · ").ifEmpty { null }
             else -> view?.summary
         }
-        return SourceCardState(status, if (status == SourceStatus.Ready) value ?: view?.summary else null, view?.problem.takeIf { status == SourceStatus.Problem })
+        val shown = when (status) {
+            SourceStatus.Ready -> value ?: view?.summary
+            SourceStatus.Empty -> inAccount(model, *card.vaultServices().toTypedArray())
+            else -> null
+        }
+        return SourceCardState(status, shown, view?.problem.takeIf { status == SourceStatus.Problem })
+    }
+
+    /** The vault services behind a card: its guides, the IPTV account for the IPTV card. */
+    private fun SourceCardSpec.vaultServices(): List<String> = if (kind == SourceKind.Iptv) listOf("iptv") else guides
+
+    /**
+     * "In your account · •••• 1234" for a card this device has not set up but the signed-in account has: a new device
+     * learns which keys to enter (the vault never sends them back). Null when the account has none of [services].
+     */
+    fun inAccount(model: OnboardingModel, vararg services: String): String? {
+        val hint = services.firstNotNullOfOrNull { model.vaultHints[it] } ?: return null
+        return L("In your account · $hint", "Dans votre compte · $hint").text()
     }
 
     /** "themoviedb.org/settings/api": the link as a person types it, under the QR. */

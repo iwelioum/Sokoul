@@ -82,4 +82,47 @@ class SourcesPageTest {
         assertEquals("themoviedb.org/settings/api", SourcesPage.shortLink("https://www.themoviedb.org/settings/api"))
         assertEquals("fanart.tv/get-an-api-key", SourcesPage.shortLink("https://fanart.tv/get-an-api-key/"))
     }
+
+    /** Signed in, the page shows what the account's vault has, and an accepted key is saved there too (never read back). */
+    @Test fun theAccountVaultShowsItsMasksAndReceivesAcceptedKeys() {
+        val puts = java.util.concurrent.LinkedBlockingQueue<okhttp3.mockwebserver.RecordedRequest>()
+        val server = okhttp3.mockwebserver.MockWebServer()
+        server.dispatcher = object : okhttp3.mockwebserver.Dispatcher() {
+            override fun dispatch(request: okhttp3.mockwebserver.RecordedRequest) = when {
+                request.method == "GET" && request.path == "/api/credentials" ->
+                    okhttp3.mockwebserver.MockResponse().setBody("""[{"service":"omdb","hint":"•••• 9f2a","verdict":"accepted","checkedAt":1},{"service":"iptv","hint":"•••• more","verdict":"accepted","checkedAt":1}]""")
+                request.method == "PUT" -> { puts.add(request); okhttp3.mockwebserver.MockResponse().setBody("""{"service":"tmdb","hint":"•••• cdef","verdict":"accepted","checkedAt":2}""") }
+                request.path!!.startsWith("/3/configuration") -> okhttp3.mockwebserver.MockResponse().setResponseCode(200)
+                else -> okhttp3.mockwebserver.MockResponse().setResponseCode(404)
+            }
+        }
+        server.start()
+        try {
+            val base = server.url("/").toString().trimEnd('/')
+            val store = com.sokoul.pc.account.MemoryAccountStore(base, com.sokoul.pc.account.StoredSession(com.sokoul.pc.account.Secret("session-token"), "s1", null))
+            val vault = com.sokoul.pc.account.AccountVault(com.sokoul.pc.account.SokoulAccount(store, OkHttpClient()))
+            val db = db()
+            val model = OnboardingModel(
+                db, CredentialValidator(OkHttpClient(), tmdbBase = base), RealDebridOAuth(OkHttpClient()), CoroutineScope(Dispatchers.Unconfined),
+                vault = vault,
+            )
+            val deadline = System.currentTimeMillis() + 5_000
+            while (model.vaultHints.size < 2 && System.currentTimeMillis() < deadline) Thread.sleep(20)
+            val omdb = SourcesPage.state(SourcesPage.cards.first { it.id == "omdb" }, model)
+            assertEquals(SourceStatus.Empty, omdb.status)
+            assertTrue(omdb.value!!, omdb.value!!.contains("•••• 9f2a"))
+            assertTrue(SourcesPage.state(SourcesPage.cards.first { it.id == "iptv" }, model).value!!.contains("•••• more"))
+            assertNull(SourcesPage.state(SourcesPage.cards.first { it.id == "fanart" }, model).value)
+
+            val key = "0123456789abcdef0123456789abcdef"
+            assertTrue(kotlinx.coroutines.runBlocking { model.saveKey("tmdb", key, com.sokoul.pc.startup.onboarding.SourceKind.Advanced) })
+            val put = puts.poll(5, java.util.concurrent.TimeUnit.SECONDS)!!
+            assertEquals("/api/credentials/tmdb", put.path)
+            assertEquals("Bearer session-token", put.getHeader("Authorization"))
+            assertEquals("""{"value":"$key"}""", put.body.readUtf8())
+            db.close()
+        } finally {
+            server.shutdown()
+        }
+    }
 }
