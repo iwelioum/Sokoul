@@ -4,6 +4,7 @@ import com.sokoul.server.TestServer.Companion.DAY
 import com.sokoul.server.TestServer.Companion.MINUTE
 import com.sokoul.server.TestServer.Companion.OWNER
 import com.sokoul.server.TestServer.Companion.OWNER_PASS
+import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpStatusCode
@@ -36,7 +37,9 @@ class AccountsTest {
 
     @Test fun `setup creates the owner once, stores no clear passphrase and returns a working session`() = testApplication {
         val s = TestServer(tmp).also { it.install(this) }
+        assertEquals("""{"needsOwner":true}""", client.get("/api/setup").bodyAsText())
         val r = client.postJson("/api/setup", """{"name":"  $OWNER ","passphrase":"$OWNER_PASS","deviceName":"PC"}""")
+        assertEquals("""{"needsOwner":false}""", client.get("/api/setup").bodyAsText())
         assertEquals(HttpStatusCode.Created, r.status)
         val body = r.json()
         val me = client.getWith("/api/me", body.str("token")).json()

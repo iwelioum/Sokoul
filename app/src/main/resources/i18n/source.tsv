@@ -115,6 +115,7 @@ Ask for a key, accept the terms and fill in the short form for personal use.	Dem
 Ask for an access key and copy it.	Demandez une clé d'accès et copiez-la.
 Ask me	Me demander
 Asked before this profile opens or is edited.	Demandé avant d'ouvrir ou de modifier ce profil.
+Asking the server for a code…	Demande d'un code au serveur…
 at %s	à %s
 At home on {1}	En vidéo le {1}
 At war	En guerre
@@ -177,6 +178,7 @@ Catalogue, posters and details	Catalogue, affiches et fiches
 Categories	Catégories
 Categories could not be refreshed. Stored titles remain available.	Les catégories n’ont pas pu être actualisées. Les titres enregistrés restent disponibles.
 Change profile	Changer de profil
+Change server	Changer de serveur
 Channel	Chaîne
 Channel groups	Groupes de chaînes
 Channel preview	Aperçu des chaînes
@@ -204,6 +206,7 @@ Chinese animation	Animation chinoise
 Choose a 4-digit code	Choisissez un code à 4 chiffres
 Choose a category, then a title · Back to close	Choisissez une catégorie, puis un titre · Retour pour fermer
 Choose a collection in the group column, then Menu › Use for zapping.	Choisissez une collection dans la colonne des groupes, puis Menu › Activer pour zapper.
+Choose a name of 1 to 40 characters.	Choisissez un nom de 1 à 40 caractères.
 Choose a private 4–8 digit PIN to protect your TV groups.	Choisissez un code privé de 4 à 8 chiffres pour protéger vos groupes TV.
 Choose a season	Choisir une saison
 Choose a unique name, 1–40 characters.	Choisissez un nom unique de 1 à 40 caractères.
@@ -223,6 +226,7 @@ Clear the search	Effacer la recherche
 Clip	Extrait
 Close	Fermer
 Code	Code
+Code valid for {1}. A new one comes by itself.	Code valable {1}. Un nouveau s'affiche tout seul.
 Code: off	Code PIN : non
 Code: on	Code PIN : oui
 Collection	Collection
@@ -239,6 +243,8 @@ Configure later	Configurer plus tard
 Configure your Sokoul server and access key in Credentials.	Configurez le serveur Sokoul et sa clé dans les Identifiants.
 Confirm delete	Confirmer la suppression
 Confirm on your phone: Sokoul connects by itself, no key to type.	Confirmez sur votre téléphone : Sokoul se connecte tout seul, aucune clé à saisir.
+Connect the Sokoul server	Connecter le serveur Sokoul
+Connected as {1}	Connecté en tant que {1}
 Connected to 	Connecté à 
 Connecting…	Connexion…
 Content sources	Sources de contenu
@@ -254,6 +260,7 @@ Copy your personal key.	Copiez votre clé personnelle.
 Could not reach the source server.	Échec de connexion au serveur source.
 Could not start the download.	Impossible de démarrer le téléchargement.
 Counting…	Calcul en cours…
+Create	Créer
 Create a collection	Créer une collection
 Create a free account on fanart.tv.	Créez un compte gratuit sur fanart.tv.
 Create a free account on opensubtitles.com and confirm your e-mail.	Créez un compte gratuit sur opensubtitles.com et confirmez votre e-mail.
@@ -266,6 +273,7 @@ Create a new consumer: any name works, for example Sokoul.	Créez un nouveau « 
 Create an account and choose the free plan.	Créez un compte et choisissez l'offre gratuite.
 Create an account on real-debrid.com and take a Premium subscription.	Créez un compte sur real-debrid.com et prenez un abonnement Premium.
 Create and add	Créer et ajouter
+Create the owner account	Créer le compte propriétaire
 Created by	Créé par
 Credentials and API keys	Identifiants et clés API
 Credits	Crédits
@@ -291,6 +299,7 @@ Delete collection	Supprimer la collection
 Delete “{1}”?	Supprimer « {1} » ?
 Details	Détails
 DETAILS	DÉTAILS
+Devices	Appareils
 Direct	Direct
 Directed by	Réalisé par
 Director	Réalisation
@@ -358,6 +367,7 @@ E{1}	É{1}
 Failed	Échec
 Failing stream	Flux défaillant
 Family	En famille
+Family member	Membre de la famille
 fanart.tv key page	Page de la clé fanart.tv
 Fantasy	Fantastique
 Fast	Rapide
@@ -525,6 +535,11 @@ Light Hearted	Esprit léger
 Light novels	Light novels
 Like my device	Comme mon appareil
 Link entered	Lien saisi
+Link this device with your phone, or sign in with your name and passphrase.	Reliez cet appareil avec votre téléphone, ou connectez-vous avec votre nom et votre phrase secrète.
+Link this PC	Relier ce PC
+Link this tablet	Relier cette tablette
+Link this TV	Relier cette TV
+Link this TV with your phone: a code and a QR code, nothing to type on the remote.	Reliez cette TV avec votre téléphone : un code et un code QR, rien à saisir avec la télécommande.
 Link tools, a little housekeeping, and credits.	Outils de liens, un peu de ménage, et les crédits.
 LIVE	DIRECT
 Live	En direct
@@ -652,6 +667,7 @@ No reminder yet. In the guide, choose a programme to come and press OK.	Aucun ra
 No results.	Aucun résultat.
 No screen watching right now	Aucun écran en cours de lecture
 No server is available for this event yet.	Aucun serveur n’est encore disponible pour cette rencontre.
+No Sokoul server address yet.	Pas encore d'adresse de serveur Sokoul.
 No Sokoul server answers at this address. Check that the PC is on and on the same Wi-Fi.	Aucun serveur Sokoul ne répond à cette adresse. Vérifiez que le PC est allumé et sur le même Wi-Fi.
 No source configured	Aucune source configurée
 No source is available for this title.	Aucune source n'est disponible pour ce titre.
@@ -668,6 +684,7 @@ Not added · you can add it later in Settings	Non ajouté · à ajouter plus tar
 Not available	Indisponible
 Not available on a kids profile ({1})	Indisponible sur un profil enfant ({1})
 Not available to read here	Pas disponible à la lecture ici
+Not connected	Non connecté
 Not Now	Plus tard
 Not set	Non renseigné
 Not the film	Pas le film
@@ -703,10 +720,12 @@ On air now	À l’antenne
 On now	En cours
 On the air right now.	En ce moment à l'antenne.
 On the PC that runs it, start the Sokoul server. On that PC, nothing else to do.	Sur le PC qui le fait tourner, lancez le serveur Sokoul. Sur ce PC, rien d'autre à faire.
+On the PC that runs it, the address is 127.0.0.1:25570. Elsewhere, use that PC's address on your Wi-Fi, shown in the server's window.	Sur le PC qui le fait tourner, l'adresse est 127.0.0.1:25570. Ailleurs, utilisez l'adresse de ce PC sur votre Wi-Fi, affichée dans la fenêtre du serveur.
 On the PC that runs the Sokoul server, its address is shown in its window. Example: 192.168.1.20	Sur le PC qui fait tourner le serveur Sokoul, son adresse est affichée dans sa fenêtre. Exemple : 192.168.1.20
 On the TV, type this address in “PC address”. The TV and the PC must be on the same Wi-Fi.	Sur la TV, saisissez cette adresse dans « Adresse du PC ». La TV et le PC doivent être sur le même Wi-Fi.
 ON YOUR CHANNELS	SUR VOS CHAÎNES
 On your channels now	Sur vos chaînes maintenant
+On your phone, scan the QR code, or open {1}	Sur votre téléphone, scannez le code QR, ou ouvrez {1}
 One page	Une page
 One page, right to left	Une page, sens japonais
 One shots	One shots
@@ -758,12 +777,14 @@ Other streams of this channel	Autres flux de cette chaîne
 Other way: copy your private token from real-debrid.com/apitoken and paste it in “Use a private token instead”.	Autre moyen : copiez votre jeton privé sur real-debrid.com/apitoken et collez-le dans « Utiliser plutôt un jeton privé ».
 Out most recently, newest first.	Sortis le plus récemment, du plus récent au plus ancien.
 OVA	OAV
+Owner of the server	Propriétaire du serveur
 Page {1}	Page {1}
 Pages	Pages
 Paid to your IPTV provider, not to Sokoul. Sokoul shows the end date and the number of screens when the provider gives them.	Payant auprès de votre fournisseur IPTV, pas de Sokoul. Sokoul affiche la date de fin et le nombre d'écrans quand le fournisseur les donne.
 Paid: a Premium subscription is needed. Prices are shown on real-debrid.com.	Payant : il faut un abonnement Premium. Les prix sont affichés sur real-debrid.com.
 Part of the Collection	Fait partie de la collection
 Partly filler	En partie hors-série
+Passphrase	Phrase secrète
 Password	Mot de passe
 Paste a link that starts with http:// or https://	Collez un lien qui commence par http:// ou https://
 Paste it in Sokoul and press “Check and save”.	Collez-la dans Sokoul et appuyez sur « Vérifier et enregistrer ».
@@ -813,7 +834,9 @@ Preparing recording	Préparation de l’enregistrement
 Preparing the selected server…	Préparation du serveur choisi…
 PRESENTS	PRÉSENTE
 Press + on a film or series page to keep it here.	Appuyez sur + sur la fiche d'un film ou d'une série pour le garder ici.
+Press a device twice to sign it out. It will need to be linked again.	Appuyez deux fois sur un appareil pour le déconnecter. Il faudra le relier à nouveau.
 Press again to confirm	Appuyer à nouveau pour confirmer
+Press again to sign out	Appuyez à nouveau pour déconnecter
 Press OK to enter a link	Appuyez sur OK pour saisir un lien
 Press “Check and save”: Sokoul asks your provider before keeping anything.	Appuyez sur « Vérifier et enregistrer » : Sokoul interroge votre fournisseur avant de garder quoi que ce soit.
 Press “Copy API Code”.	Appuyez sur « Copy API Code ».
@@ -847,6 +870,7 @@ Rating	Classification
 Read	Lire
 READ MORE	LIRE LA SUITE
 Read the chapter	Lire le chapitre
+Reading your account…	Lecture de votre compte…
 Ready	Disponible
 ready	prête
 Real-Debrid	Real-Debrid
@@ -979,6 +1003,7 @@ Server	Serveur
 Server address	Adresse du serveur
 Server and sign-in	Serveur et identifiants
 Server, username and password are all required.	Le serveur, l'utilisateur et le mot de passe sont tous requis.
+Server: {1}	Serveur : {1}
 Servers	Serveurs
 Service	Service
 Set adult PIN	Définir un code adulte
@@ -1000,8 +1025,12 @@ Show results	Afficher les résultats
 Showing saved information; the provider could not be reached. Its connection counter may be delayed.	Informations enregistrées : le fournisseur n’a pas pu être joint. Son compteur de connexions peut être retardé.
 Showing {1}+ titles	{1}+ titres affichés
 Shown	Affichée
+Sign in	Se connecter
 Sign in from your phone: no key to type.	Connectez-vous depuis votre téléphone : aucune clé à saisir.
+Sign in to your Sokoul account, then check this code:	Connectez-vous à votre compte Sokoul, puis vérifiez ce code :
+Sign in with my name	Me connecter avec mon nom
 Sign in with Real-Debrid	Se connecter avec Real-Debrid
+Sign out of this device	Déconnecter cet appareil
 Signed in, open fanart.tv/get-an-api-key.	Une fois connecté, ouvrez fanart.tv/get-an-api-key.
 Signed in, open tastedive.com/account/api_access.	Une fois connecté, ouvrez tastedive.com/account/api_access.
 Size	Taille
@@ -1012,6 +1041,7 @@ Slice of life	Tranche de vie
 Small	Petite
 Society and more	Société et autres
 Soft and soothing	Doux et apaisant
+Sokoul account	Compte Sokoul
 Sokoul already works without these. Each key adds something precise.	Sokoul fonctionne déjà sans elles. Chaque clé ajoute quelque chose de précis.
 Sokoul is loading your content. It appears as it arrives.	Sokoul charge votre contenu. Il apparaît au fur et à mesure.
 Sokoul picks the right version for you. You can change it at any time.	Sokoul choisit la bonne version pour vous. Vous pourrez changer à tout moment.
@@ -1106,6 +1136,8 @@ the file was not the film	le fichier n'était pas le film
 the file was not the right length	le fichier n'avait pas la bonne durée
 The Films	Les films
 The films everyone is watching.	Les films que tout le monde regarde.
+The first account can only be created on the PC that runs the server.	Le premier compte ne peut être créé que sur le PC qui fait tourner le serveur.
+The first account of the server. Choose a passphrase of at least 12 characters: a few words you will remember.	Le premier compte du serveur. Choisissez une phrase secrète d'au moins 12 caractères : quelques mots dont vous vous souviendrez.
 The first language a version offers is played. Original audio is the language the work was made in. Every version and track stays available in the player.	La première langue qu'une version propose est lue. L'audio original est la langue dans laquelle l'œuvre a été faite. Toutes les versions et pistes restent disponibles dans le lecteur.
 The highest rated of all time.	Les mieux notés de tous les temps.
 The Honors	Le palmarès
@@ -1118,6 +1150,7 @@ The only version left is not as long as this episode.	La seule version restante 
 The only version left seems to be a film, not this episode.	La seule version restante semble être un film, pas cet épisode.
 The only version left seems to be another episode.	La seule version restante semble être un autre épisode.
 The only version left seems to be another work with the same name.	La seule version restante semble être une autre œuvre du même nom.
+The passphrase needs at least 12 characters.	La phrase secrète doit faire au moins 12 caractères.
 The playback engine was not found.	Le moteur de lecture est introuvable.
 the previous one failed	la précédente a échoué
 The provider stream could not be opened. Try again.	Le flux du fournisseur n’a pas pu être ouvert. Réessayez.
@@ -1125,12 +1158,18 @@ The recording could not be started.	Impossible de démarrer l’enregistrement.
 The recording is still growing	L’enregistrement est toujours en cours
 The series everyone is talking about.	Les séries dont tout le monde parle.
 The server doesn't answer. Check the address and the port, then try again.	Le serveur ne répond pas. Vérifiez l'adresse et le port, puis réessayez.
+The server is busy. Try again in a minute.	Le serveur est occupé. Réessayez dans une minute.
 The server refused this version (error %d).	Le serveur refuse cette version (erreur %d).
 The server requires an active VIP key.	Le serveur demande une clé VIP active.
 The server took too long to answer.	Délai de réponse dépassé.
 The service doesn't answer right now. Try again in a moment.	Le service ne répond pas pour l'instant. Réessayez dans un moment.
 The service is unavailable. Try again later.	Le service est indisponible. Réessayez plus tard.
 The service refused this key. Check that it is complete.	Le service refuse cette clé. Vérifiez qu'elle est complète.
+The Sokoul server does not answer. Check that it is running and that this device is on the same network.	Le serveur Sokoul ne répond pas. Vérifiez qu'il est lancé et que cet appareil est sur le même réseau.
+The Sokoul server had a problem. Try again.	Le serveur Sokoul a rencontré un problème. Réessayez.
+The Sokoul server is a small program on your home PC that keeps your account, your profiles and where you stopped, so every TV, tablet and PC shares them.	Le serveur Sokoul est un petit programme sur le PC de la maison qui garde votre compte, vos profils et où vous en êtes, pour que chaque TV, tablette et PC les partagent.
+The Sokoul server refused. Try again.	Le serveur Sokoul a refusé. Réessayez.
+The Sokoul server refuses this device. On the server's PC, allow devices of the home network.	Le serveur Sokoul refuse cet appareil. Sur le PC du serveur, autorisez les appareils du réseau de la maison.
 The source refused this stream.	La source a refusé ce flux.
 The sports server did not provide a playable native stream.	Le serveur de sport n’a pas fourni de flux natif lisible.
 the stream had frozen	le flux s'était figé
@@ -1144,16 +1183,22 @@ The worlds of Studio Ghibli	Les mondes du Studio Ghibli
 THEME	THÈME
 These controls are unavailable on a kids profile.	Ces réglages sont indisponibles sur un profil enfant.
 TheTVDB key page	Page de la clé TheTVDB
+This address does not answer like a Sokoul server.	Cette adresse ne répond pas comme un serveur Sokoul.
 This category is restricted for this profile.	Cette catégorie est restreinte pour ce profil.
 This channel is no longer available.	Cette chaîne n'est plus disponible.
 This channel is restricted for this profile	Cette chaîne est restreinte pour ce profil
 This channel is restricted for this profile.	Cette chaîne est restreinte pour ce profil.
 This chapter is no longer available: its source took it down. The chapter list button shows the others.	Ce chapitre n'est plus disponible : sa source l'a retiré. Le bouton de la liste des chapitres montre les autres.
+This device	Cet appareil
+This device is already signed out.	Cet appareil est déjà déconnecté.
+This device is no longer signed in. Link it again.	Cet appareil n'est plus connecté. Reliez-le à nouveau.
+This device: {1}	Cet appareil : {1}
 This doesn't look like a {1} key. Check that you copied all of it.	Cela ne ressemble pas à une clé {1}. Vérifiez que vous l'avez copiée en entier.
 This doesn't look like an address. Example: http://exemple.tv:8080	Cette adresse n'a pas le bon format. Exemple : http://exemple.tv:8080
 This entry is not a direct video file and cannot be saved offline.	Cette source n’est pas un fichier vidéo direct téléchargeable.
 This episode adapts	Cet épisode adapte
 This file does not have the language wanted.	Ce fichier n'a pas la langue voulue.
+This is not an address. Example: 192.168.1.20	Ce n'est pas une adresse. Exemple : 192.168.1.20
 This key was refused.	Cette clé a été refusée.
 This link doesn't answer. Check it and try again.	Ce lien ne répond pas. Vérifiez-le et réessayez.
 This link doesn't lead to a playlist.	Ce lien ne mène pas à une playlist.
@@ -1165,6 +1210,7 @@ This recording is no longer available.	Cet enregistrement n’est plus disponibl
 This recording is not ready to play yet.	Cet enregistrement n’est pas encore prêt à être lu.
 This recording is restricted for this profile.	Cet enregistrement est restreint pour ce profil.
 This season	Cette saison
+This server already has its owner. Sign in instead.	Ce serveur a déjà son propriétaire. Connectez-vous plutôt.
 This server requires a VIP account for native sports playback.	Ce serveur exige un compte VIP pour la lecture native du sport.
 This service could not unlock the link.	Ce service n'a pas pu débrider le lien.
 This service did not respond. Try again.	Ce service n'a pas répondu. Réessayez.
@@ -1197,6 +1243,7 @@ Tomorrow	Demain
 Tonight	Ce soir
 Tonight: like {1}	Ce soir : comme {1}
 Too many attempts. Try again in one minute.	Trop de tentatives. Réessayez dans une minute.
+Too many tries. Wait {1} min, then try again.	Trop d'essais. Attendez {1} min, puis réessayez.
 Tools and maintenance	Outils et maintenance
 Top 10 Anime	Top 10 des animés
 Top 10 Films This Week	Top 10 des films cette semaine
@@ -1247,6 +1294,9 @@ Use a private token instead	Utiliser plutôt un jeton privé
 Use a unique name from 1 to 40 characters.	Utilisez un nom unique de 1 à 40 caractères.
 Use for zapping	Utiliser pour zapper
 Use your deployed website backend address. Sokoul's Mainapi address is separate.	Saisissez l'adresse du backend du site déployé. Le serveur Mainapi de Sokoul est distinct.
+Used today	Utilisé aujourd'hui
+Used yesterday	Utilisé hier
+Used {1} days ago	Utilisé il y a {1} jours
 Username	Identifiant
 Uses the provider connection and recording storage	Utilise la connexion du fournisseur et le stockage des enregistrements
 USUAL BROADCASTER	DIFFUSEUR HABITUEL
@@ -1296,6 +1346,7 @@ Worlds and places	Univers et lieux
 Worldwide box office	Box-office mondial
 Written by	Scénario
 Wrong code. Try again.	Code incorrect. Réessayez.
+Wrong name or passphrase.	Nom ou phrase secrète incorrects.
 XMLTV guide URL	Adresse du guide XMLTV
 Yellow	Jaune
 You can explore the catalogue and trailers now, and add a source later in Settings.	Vous pouvez explorer le catalogue et les bandes-annonces dès maintenant, et ajouter une source plus tard dans Réglages.
@@ -1321,6 +1372,7 @@ Your name	Votre nom
 Your next binge starts here.	Le prochain marathon commence ici.
 Your own keys for ratings, artwork and recommendations	Vos propres clés pour les notes, les visuels et les recommandations
 Your password stays on this device, or in your own vault on your Sokoul server. It is never shown again once saved.	Votre mot de passe reste sur cet appareil, ou dans votre propre coffre sur votre serveur Sokoul. Il n'est plus jamais affiché une fois enregistré.
+Your profiles and where you stopped follow you on every TV, tablet and PC of the house.	Vos profils et où vous en êtes vous suivent sur chaque TV, tablette et PC de la maison.
 Your provider refused this username or password, or the subscription has ended.	Votre fournisseur refuse cet identifiant ou ce mot de passe, ou l'abonnement est terminé.
 Your provider's live channels, TV guide, films and series, in Sokoul.	Les chaînes en direct, le guide TV, les films et les séries de votre fournisseur, dans Sokoul.
 Your sign-in stays on this device, or in your own vault on your Sokoul server, and is never shown in full. The private token opens your whole account: never share it.	Votre connexion reste sur cet appareil, ou dans votre propre coffre sur votre serveur Sokoul, et n'est jamais affichée en entier. Le jeton privé ouvre tout votre compte : ne le partagez jamais.

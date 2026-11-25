@@ -128,6 +128,8 @@ class AppDeps(
     val engineStatus: () -> com.sokoul.desktop.player.PlayerStatus? = { engine?.status?.value }
     /** The app as tools and state: used by the live checks, and the way in for a future assistant. */
     val bridge by lazy { com.sokoul.pc.control.AppBridge(this) }
+    /** This device's Sokoul account on the private server; `account.session()` is what sync will call with. */
+    val account by lazy { com.sokoul.pc.account.SokoulAccount(com.sokoul.pc.account.DbAccountStore(db), smallHttp) }
     /** Pictures of live programmes: the guide's, else TMDB's for an unambiguous title. */
     val programArt by lazy { com.sokoul.pc.live.ProgramArtCache { title -> catalog.search(title) } }
 
@@ -433,6 +435,7 @@ private fun MainInterface(deps: AppDeps, onProfiles: () -> Unit = {}, onSourcesS
     var searchOrigin by remember { mutableStateOf(SECTION_HOME) }
     var sportsOrigin by remember { mutableStateOf(SECTION_HOME) }
     var editingCredentials by remember { mutableStateOf(false) }
+    var editingAccount by remember { mutableStateOf(false) }
     var editingRows by remember { mutableStateOf(false) }
     var editingAudio by remember { mutableStateOf(false) }
     var editingLanguage by remember { mutableStateOf(deps.languageReturn) }
@@ -765,6 +768,20 @@ private fun MainInterface(deps: AppDeps, onProfiles: () -> Unit = {}, onSourcesS
             )
             return@Box
         }
+        if (editingAccount) {
+            // Settings › Sokoul account: a code and a QR on a TV, sign-in by name where there is a keyboard.
+            val accountScope = androidx.compose.runtime.rememberCoroutineScope()
+            val model = remember {
+                com.sokoul.pc.account.AccountPanelModel(
+                    deps.account, accountScope,
+                    keyboard = !Platform.IS_TV || com.sokoul.pc.ui.Form.tablet,
+                    deviceName = com.sokoul.pc.account.defaultDeviceName(),
+                    serverPc = !Platform.IS_TV,
+                )
+            }
+            com.sokoul.pc.account.AccountScreen(model, onBack = { editingAccount = false })
+            return@Box
+        }
         if (editingCredentials) {
             // Settings › Sources and keys: the first launch's cards and sheets, with a guide per service.
             val sourcesScope = androidx.compose.runtime.rememberCoroutineScope()
@@ -843,6 +860,8 @@ private fun MainInterface(deps: AppDeps, onProfiles: () -> Unit = {}, onSourcesS
                                 deps.uiChanged()
                             }
                         },
+                        onSokoulAccount = { settingsPane = "sources"; editingAccount = true },
+                        sokoulAccountName = { deps.account.session()?.user?.name },
                         onResetDisplay = {
                             deps.prefs.resetDisplay()
                             com.sokoul.pc.theme.AccentTheme.color = androidx.compose.ui.graphics.Color.White

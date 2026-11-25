@@ -49,6 +49,7 @@ class DeviceLinksTest {
         val linked = client.postJson("/api/link/poll", """{"deviceCode":"$deviceCode"}""")
         assertEquals(HttpStatusCode.OK, linked.status)
         val tv = linked.json().str("token")
+        assertEquals(TestServer.OWNER, linked.json().getValue("user").jsonObject.str("name"))
         val me = client.getWith("/api/me", tv).json()
         assertEquals(TestServer.OWNER, me.str("name"))
         val devices = client.getWith("/api/sessions", phone).json().getValue("sessions").jsonArray.map { it.jsonObject.str("deviceName") }

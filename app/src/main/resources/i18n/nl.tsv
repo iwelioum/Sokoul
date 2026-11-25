@@ -1063,3 +1063,55 @@ Where else a title can be watched in your country, when Movie of the Night doesn
 Recommendations of films similar to the ones you like.	Aanbevelingen voor films die lijken op wat je leuk vindt.
 Which streaming services offer a title in your country (Netflix, Prime Video…).	Welke streamingdiensten een titel in je land aanbieden (Netflix, Prime Video…).
 More web and anime sources, from the PC at home that runs the Sokoul server.	Meer web- en animebronnen, van de pc thuis waarop de Sokoul-server draait.
+Asking the server for a code…	Code wordt bij de server opgevraagd…
+Change server	Andere server
+Choose a name of 1 to 40 characters.	Kies een naam van 1 tot 40 tekens.
+Code valid for {1}. A new one comes by itself.	Code geldig voor {1}. Er verschijnt vanzelf een nieuwe.
+Connect the Sokoul server	Sokoul-server verbinden
+Connected as {1}	Verbonden als {1}
+Create	Aanmaken
+Create the owner account	Eigenaarsaccount aanmaken
+Devices	Apparaten
+Family member	Gezinslid
+Link this device with your phone, or sign in with your name and passphrase.	Koppel dit apparaat met je telefoon, of meld je aan met je naam en wachtzin.
+Link this PC	Deze pc koppelen
+Link this tablet	Deze tablet koppelen
+Link this TV	Deze tv koppelen
+Link this TV with your phone: a code and a QR code, nothing to type on the remote.	Koppel deze tv met je telefoon: een code en een QR-code, niets te typen met de afstandsbediening.
+No Sokoul server address yet.	Nog geen adres van de Sokoul-server.
+Not connected	Niet verbonden
+On the PC that runs it, the address is 127.0.0.1:25570. Elsewhere, use that PC's address on your Wi-Fi, shown in the server's window.	Op de pc waarop hij draait is het adres 127.0.0.1:25570. Elders gebruik je het wifi-adres van die pc, dat in het servervenster staat.
+On your phone, scan the QR code, or open {1}	Scan op je telefoon de QR-code of open {1}
+Owner of the server	Eigenaar van de server
+Passphrase	Wachtzin
+Press a device twice to sign it out. It will need to be linked again.	Druk twee keer op een apparaat om het af te melden. Het moet daarna opnieuw gekoppeld worden.
+Press again to sign out	Druk nogmaals om af te melden
+Reading your account…	Je account wordt gelezen…
+Server: {1}	Server: {1}
+Sign in	Aanmelden
+Sign in to your Sokoul account, then check this code:	Meld je aan bij je Sokoul-account en controleer dan deze code:
+Sign in with my name	Aanmelden met mijn naam
+Sign out of this device	Dit apparaat afmelden
+Sokoul account	Sokoul-account
+The first account can only be created on the PC that runs the server.	Het eerste account kan alleen worden aangemaakt op de pc waarop de server draait.
+The first account of the server. Choose a passphrase of at least 12 characters: a few words you will remember.	Het eerste account van de server. Kies een wachtzin van minstens 12 tekens: een paar woorden die je onthoudt.
+The passphrase needs at least 12 characters.	De wachtzin moet minstens 12 tekens hebben.
+The server is busy. Try again in a minute.	De server is bezet. Probeer het over een minuut opnieuw.
+The Sokoul server does not answer. Check that it is running and that this device is on the same network.	De Sokoul-server antwoordt niet. Controleer of hij draait en of dit apparaat op hetzelfde netwerk zit.
+The Sokoul server had a problem. Try again.	De Sokoul-server had een probleem. Probeer het opnieuw.
+The Sokoul server is a small program on your home PC that keeps your account, your profiles and where you stopped, so every TV, tablet and PC shares them.	De Sokoul-server is een klein programma op je pc thuis dat je account, je profielen en waar je gebleven was bewaart, zodat elke tv, tablet en pc ze deelt.
+The Sokoul server refused. Try again.	De Sokoul-server weigerde. Probeer het opnieuw.
+The Sokoul server refuses this device. On the server's PC, allow devices of the home network.	De Sokoul-server weigert dit apparaat. Sta op de pc van de server apparaten uit het thuisnetwerk toe.
+This address does not answer like a Sokoul server.	Dit adres antwoordt niet als een Sokoul-server.
+This device	Dit apparaat
+This device is already signed out.	Dit apparaat is al afgemeld.
+This device is no longer signed in. Link it again.	Dit apparaat is niet meer aangemeld. Koppel het opnieuw.
+This device: {1}	Dit apparaat: {1}
+This is not an address. Example: 192.168.1.20	Dit is geen adres. Voorbeeld: 192.168.1.20
+This server already has its owner. Sign in instead.	Deze server heeft al een eigenaar. Meld je in plaats daarvan aan.
+Too many tries. Wait {1} min, then try again.	Te veel pogingen. Wacht {1} min en probeer het opnieuw.
+Used today	Vandaag gebruikt
+Used yesterday	Gisteren gebruikt
+Used {1} days ago	{1} dagen geleden gebruikt
+Wrong name or passphrase.	Verkeerde naam of wachtzin.
+Your profiles and where you stopped follow you on every TV, tablet and PC of the house.	Je profielen en waar je gebleven was volgen je op elke tv, tablet en pc in huis.

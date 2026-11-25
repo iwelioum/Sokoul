@@ -50,6 +50,16 @@ object ProviderConfig {
     /** Clé saisie dans Réglages ; vide = revenir à la clé intégrée. */
     fun setKey(db: DesktopDb, id: String, value: String?) = db.putSetting(settingKey(id), value?.trim()?.takeIf { it.isNotEmpty() })
 
+    /** The new private Sokoul server (accounts, devices, later sync): its address, kept apart from the old Mainapi's. */
+    private const val SOKOUL_SERVER_SETTING = "sokoul_server_url"
+
+    /** Where the Sokoul server listens on the PC that runs it (docs/server.md). */
+    const val SOKOUL_SERVER_LOCAL_URL = "http://127.0.0.1:25570"
+
+    fun sokoulServerUrl(db: DesktopDb): String? = key(db, SOKOUL_SERVER_SETTING)?.trim()?.trimEnd('/')?.takeIf { it.isNotEmpty() }
+
+    fun setSokoulServerUrl(db: DesktopDb, value: String?) = setKey(db, SOKOUL_SERVER_SETTING, value?.trim()?.trimEnd('/'))
+
     /** Optional AniProject-compatible backend; kept separate from Sokoul Mainapi's unrelated routes. */
     fun animeBackendUrl(db: DesktopDb): String? = db.setting(settingKey(ANIME_BACKEND_SETTING))?.trim()?.takeIf { it.isNotEmpty() }
 

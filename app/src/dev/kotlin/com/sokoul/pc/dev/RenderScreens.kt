@@ -333,6 +333,61 @@ fun main(args: Array<String>) {
         kotlin.system.exitProcess(0)
     }
 
+    // "account-panel": Settings › Sokoul account. Signed out with the code and its QR, signed in with three devices,
+    // the address step and the signed-out choices; TV 1920x1080 and a tablet held upright, FR and EN. No server is asked.
+    if (args.getOrNull(1) == "account-panel") {
+        val now = 1_764_000_000_000L
+        val serverUrl = "http://192.168.0.10:25570"
+        val store = com.sokoul.pc.account.MemoryAccountStore(serverUrl)
+        val account = com.sokoul.pc.account.SokoulAccount(store, OkHttpClient(), clock = { now })
+        val code = com.sokoul.pc.account.LinkCode(
+            com.sokoul.pc.account.Secret("render"), "BCDF-GHJK", "$serverUrl/link?code=BCDF-GHJK", now + 9 * 60_000L + 42_000L, 3,
+        )
+        val day = 86_400_000L
+        val devices = listOf(
+            com.sokoul.pc.account.DeviceSession("s1", "Google TV Streamer", now - 30 * day, now, current = true),
+            com.sokoul.pc.account.DeviceSession("s2", "Galaxy Tab S7 FE", now - 20 * day, now - day, current = false),
+            com.sokoul.pc.account.DeviceSession("s3", "SOKOUL-PC", now - 40 * day, now - 3 * day, current = false),
+        )
+        // On the tablet, the tablet is this device.
+        val tabletDevices = devices.map { it.copy(current = it.id == "s2", lastUsedAt = if (it.id == "s2") now else if (it.id == "s1") now - day else it.lastUsedAt) }
+        val user = com.sokoul.pc.account.AccountUser("u1", "Ana", "owner")
+        data class Shot(val name: String, val w: Int, val h: Int, val portrait: Boolean, val view: com.sokoul.pc.account.AccountView, val keyboard: Boolean)
+        val wanted = args.getOrNull(2)?.split(',')
+        val shots = listOf(
+            Shot("linking", 1920, 1080, false, com.sokoul.pc.account.AccountView.Linking(code), false),
+            Shot("signed-in", 1920, 1080, false, com.sokoul.pc.account.AccountView.SignedIn(user, devices, justConnected = true), false),
+            Shot("signed-out", 1920, 1080, false, com.sokoul.pc.account.AccountView.SignedOut(), false),
+            Shot("server", 1920, 1080, false, com.sokoul.pc.account.AccountView.NeedsServer(""), false),
+            Shot("tablet-linking", 1600, 2560, true, com.sokoul.pc.account.AccountView.Linking(code), true),
+            Shot("tablet-signed-in", 1600, 2560, true, com.sokoul.pc.account.AccountView.SignedIn(user, tabletDevices), true),
+            Shot("tablet-sign-in", 1600, 2560, true, com.sokoul.pc.account.AccountView.SignIn(problem = com.sokoul.pc.account.Problems.forCode("invalid_credentials")), true),
+        ).filter { wanted == null || it.name in wanted }
+        for (language in listOf("fr", "en")) {
+            com.sokoul.pc.i18n.Strings.applyLanguage(language)
+            for (shot in shots) {
+                com.sokoul.pc.ui.Form.tablet = shot.portrait
+                com.sokoul.pc.ui.Form.tabletPortrait = shot.portrait
+                val model = com.sokoul.pc.account.AccountPanelModel(
+                    account, CoroutineScope(Dispatchers.Unconfined), shot.keyboard, if (shot.portrait) "Galaxy Tab S7 FE" else "Google TV Streamer",
+                    serverPc = false, clock = { now },
+                    kind = if (shot.portrait) com.sokoul.pc.account.DeviceKind.Tablet else com.sokoul.pc.account.DeviceKind.Tv,
+                )
+                model.preview(shot.view)
+                val s = ImageComposeScene(shot.w, shot.h, Density(1f)) {
+                    ScaledRoot { com.sokoul.pc.account.AccountScreen(model, onBack = {}, backButton = shot.portrait, openOnStart = false) }
+                }
+                var t = 0L
+                repeat(12) { s.render(t); t += 50_000_000L }
+                save("account-panel_${shot.name}_$language", s, t)
+                s.close()
+            }
+        }
+        com.sokoul.pc.ui.Form.tablet = false
+        com.sokoul.pc.ui.Form.tabletPortrait = false
+        kotlin.system.exitProcess(0)
+    }
+
     // "intro": the animated intro (Figma "breaking the evil eye"), one picture per key moment.
     if (args.getOrNull(1) == "intro") {
         val s = ImageComposeScene(1920, 1080, Density(1f)) { ScaledRoot { com.sokoul.pc.startup.SokoulIntro() } }

@@ -93,6 +93,10 @@ class SettingsHooks(
     val onClearHistory: () -> Unit = {},
     /** Accent, menu, home rows, subtitle style and screensaver back to what they were at first. */
     val onResetDisplay: () -> Unit = {},
+    /** Opens the Sokoul account panel (code and QR on a TV, sign-in on a PC or tablet). Null hides the row. */
+    val onSokoulAccount: (() -> Unit)? = null,
+    /** Who is signed in to the Sokoul account on this device, or null when nobody is. */
+    val sokoulAccountName: () -> String? = { null },
 )
 
 private val ON_OFF = listOf(true, false)
@@ -199,6 +203,17 @@ internal fun ProfilePane(prefs: DesktopPrefs?, profile: com.sokoul.pc.data.Profi
 @Composable
 internal fun SourcesPane(onCredentials: () -> Unit, hooks: SettingsHooks) {
     val services = remember { hooks.services() }
+    // The account of this device first: it carries the profiles and progress between the TV, the tablet and the PC.
+    hooks.onSokoulAccount?.let { open ->
+        val name = remember { hooks.sokoulAccountName() }
+        RowGroup {
+            SettingsRow(
+                com.sokoul.pc.account.AccountCopy.title.text(), name ?: com.sokoul.pc.account.AccountCopy.notConnected.text(), true,
+                remember { FocusRequester() }, open, "settings-sokoul-account",
+            )
+        }
+        Spacer(Modifier.height(10.dp))
+    }
     RowGroup {
         services.forEach { s ->
             InfoRow(s.label, if (s.configured) (s.source ?: L("Set up", "Configuré").text()) else L("Not set", "Non renseigné").text(), if (s.configured) GREEN else Color(0xFF636366), "service-${s.label}")

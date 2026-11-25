@@ -57,7 +57,8 @@ import org.slf4j.event.Level
 @Serializable data class LinkConfirmRequest(val userCode: String)
 @Serializable data class LinkConfirmBody(val deviceName: String)
 @Serializable data class LinkPollRequest(val deviceCode: String)
-@Serializable data class LinkTokenBody(val token: String, val sessionId: String)
+@Serializable data class LinkTokenBody(val token: String, val sessionId: String, val user: MeBody)
+@Serializable data class SetupStatusBody(val needsOwner: Boolean)
 
 /** No valid Sokoul session: 401 `unauthorized`. */
 class UnauthorizedException : RuntimeException(null, null, false, false)
@@ -157,6 +158,12 @@ private fun Route.publicRoutes(services: Services) {
     val accounts = services.accounts
     val limiter = services.limiter
 
+    // Whether the server still waits for its owner: behind the network lock like every /api route, so it never leaks
+    // through /health.
+    get("/setup") {
+        call.respond(SetupStatusBody(needsOwner = !io { services.accounts.hasUsers() }))
+    }
+
     post("/setup") {
         val local = AccessGate.isDirectLoopback(call.request.local.remoteAddress) { call.request.headers[it] }
         if (!local) throw ApiError(403, "setup_local_only")
@@ -219,7 +226,11 @@ private fun Route.publicRoutes(services: Services) {
             DeviceLinks.Poll.Pending -> call.respond(PreconditionRequired, ErrorBody("pending"))
             DeviceLinks.Poll.Expired -> call.respond(HttpStatusCode.Gone, ErrorBody("expired"))
             DeviceLinks.Poll.SlowDown -> throw ApiError(429, "slow_down", DeviceLinks.INTERVAL_SECONDS.toLong())
-            is DeviceLinks.Poll.Linked -> call.respond(LinkTokenBody(result.session.token, result.session.sessionId))
+            is DeviceLinks.Poll.Linked -> {
+                // The linked device learns who it now belongs to in the same answer, as a login does.
+                val who = io { services.sessions.lookup(result.session.token) } ?: throw ApiError(410, "expired")
+                call.respond(LinkTokenBody(result.session.token, result.session.sessionId, MeBody(who.userId, who.name, who.role.wire)))
+            }
         }
     }
 }

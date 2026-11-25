@@ -1063,3 +1063,55 @@ Where else a title can be watched in your country, when Movie of the Night doesn
 Recommendations of films similar to the ones you like.	توصيات بأفلام مشابهة لما تحبه.
 Which streaming services offer a title in your country (Netflix, Prime Video…).	خدمات البث التي تعرض عملًا ما في بلدك (Netflix وPrime Video…).
 More web and anime sources, from the PC at home that runs the Sokoul server.	مزيد من مصادر الويب والأنمي، من حاسوب المنزل الذي يشغّل خادم Sokoul.
+Asking the server for a code…	جارٍ طلب رمز من الخادم…
+Change server	تغيير الخادم
+Choose a name of 1 to 40 characters.	اختر اسمًا من 1 إلى 40 حرفًا.
+Code valid for {1}. A new one comes by itself.	الرمز صالح لمدة {1}. يظهر رمز جديد تلقائيًا.
+Connect the Sokoul server	ربط خادم Sokoul
+Connected as {1}	متصل باسم {1}
+Create	إنشاء
+Create the owner account	إنشاء حساب المالك
+Devices	الأجهزة
+Family member	فرد من العائلة
+Link this device with your phone, or sign in with your name and passphrase.	اربط هذا الجهاز بهاتفك، أو سجّل الدخول باسمك وعبارة المرور.
+Link this PC	ربط هذا الحاسوب
+Link this tablet	ربط هذا الجهاز اللوحي
+Link this TV	ربط هذا التلفاز
+Link this TV with your phone: a code and a QR code, nothing to type on the remote.	اربط هذا التلفاز بهاتفك: رمز ورمز QR، دون كتابة أي شيء بجهاز التحكم.
+No Sokoul server address yet.	لا يوجد عنوان لخادم Sokoul بعد.
+Not connected	غير متصل
+On the PC that runs it, the address is 127.0.0.1:25570. Elsewhere, use that PC's address on your Wi-Fi, shown in the server's window.	على الحاسوب الذي يشغّله، العنوان هو 127.0.0.1:25570. في مكان آخر، استخدم عنوان ذلك الحاسوب على شبكة Wi-Fi، المعروض في نافذة الخادم.
+On your phone, scan the QR code, or open {1}	على هاتفك، امسح رمز QR أو افتح {1}
+Owner of the server	مالك الخادم
+Passphrase	عبارة المرور
+Press a device twice to sign it out. It will need to be linked again.	اضغط مرتين على جهاز لتسجيل خروجه. سيلزم ربطه من جديد.
+Press again to sign out	اضغط مرة أخرى لتسجيل الخروج
+Reading your account…	جارٍ قراءة حسابك…
+Server: {1}	الخادم: {1}
+Sign in	تسجيل الدخول
+Sign in to your Sokoul account, then check this code:	سجّل الدخول إلى حسابك في Sokoul، ثم تحقّق من هذا الرمز:
+Sign in with my name	تسجيل الدخول باسمي
+Sign out of this device	تسجيل خروج هذا الجهاز
+Sokoul account	حساب Sokoul
+The first account can only be created on the PC that runs the server.	لا يمكن إنشاء الحساب الأول إلا على الحاسوب الذي يشغّل الخادم.
+The first account of the server. Choose a passphrase of at least 12 characters: a few words you will remember.	الحساب الأول للخادم. اختر عبارة مرور من 12 حرفًا على الأقل: بضع كلمات ستتذكرها.
+The passphrase needs at least 12 characters.	يجب أن تتكون عبارة المرور من 12 حرفًا على الأقل.
+The server is busy. Try again in a minute.	الخادم مشغول. أعد المحاولة بعد دقيقة.
+The Sokoul server does not answer. Check that it is running and that this device is on the same network.	خادم Sokoul لا يستجيب. تحقّق من أنه يعمل وأن هذا الجهاز على الشبكة نفسها.
+The Sokoul server had a problem. Try again.	واجه خادم Sokoul مشكلة. أعد المحاولة.
+The Sokoul server is a small program on your home PC that keeps your account, your profiles and where you stopped, so every TV, tablet and PC shares them.	خادم Sokoul برنامج صغير على حاسوب المنزل يحفظ حسابك وملفاتك الشخصية وموضع توقفك، لتتشاركها كل أجهزة التلفاز والأجهزة اللوحية والحواسيب.
+The Sokoul server refused. Try again.	رفض خادم Sokoul. أعد المحاولة.
+The Sokoul server refuses this device. On the server's PC, allow devices of the home network.	يرفض خادم Sokoul هذا الجهاز. على حاسوب الخادم، اسمح بأجهزة شبكة المنزل.
+This address does not answer like a Sokoul server.	هذا العنوان لا يستجيب كخادم Sokoul.
+This device	هذا الجهاز
+This device is already signed out.	تم تسجيل خروج هذا الجهاز بالفعل.
+This device is no longer signed in. Link it again.	لم يعد هذا الجهاز مسجّل الدخول. اربطه من جديد.
+This device: {1}	هذا الجهاز: {1}
+This is not an address. Example: 192.168.1.20	هذا ليس عنوانًا. مثال: 192.168.1.20
+This server already has its owner. Sign in instead.	لهذا الخادم مالك بالفعل. سجّل الدخول بدلًا من ذلك.
+Too many tries. Wait {1} min, then try again.	محاولات كثيرة جدًا. انتظر {1} دقيقة ثم أعد المحاولة.
+Used today	استُخدم اليوم
+Used yesterday	استُخدم أمس
+Used {1} days ago	استُخدم قبل {1} أيام
+Wrong name or passphrase.	الاسم أو عبارة المرور غير صحيحين.
+Your profiles and where you stopped follow you on every TV, tablet and PC of the house.	ملفاتك الشخصية وموضع توقفك يتبعانك على كل تلفاز وجهاز لوحي وحاسوب في المنزل.

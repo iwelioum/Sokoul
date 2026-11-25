@@ -1063,3 +1063,55 @@ Where else a title can be watched in your country, when Movie of the Night doesn
 Recommendations of films similar to the ones you like.	Recomendaciones de películas parecidas a las que te gustan.
 Which streaming services offer a title in your country (Netflix, Prime Video…).	Qué servicios de streaming ofrecen un título en tu país (Netflix, Prime Video…).
 More web and anime sources, from the PC at home that runs the Sokoul server.	Más fuentes web y de anime, desde el PC de casa que ejecuta el servidor Sokoul.
+Asking the server for a code…	Pidiendo un código al servidor…
+Change server	Cambiar de servidor
+Choose a name of 1 to 40 characters.	Elige un nombre de 1 a 40 caracteres.
+Code valid for {1}. A new one comes by itself.	Código válido durante {1}. Aparecerá uno nuevo solo.
+Connect the Sokoul server	Conectar el servidor Sokoul
+Connected as {1}	Conectado como {1}
+Create	Crear
+Create the owner account	Crear la cuenta de propietario
+Devices	Dispositivos
+Family member	Miembro de la familia
+Link this device with your phone, or sign in with your name and passphrase.	Vincula este dispositivo con tu teléfono o inicia sesión con tu nombre y tu frase de contraseña.
+Link this PC	Vincular este PC
+Link this tablet	Vincular esta tableta
+Link this TV	Vincular esta TV
+Link this TV with your phone: a code and a QR code, nothing to type on the remote.	Vincula esta TV con tu teléfono: un código y un código QR, nada que escribir con el mando.
+No Sokoul server address yet.	Aún no hay dirección del servidor Sokoul.
+Not connected	No conectado
+On the PC that runs it, the address is 127.0.0.1:25570. Elsewhere, use that PC's address on your Wi-Fi, shown in the server's window.	En el PC que lo ejecuta, la dirección es 127.0.0.1:25570. En otro lugar, usa la dirección de ese PC en tu wifi, que aparece en la ventana del servidor.
+On your phone, scan the QR code, or open {1}	En tu teléfono, escanea el código QR o abre {1}
+Owner of the server	Propietario del servidor
+Passphrase	Frase de contraseña
+Press a device twice to sign it out. It will need to be linked again.	Pulsa dos veces un dispositivo para cerrar su sesión. Habrá que vincularlo de nuevo.
+Press again to sign out	Pulsa de nuevo para cerrar sesión
+Reading your account…	Leyendo tu cuenta…
+Server: {1}	Servidor: {1}
+Sign in	Iniciar sesión
+Sign in to your Sokoul account, then check this code:	Inicia sesión en tu cuenta Sokoul y comprueba este código:
+Sign in with my name	Iniciar sesión con mi nombre
+Sign out of this device	Cerrar sesión en este dispositivo
+Sokoul account	Cuenta Sokoul
+The first account can only be created on the PC that runs the server.	La primera cuenta solo se puede crear en el PC que ejecuta el servidor.
+The first account of the server. Choose a passphrase of at least 12 characters: a few words you will remember.	La primera cuenta del servidor. Elige una frase de contraseña de al menos 12 caracteres: unas palabras que recordarás.
+The passphrase needs at least 12 characters.	La frase de contraseña necesita al menos 12 caracteres.
+The server is busy. Try again in a minute.	El servidor está ocupado. Inténtalo de nuevo en un minuto.
+The Sokoul server does not answer. Check that it is running and that this device is on the same network.	El servidor Sokoul no responde. Comprueba que está en marcha y que este dispositivo está en la misma red.
+The Sokoul server had a problem. Try again.	El servidor Sokoul tuvo un problema. Inténtalo de nuevo.
+The Sokoul server is a small program on your home PC that keeps your account, your profiles and where you stopped, so every TV, tablet and PC shares them.	El servidor Sokoul es un pequeño programa en el PC de casa que guarda tu cuenta, tus perfiles y dónde te quedaste, para que cada TV, tableta y PC los compartan.
+The Sokoul server refused. Try again.	El servidor Sokoul se negó. Inténtalo de nuevo.
+The Sokoul server refuses this device. On the server's PC, allow devices of the home network.	El servidor Sokoul rechaza este dispositivo. En el PC del servidor, permite los dispositivos de la red de casa.
+This address does not answer like a Sokoul server.	Esta dirección no responde como un servidor Sokoul.
+This device	Este dispositivo
+This device is already signed out.	Este dispositivo ya ha cerrado sesión.
+This device is no longer signed in. Link it again.	Este dispositivo ya no tiene sesión iniciada. Vincúlalo de nuevo.
+This device: {1}	Este dispositivo: {1}
+This is not an address. Example: 192.168.1.20	Esto no es una dirección. Ejemplo: 192.168.1.20
+This server already has its owner. Sign in instead.	Este servidor ya tiene propietario. Inicia sesión.
+Too many tries. Wait {1} min, then try again.	Demasiados intentos. Espera {1} min y vuelve a intentarlo.
+Used today	Usado hoy
+Used yesterday	Usado ayer
+Used {1} days ago	Usado hace {1} días
+Wrong name or passphrase.	Nombre o frase de contraseña incorrectos.
+Your profiles and where you stopped follow you on every TV, tablet and PC of the house.	Tus perfiles y dónde te quedaste te siguen en cada TV, tableta y PC de la casa.
