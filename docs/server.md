@@ -1,8 +1,8 @@
 # Sokoul server
 
 `server/` is Sokoul's own private server (Kotlin, Ktor on Netty, one SQLite file). It replaces `API/` lot by lot; see
-[`openspec/changes/sokoul-server`](../openspec/changes/sokoul-server). Today (Lot 3) it has the skeleton: config,
-database with migrations, structured logs, `/health`, and both access locks. Accounts arrive in Lot 4.
+[`openspec/changes/sokoul-server`](../openspec/changes/sokoul-server). Today (Lot 4) it has the skeleton (config,
+database with migrations, structured logs, `/health`, both access locks), accounts, sessions and TV linking.
 
 ## Run it
 
@@ -54,10 +54,69 @@ The server has two locks (design D4). Either one alone is one mistake away from 
      `lan=true`, carry no Cloudflare header and pass without an assertion: only what came through the tunnel needs one.
    - A refused request gets `403 {"error":"access_denied"}`. The log records the reason (`missing_assertion`,
      `signature`, `audience`…), never the token.
-2. **Session lock**: every `/api/*` route needs a Sokoul session. Until Lot 4, `RefuseAllSessions` refuses everyone, so
-   `GET /api/me` answers `401 {"error":"unauthorized"}` even behind a valid Access assertion.
+2. **Session lock** (`SessionStore`): every `/api/*` route needs a Sokoul session (`Authorization: Bearer <token>`),
+   except first-start setup, sign-in, joining and the TV side of linking. Without one, the answer is
+   `401 {"error":"unauthorized"}`, even behind a valid Access assertion.
 
 Errors are always `{"error":"<stable_code>"}`. Responses never include stack traces or exception messages.
+
+## Accounts
+
+The instance is private: one owner, plus family members the owner invites. There is no sign-up and no payment.
+
+- **Owner (first start).** While the database has no user, the server logs `No account yet`. `POST /api/setup`
+  `{"name","passphrase","deviceName"?}` creates the owner and returns a session. It is accepted only from this PC
+  itself (loopback, no Cloudflare header), and only once: afterwards it answers `409 already_set_up`.
+
+  ```powershell
+  curl.exe -s -X POST http://127.0.0.1:25570/api/setup -H "Content-Type: application/json" `
+    -d '{\"name\":\"Ana\",\"passphrase\":\"<at least 12 characters>\",\"deviceName\":\"PC\"}'
+  ```
+- **Passphrases**: 12 to 1024 characters, stored as PBKDF2-HMAC-SHA256 (JDK, 310 000 iterations, 16-byte random salt,
+  constant-time comparison). The iteration count is stored per user. Names are unique, ignoring case.
+- **Sign-in**: `POST /api/auth/login` `{"name","passphrase","deviceName"?}` returns
+  `{"token","sessionId","user":{"id","name","role"}}`. A wrong name and a wrong passphrase get the same
+  `401 invalid_credentials`. After 5 failures in 15 minutes from one address, or on one account, sign-in answers
+  `429 too_many_attempts` with `Retry-After`. The counters live in memory. Behind the tunnel the address is
+  `Cf-Connecting-IP`, which only Access-verified requests can carry.
+- **Invitations**: the owner calls `POST /api/invites` and gets `{"code":"XXXX-XXXX-XXXX","expiresAt"}`. The code
+  works once, for 24 hours, and is stored hashed. The new member calls `POST /api/auth/join`
+  `{"code","name","passphrase","deviceName"?}`: a wrong, used or expired code is `400 invalid_invite`, and a taken name
+  is `409 name_taken`. Members cannot invite (`403 owner_only`).
+- `GET /api/me` returns `{"id","name","role"}` (`owner` or `member`).
+- Passkeys (WebAuthn) come later.
+
+## Sessions and devices
+
+- A session token is 32 random bytes in Base64 URL. The device keeps it; the server stores only its SHA-256.
+- A session expires 30 days after its last use. Use is recorded at most once an hour.
+- `GET /api/sessions` lists the caller's devices: `{"sessions":[{"id","deviceName","createdAt","lastUsedAt","current"}]}`
+  (times in epoch milliseconds, most recent first).
+- `DELETE /api/sessions/{id}` revokes one of the caller's devices (`204`, or `404` for an unknown or foreign id). The
+  device's next call gets `401`.
+- `POST /api/auth/logout` revokes the current session.
+
+## Linking a TV
+
+The TV never shows a keyboard. It shows a code and a QR; a signed-in phone or computer confirms.
+
+1. The TV calls `POST /api/link/start` `{"deviceName":"Salon TV"}` (no session). The answer is
+   `{"deviceCode","userCode":"XXXX-XXXX","verifyPath":"/link?code=XXXX-XXXX","expiresIn":600,"interval":3}`.
+   - `deviceCode` is a 32-byte secret that only the TV knows.
+   - `userCode` uses only `BCDFGHJKLMNPQRSTVWXZ23456789` (no vowels, no 0/O, 1/I/L).
+   - The QR encodes the server address followed by `verifyPath`.
+2. On the phone, `GET /link` opens a small page (monochrome, French or English from the browser, no external
+   assets). It signs in with name and passphrase if needed, keeps the token in `localStorage`, and confirms the code
+   through `POST /api/link/confirm` `{"userCode"}`, with a session. A wrong, used or expired code is
+   `404 invalid_code`. The page is temporary until the web client exists.
+3. The TV calls `POST /api/link/poll` `{"deviceCode"}` every 3 seconds:
+   - `428 pending` until the code is confirmed;
+   - `200 {"token","sessionId"}` once confirmed, exactly once;
+   - `410 expired` after 10 minutes, after the token was handed out, or for an unknown code;
+   - `429 slow_down` when polled faster than every 3 seconds.
+
+Both codes are stored hashed. At most 50 links can wait at once (`429 too_many_links`). `/link`, `/api/link/start` and
+`/api/link/poll` need no session but stay behind the network lock.
 
 ## Remote access: Cloudflare Tunnel + Access (free plan)
 
@@ -79,7 +138,7 @@ filled in (`tools/server.sh tunnel <host> <email>` on macOS / Linux). It runs no
 6. Check from a phone on mobile data:
    - the address asks for the e-mail code first;
    - after the code, `/health` answers;
-   - `/api/me` answers 401.
+   - `/api/me` answers 401 (no session yet).
 
 Tailscale stays a documented alternative for devices that cannot use Access. In that case, keep local mode and use
 `lan=true` with `bind` set to the Tailscale address.
@@ -120,13 +179,13 @@ There is one file, `sokoul-server.db`, set up as follows:
 - plain JDBC, with every value bound as a parameter;
 - migrations run in order at start-up, each in its own transaction, recorded in `schema_version`;
 - a database newer than the server is refused;
-- migration 1 creates `users` and `sessions`.
+- migration 1 creates `users` and `sessions`;
+- migration 2 adds the users' name (unique, ignoring case), role (`owner` or `member`, one owner at most) and
+  passphrase hash, salt and iterations, plus the `invites` and `device_links` tables.
 
 To change the schema, append a migration. Never edit a shipped one.
 
 ## Next
 
-- **Lot 4**: the owner account (passphrase, then passkey), sessions with hashed tokens and a 30-day sliding expiry, the
-  device list with revocation, and TV linking by code and QR. A real `SessionAuthenticator` replaces
-  `RefuseAllSessions`.
+- **Lot 4, still open**: passkeys, a real TV → phone link check, and the app side (task 5.4).
 - **Lot 5 onwards**: the credentials vault, sync, streams, and the watch party.

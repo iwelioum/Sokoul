@@ -8,17 +8,23 @@ import io.ktor.server.testing.ApplicationTestBuilder
 import io.ktor.server.testing.testApplication
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
 import java.util.Properties
 
 class ServerTest {
+    @get:Rule val tmp = TemporaryFolder()
     private val local = ServerConfig.from(Properties())
 
     private fun ApplicationTestBuilder.app(
         config: ServerConfig = local,
         access: AccessGate = AccessGate(config),
-        sessions: SessionAuthenticator = RefuseAllSessions,
-    ) = application { module(config, access, sessions) }
+        sessions: SessionAuthenticator? = null,
+    ) {
+        val services = Services(Database.open(tmp.newFolder()), hasher = PassphraseHasher(1_000))
+        application { module(config, services, access, sessions ?: services.sessions) }
+    }
 
     @Test fun `health answers without auth`() = testApplication {
         app()
@@ -35,10 +41,10 @@ class ServerTest {
     }
 
     @Test fun `api me answers once a session is found`() = testApplication {
-        app(sessions = { SessionPrincipal("u1", "s1") })
+        app(sessions = { SessionPrincipal("u1", "s1", "Ana", Role.OWNER) })
         val r = client.get("/api/me")
         assertEquals(HttpStatusCode.OK, r.status)
-        assertEquals("""{"userId":"u1","sessionId":"s1"}""", r.bodyAsText())
+        assertEquals("""{"id":"u1","name":"Ana","role":"owner"}""", r.bodyAsText())
     }
 
     @Test fun `errors are stable codes without details`() = testApplication {
@@ -79,7 +85,7 @@ class ServerTest {
             header("Cf-Connecting-IP", "203.0.113.9")
             header(AccessGate.ASSERTION_HEADER, jwt.token("""{"aud":["aud-1"],"iss":"https://team.cloudflareaccess.com","exp":${now + 600}}"""))
         }
-        // Past the network lock, the session lock still refuses: there are no accounts yet.
+        // Past the network lock, the session lock still refuses: no session token.
         assertEquals(HttpStatusCode.Unauthorized, valid.status)
 
         assertEquals(HttpStatusCode.OK, client.get("/health").status)

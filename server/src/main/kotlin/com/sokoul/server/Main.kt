@@ -22,8 +22,13 @@ fun main() {
             ?: if (config.lan) "loopback and private LAN only" else "loopback only",
     )
 
+    val services = Services(db)
+    if (!services.accounts.hasUsers()) {
+        log.info("No account yet: create the owner from this PC with POST /api/setup (see docs/server.md)")
+    }
+
     val server = embeddedServer(Netty, port = config.port, host = config.bind) {
-        module(config)
+        module(config, services)
     }
     Runtime.getRuntime().addShutdownHook(Thread({
         log.info("Stopping Sokoul server")

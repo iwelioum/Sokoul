@@ -144,6 +144,13 @@ class AccessGate(
             return runCatching { InetAddress.getByName(s) }.getOrNull()
         }
 
+        /**
+         * A request made on this machine itself: a loopback caller, and no Cloudflare header (so not relayed by the
+         * tunnel, whose `cloudflared` also connects from loopback). Used for first-start setup.
+         */
+        fun isDirectLoopback(remoteAddress: String, header: (String) -> String?): Boolean =
+            CLOUDFLARE_HEADERS.none { header(it) != null } && isAllowedLocal(remoteAddress, lan = false)
+
         internal fun logDenied(reason: String, method: String, path: String) {
             log.warn("Access denied ({}) for {} {}", reason, method, path)
         }

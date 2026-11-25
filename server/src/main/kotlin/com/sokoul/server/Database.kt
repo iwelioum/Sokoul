@@ -115,6 +115,44 @@ object Migrations {
                 "CREATE INDEX sessions_user ON sessions(user_id)",
             ),
         ),
+        Migration(
+            2, "accounts, invitations and device links",
+            listOf(
+                // ADD COLUMN cannot carry UNIQUE: the unique name and the single owner are indexes below.
+                "ALTER TABLE users ADD COLUMN name TEXT",
+                "ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'member' CHECK (role IN ('owner', 'member'))",
+                "ALTER TABLE users ADD COLUMN passphrase_hash BLOB",
+                "ALTER TABLE users ADD COLUMN passphrase_salt BLOB",
+                "ALTER TABLE users ADD COLUMN passphrase_iterations INTEGER",
+                "CREATE UNIQUE INDEX users_name ON users(name COLLATE NOCASE)",
+                "CREATE UNIQUE INDEX users_single_owner ON users(role) WHERE role = 'owner'",
+                """
+                CREATE TABLE invites (
+                    id TEXT PRIMARY KEY,
+                    code_hash BLOB NOT NULL UNIQUE,
+                    created_by TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    created_at INTEGER NOT NULL,
+                    expires_at INTEGER NOT NULL,
+                    used_at INTEGER,
+                    used_by TEXT REFERENCES users(id) ON DELETE SET NULL
+                )
+                """,
+                """
+                CREATE TABLE device_links (
+                    id TEXT PRIMARY KEY,
+                    device_code_hash BLOB NOT NULL UNIQUE,
+                    user_code_hash BLOB NOT NULL UNIQUE,
+                    device_name TEXT NOT NULL,
+                    created_at INTEGER NOT NULL,
+                    expires_at INTEGER NOT NULL,
+                    last_poll_at INTEGER,
+                    confirmed_by TEXT REFERENCES users(id) ON DELETE CASCADE,
+                    confirmed_at INTEGER,
+                    consumed_at INTEGER
+                )
+                """,
+            ),
+        ),
     )
 
     fun currentVersion(c: Connection): Int {
@@ -139,7 +177,8 @@ object Migrations {
             db.transaction { c ->
                 // Re-read inside the transaction: another process may have migrated meanwhile.
                 if (currentVersion(c) >= m.version) return@transaction
-                m.statements.forEach { c.update(it.trimIndent()) }
+                // execute, not executeUpdate: the driver reports some DDL (ALTER TABLE ADD COLUMN) as returning rows.
+                m.statements.forEach { sql -> c.createStatement().use { it.execute(sql.trimIndent()) } }
                 c.update(
                     "INSERT INTO schema_version (version, description, applied_at) VALUES (?, ?, ?)",
                     m.version, m.description, System.currentTimeMillis(),

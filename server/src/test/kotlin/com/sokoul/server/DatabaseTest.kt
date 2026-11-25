@@ -23,7 +23,7 @@ class DatabaseTest {
         assertEquals(Migrations.ALL.size, again.schemaVersion())
         assertEquals(listOf(Migrations.ALL.size), again.query("SELECT COUNT(*) FROM schema_version") { it.getInt(1) })
         val tables = again.query("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name") { it.getString(1) }
-        assertTrue(tables.containsAll(listOf("schema_version", "sessions", "users")))
+        assertTrue(tables.containsAll(listOf("schema_version", "sessions", "users", "invites", "device_links")))
     }
 
     @Test fun `WAL, foreign keys and busy timeout are on`() {
@@ -53,17 +53,18 @@ class DatabaseTest {
     @Test fun `a later migration applies on top and a failing one rolls back`() {
         val dir = tmp.newFolder("data")
         val db = Database.open(dir)
-        val next = Migrations.ALL + Migration(2, "extra", listOf("CREATE TABLE extra (id INTEGER PRIMARY KEY)"))
+        val n = Migrations.ALL.size
+        val next = Migrations.ALL + Migration(n + 1, "extra", listOf("CREATE TABLE extra (id INTEGER PRIMARY KEY)"))
         assertEquals(1, Migrations.apply(db, next))
-        assertEquals(2, db.schemaVersion())
+        assertEquals(n + 1, db.schemaVersion())
 
-        val broken = next + Migration(3, "broken", listOf("CREATE TABLE t3 (id INTEGER)", "NOT SQL"))
+        val broken = next + Migration(n + 2, "broken", listOf("CREATE TABLE t3 (id INTEGER)", "NOT SQL"))
         try {
             Migrations.apply(db, broken)
             throw AssertionError("Broken migration must throw")
         } catch (_: SQLException) {
         }
-        assertEquals(2, db.schemaVersion())
+        assertEquals(n + 1, db.schemaVersion())
         assertEquals(emptyList<String>(), db.query("SELECT name FROM sqlite_master WHERE name = 't3'") { it.getString(1) })
     }
 
@@ -71,7 +72,8 @@ class DatabaseTest {
     fun `a database newer than the server is refused`() {
         val dir = tmp.newFolder("data")
         val db = Database.open(dir)
-        Migrations.apply(db, Migrations.ALL + Migration(2, "future", listOf("CREATE TABLE future (id INTEGER)")))
-        Database.open(dir) // knows only version 1
+        val future = Migration(Migrations.ALL.size + 1, "future", listOf("CREATE TABLE future (id INTEGER)"))
+        Migrations.apply(db, Migrations.ALL + future)
+        Database.open(dir) // does not know the future migration
     }
 }
