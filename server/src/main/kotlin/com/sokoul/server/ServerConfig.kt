@@ -18,6 +18,8 @@ import java.util.Properties
  * | `access.teamDomain` | `SOKOUL_SERVER_ACCESS_TEAM_DOMAIN`   | unset (local-only mode)       |
  * | `access.audience`   | `SOKOUL_SERVER_ACCESS_AUDIENCE`      | unset (local-only mode)       |
  * | `vault.keyFile`     | `SOKOUL_SERVER_VAULT_KEY_FILE`       | `vault.key` next to the config |
+ * | `web.dir`           | `SOKOUL_SERVER_WEB_DIR`              | `web/` of the checkout or the install |
+ * | `ffmpeg.path`       | `SOKOUL_SERVER_FFMPEG`               | `ffmpeg` on PATH, if any      |
  *
  * [toString] never prints the Access audience; nothing here should reach a log in clear.
  */
@@ -30,6 +32,10 @@ class ServerConfig(
     val configFile: File?,
     /** The credentials vault's master key (32 bytes, owner-only). Keep it out of the data folder's backups. */
     val vaultKeyFile: File,
+    /** The web client's folder when set (`web.dir`); [WebFiles.locate] looks for `web/` otherwise. */
+    val webDir: File? = null,
+    /** The ffmpeg program when set (`ffmpeg.path`); otherwise `ffmpeg` is looked for on PATH. */
+    val ffmpegPath: String? = null,
 ) {
     /** Cloudflare Access settings; present only when both the team domain and the audience are set. */
     class AccessConfig(val teamDomain: String, val audience: String) {
@@ -55,6 +61,8 @@ class ServerConfig(
             "access.teamDomain" to "SOKOUL_SERVER_ACCESS_TEAM_DOMAIN",
             "access.audience" to "SOKOUL_SERVER_ACCESS_AUDIENCE",
             "vault.keyFile" to "SOKOUL_SERVER_VAULT_KEY_FILE",
+            "web.dir" to "SOKOUL_SERVER_WEB_DIR",
+            "ffmpeg.path" to "SOKOUL_SERVER_FFMPEG",
         )
 
         private val HOST = Regex("^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$")
@@ -119,7 +127,8 @@ class ServerConfig(
             }
             val vaultKeyFile = value("vault.keyFile")?.let(::File)
                 ?: File(configFile?.absoluteFile?.parentFile ?: dataDir, VAULT_KEY_FILE_NAME)
-            return ServerConfig(port, bind, lan, dataDir, access, configFile, vaultKeyFile.absoluteFile)
+            val webDir = value("web.dir")?.let { File(it).absoluteFile }
+            return ServerConfig(port, bind, lan, dataDir, access, configFile, vaultKeyFile.absoluteFile, webDir, value("ffmpeg.path"))
         }
     }
 }

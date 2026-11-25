@@ -1,8 +1,9 @@
 # Sokoul server
 
 `server/` is Sokoul's own private server (Kotlin, Ktor on Netty, one SQLite file). It replaces `API/` lot by lot; see
-[`openspec/changes/sokoul-server`](../openspec/changes/sokoul-server). Today (Lot 4) it has the skeleton (config,
-database with migrations, structured logs, `/health`, both access locks), accounts, sessions and TV linking.
+[`openspec/changes/sokoul-server`](../openspec/changes/sokoul-server). Today it has the skeleton (config,
+database with migrations, structured logs, `/health`, both access locks), accounts, sessions, TV linking, sync, the
+credentials vault, and the web client with its catalogue, sources and stream relay (see Web client API).
 
 ## Run it
 
@@ -32,6 +33,8 @@ file means every setting takes its default. Environment variables override the f
 | `access.teamDomain` | `SOKOUL_SERVER_ACCESS_TEAM_DOMAIN` | unset | e.g. `myteam.cloudflareaccess.com` |
 | `access.audience` | `SOKOUL_SERVER_ACCESS_AUDIENCE` | unset | The Access application's AUD tag |
 | `vault.keyFile` | `SOKOUL_SERVER_VAULT_KEY_FILE` | `vault.key` next to the config file | The credentials vault's master key (see Credentials vault) |
+| `web.dir` | `SOKOUL_SERVER_WEB_DIR` | `web/` of the checkout or beside the install | The web client's files (see Web client API) |
+| `ffmpeg.path` | `SOKOUL_SERVER_FFMPEG` | `ffmpeg` on the `PATH` | Remux for Safari; without it MKV/AC3 files are relayed as they are |
 
 The two `access.*` keys must be set together. Set both, or leave both unset.
 
@@ -232,6 +235,138 @@ The apps: signed in to an account, Settings › Sources and keys also saves each
 this device has not set up shows "In your account · •••• 1234" when the account has that key, so a new device knows
 which keys to enter. Keys never come back from the server.
 
+## Web client API
+
+The web client (`web/`, openspec `web-client`) is served by this server and talks only to it. Everything below sits
+behind the network lock; the static files need no session (the page signs in through the API), every JSON route needs
+`Authorization: Bearer <token>`. The server has **no key of its own**: catalogue and sources use the caller's keys from
+the vault. Errors are `{"error":"<code>"}` as everywhere else, with `Retry-After` on `429`.
+
+### Static files
+
+- `web.dir` (`SOKOUL_SERVER_WEB_DIR`) sets the folder; otherwise the server looks for `web/` in its working folder, one
+  level up, then beside the install (`<install>/web`). Without one, `/` answers 404.
+- `GET /` and every path without an extension that is not a file (client routes such as `/title/movie/603`) answer
+  `index.html`. A missing file with an extension, a folder (no listing), a hidden name (`.env`) or any path leaving the
+  folder (`..`, `%2e%2e`, `%2f`, `%5c`, NUL, symbolic links out) answers 404. `/api/…` never falls back to the page.
+- Cache: `index.html` and unhashed files `no-cache` with an `ETag` (`304` on `If-None-Match`); `vendor/`, `fonts/` and
+  hashed names (`app.3f2a9c1d.js`) `public, max-age=31536000, immutable`.
+- Headers on every static answer: `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`,
+  `X-Frame-Options: DENY` and
+
+  ```
+  Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; connect-src 'self';
+    img-src 'self' data: blob: https://image.tmdb.org; media-src 'self' blob:; worker-src 'self' blob:;
+    manifest-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; object-src 'none'
+  ```
+
+  No inline script or style, no third-party script. Images may come from TMDB's CDN (the addresses carry no key).
+
+### Catalogue
+
+Language from `Accept-Language`: the first `fr*` or `en*` tag gives `fr-FR` or `en-US`, French by default. Region FR.
+TMDB answers are cached in memory 3 hours per key, path, parameters and language (the key enters the cache only as its
+SHA-256). Images are TMDB CDN addresses (`https://image.tmdb.org/t/p/<size>/<file>`).
+
+Without a TMDB key in the caller's vault, or when TMDB refuses the stored one, every catalogue and play route answers
+`409`:
+
+```json
+{"error":"needs_key","service":"tmdb"}
+{"error":"needs_key","service":"tmdb","reason":"refused"}
+```
+
+`Item` (rows and search):
+
+```json
+{"kind":"movie","id":603,"title":"Matrix","year":1999,
+ "poster":"https://image.tmdb.org/t/p/w342/….jpg","backdrop":"https://image.tmdb.org/t/p/w780/….jpg"}
+```
+
+`kind` is `movie` or `tv`; `year`, `poster`, `backdrop` may be missing.
+
+- `GET /api/catalog/home[?profile=<profile uuid>]` →
+  `{"rows":[{"id","title","items":[Item]}]}`. Row ids in order: `continue` (only with `profile`, only when it has
+  something: "Reprendre" / "Continue watching"), `trending` (all, week), `popular_movies`, `popular_tv`, `top_rated`
+  (films). Empty rows are left out. A `continue` item has no poster; its `backdrop` is the synced image and it adds
+  `"resume":{"season":1,"episode":2,"positionMs":600000,"durationMs":3600000,"subtitle":"S1E2"}` (`season`/`episode`
+  for series). It holds the 20 most recent unfinished resume points of that profile in the caller's account, one per
+  title. `400 invalid_profile` when the id is not 1–64 of `[A-Za-z0-9_-]`.
+- `GET /api/catalog/title/{movie|tv}/{id}` →
+
+  ```json
+  {"kind":"tv","id":1399,"title":"Game of Thrones","originalTitle":"Game of Thrones","overview":"…","year":2011,
+   "runtime":60,"genres":["Drame"],"rating":8.4,"backdrop":"…/w1280/….jpg","poster":"…/w500/….jpg",
+   "logo":"…/w500/….png","cast":[{"name":"…","character":"…","photo":"…/w185/….jpg"}],
+   "seasons":[{"number":1,"name":"Saison 1","episodeCount":10,"poster":"…/w342/….jpg","airDate":"2011-04-17"}]}
+  ```
+
+  `runtime` is minutes (a series' usual episode length); `logo` prefers the request language, then English; `cast` is
+  the first 10; `seasons` only for `tv`, specials (`number` 0) last. `400 invalid_kind`, `400 invalid_id`,
+  `404 not_found`.
+- `GET /api/catalog/season/{id}/{season}` →
+  `{"id":1399,"season":1,"name":"Saison 1","episodes":[{"number":1,"name":"…","overview":"…","still":"…/w300/….jpg","runtime":62,"airDate":"2011-04-17"}]}`.
+- `GET /api/catalog/search?q=<text>` → `{"items":[Item]}` (films and series only; an empty `q` gives `[]`;
+  `400 query_too_long` over 100 characters).
+
+### Play
+
+- `GET /api/play/versions?kind=movie&id=603` or `?kind=tv&id=1399&season=1&episode=2` →
+
+  ```json
+  {"versions":[{"id":"<opaque>","label":"Coflix · Uqload","quality":"1080p","language":"VF","origin":"web","source":"Coflix"}],
+   "sources":[{"name":"Coflix","status":"found"},{"name":"FStream","status":"not_found"},
+              {"name":"PurStream","status":"unavailable","reason":"blocked"}]}
+  ```
+
+  The sites of `sources/` (PurStream, Coflix, FStream, VoirDrama, and Anime-Sama for Japanese animation) are asked in
+  parallel, 25 s at most each. `quality` is `2160p`, `1080p`, `720p`, `480p` or missing; `language` is `VF`, `MULTI`,
+  `VOSTFR`, `VO` or missing. Order: French audio first (VF, MULTI, VOSTFR, VO, unknown), then quality, then direct links
+  before player pages. A player page no Sokoul host extractor reads is left out. `reason` is `blocked`, `timeout`,
+  `network` or `host_changed`. A version id is valid 2 hours, for the session that listed it only. Real-Debrid is not
+  asked yet (`origin` will then be `realdebrid`). `400 invalid_kind|invalid_id|episode_required`.
+- `POST /api/play/start` with `{"versionId":"…"}` →
+
+  ```json
+  {"url":"/api/stream/<id>/index.m3u8","type":"hls","remux":false,"compatible":true,
+   "subtitles":[{"url":"/api/stream/<id>/u/…/…","label":"Français","language":"fr"}]}
+  ```
+
+  - `type` `hls`: `url` ends in `index.m3u8` (a relayed playlist, or ffmpeg's remux when `remux` is true).
+  - `type` `file`: `url` is `/api/stream/<id>/media`, an MP4 (byte ranges supported).
+  - `compatible: false`: the file needs a remux (MKV, or AC3/E-AC3/DTS/TrueHD/FLAC audio) and this server has no
+    ffmpeg; it is served as it is and Safari will probably not play it, so tell the person.
+  - Subtitles come as WebVTT (SRT is converted).
+  - Errors: `404 unknown_version`; `422 unsupported_host`; `502 host_removed|host_not_found|host_changed|host_blocked|
+    host_timeout|host_network|host_unsupported`; `504 host_timeout`; `502 bad_media`.
+
+### Stream relay
+
+`/api/stream/<id>/…` needs no `Authorization` (a `<video>` element and Safari's native HLS cannot send one): the id is a
+random 256-bit capability bound to the session that started it.
+
+- An unknown id, a stream older than 6 hours, a session revoked or expired since (sign-out ends its streams), or a
+  request that carries another session's token: `404 not_found`. A session keeps its 6 newest streams.
+- Only addresses the server resolved itself are fetched. Playlists (recognised by `#EXTM3U` or their type) are
+  rewritten so every segment, variant, key and map address becomes `/api/stream/<id>/u/<payload>/<signature>` (HMAC-SHA256
+  with the stream's own key); anything else answers 404. Private, loopback and link-local addresses are never reached.
+- Upstream requests carry the extractor's headers (Referer, User-Agent…) and the player's `Range`, nothing of the caller.
+- Segments disguised as images (a PNG/JPEG/GIF before the TS) are unwrapped.
+- Remux: with ffmpeg (`ffmpeg.path` / `SOKOUL_SERVER_FFMPEG`, else `ffmpeg` on PATH; `ffprobe` beside it), a file
+  whose container is not MP4/MOV or whose audio is not AAC/MP3/ALAC becomes fMP4 HLS on the fly in
+  `<dataDir>/remux/<stream>`: video copied (`hvc1` tag for HEVC), audio copied when Safari plays it, AAC stereo
+  192 kb/s otherwise. The playlist grows while ffmpeg works (`EVENT`): the player can seek only within what is done.
+  ffmpeg reads http(s) only, and stops and its folder is deleted after 30 minutes without a request (or when the
+  stream expires, or the server stops).
+
+### Limits
+
+- `GET /api/play/versions`: 30 per 10 minutes per account; `POST /api/play/start`: 20 per 10 minutes;
+  `PUT /api/credentials/{service}`: 20 per 15 minutes (each one asks the real service). Over: `429 too_many_requests`.
+- At most 2 resolutions (versions or start) at once per account: `429 busy`.
+- Timeouts: TMDB 20 s per call, each site 25 s, each host 25 s, relay connect 10 s / read 30 s; playlists 4 MiB and
+  subtitles 2 MiB at most.
+
 ## Backup)
 
 `.\tools\server.ps1 backup [-To <folder>]` (or `tools/server.sh backup [folder]`) writes
@@ -270,4 +405,6 @@ To change the schema, append a migration. Never edit a shipped one.
 
 - **Lot 4, still open**: passkeys, a real TV → phone link check, and the app side (task 5.4).
 - **Lot 5, still open**: the "API et sources" settings page (6.4) and the OpenSubtitles user login (6.3b).
-- **Next lots**: streams and the watch party.
+- **Lot 7, still open**: Real-Debrid versions on the web (its search lives in the PC app, not in a shared module),
+  HLS sources with AC3 audio (relayed, not remuxed), the iPhone check of an MKV with AC3 (8.2), the IPTV lease (8.3)
+  and the watch party (8.4).

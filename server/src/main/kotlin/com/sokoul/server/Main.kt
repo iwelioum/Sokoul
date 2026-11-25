@@ -22,7 +22,11 @@ fun main() {
             ?: if (config.lan) "loopback and private LAN only" else "loopback only",
     )
 
-    val services = Services(db, vaultKeyFile = config.vaultKeyFile)
+    val ffmpeg = Remuxer.find(config.ffmpegPath)
+    log.info("ffmpeg: {}", ffmpeg ?: "not found (MKV and AC3/DTS audio will not be remuxed for Safari)")
+    val services = Services(db, vaultKeyFile = config.vaultKeyFile, remuxer = Remuxer(ffmpeg, java.io.File(config.dataDir, "remux")))
+    val webDir = config.webDir ?: WebFiles.locate()
+    log.info("Web client: {}", webDir ?: "not found (set web.dir)")
     // The vault opens now: its key file is created on the first start, and a missing or wrong one stops the server here.
     try {
         services.vault
@@ -39,7 +43,7 @@ fun main() {
     }
 
     val server = embeddedServer(Netty, port = config.port, host = config.bind) {
-        module(config, services)
+        module(config, services, webDir = webDir)
     }
     Runtime.getRuntime().addShutdownHook(Thread({
         log.info("Stopping Sokoul server")

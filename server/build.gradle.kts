@@ -55,6 +55,8 @@ dependencies {
     implementation(libs.kotlinx.coroutines.core)
     // The credentials vault checks keys with the apps' own ServiceCheck (core), over OkHttp.
     implementation(project(":core"))
+    // The web client's sources and embed hosts (Lot 7): the same scrapers and extractors as the apps.
+    implementation(project(":sources"))
     implementation(libs.okhttp)
     runtimeOnly(libs.slf4j.simple)
 

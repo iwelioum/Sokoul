@@ -25,10 +25,16 @@ class TestServer(
     val config: ServerConfig = ServerConfig.from(Properties()),
     /** Accepts everything by default: no test reaches a real service. */
     checker: CredentialChecker = CredentialChecker { _, _ -> com.sokoul.credentials.CheckResult(com.sokoul.credentials.Verdict.Accepted, 200) },
+    tmdbBaseUrl: String = "http://127.0.0.1:9/",
+    sources: SourceFactory = SourceFactory { _, _ -> emptyList() },
+    hostFor: (String) -> com.sokoul.sources.hosts.HostExtractor? = { null },
+    remuxer: Remuxer = Remuxer(null, tmp.newFolder()),
 ) {
     var now: Long = 1_800_000_000_000L
     val db: Database = Database.open(tmp.newFolder())
-    val services = Services(db, { now }, PassphraseHasher(1_000), vaultKeyFile = java.io.File(tmp.newFolder(), "vault.key"), credentialChecker = checker)
+    val services = Services(db, { now }, PassphraseHasher(1_000), vaultKeyFile = java.io.File(tmp.newFolder(), "vault.key"), credentialChecker = checker,
+        tmdbBaseUrl = tmdbBaseUrl, sourceFactory = sources, hostFor = hostFor, remuxer = remuxer, relayAllowPrivate = true,
+    )
 
     fun install(builder: ApplicationTestBuilder, access: AccessGate = AccessGate(config)) {
         builder.application { module(config, services, access) }

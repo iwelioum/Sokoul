@@ -70,6 +70,11 @@ class SessionStore(
         return principal
     }
 
+    /** Whether [sessionId] is still signed in (not revoked, not expired): a relayed stream lives only as long. */
+    fun isLive(sessionId: String): Boolean = db.query(
+        "SELECT 1 FROM sessions WHERE id = ? AND revoked_at IS NULL AND expires_at > ?", sessionId, nowMillis(),
+    ) { 1 }.isNotEmpty()
+
     /** The user's live sessions, most recently used first. */
     fun list(userId: String): List<DeviceSession> = db.query(
         "SELECT id, device_name, created_at, last_used_at FROM sessions " +

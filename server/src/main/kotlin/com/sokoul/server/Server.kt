@@ -30,7 +30,15 @@ import io.ktor.server.routing.post
 import io.ktor.server.routing.put
 import io.ktor.server.routing.route
 import io.ktor.server.routing.routing
+import io.ktor.server.application.ApplicationStopped
 import io.ktor.util.AttributeKey
+import com.sokoul.sources.SourceQuery
+import com.sokoul.sources.hosts.HostExtractor
+import com.sokoul.sources.hosts.Hosts
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
@@ -81,6 +89,14 @@ class Services(
     /** The vault's master key file (`ServerConfig.vaultKeyFile`); read, or created, the first time the vault is used. */
     vaultKeyFile: File,
     credentialChecker: CredentialChecker = CredentialChecker(ServiceCheck(defaultCheckHttp())::check),
+    /** Outside services of the web client (Lot 7): TMDB, the sites, the hosts, ffmpeg. Tests pass fakes. */
+    upstreamHttp: OkHttpClient = defaultUpstreamHttp(),
+    tmdbBaseUrl: String = "https://api.themoviedb.org",
+    sourceFactory: SourceFactory = DefaultSources(upstreamHttp),
+    hostFor: (String) -> HostExtractor? = Hosts::forUrl,
+    remuxer: Remuxer = Remuxer(null),
+    /** Tests only: lets the relay reach a MockWebServer on loopback. */
+    relayAllowPrivate: Boolean = false,
 ) {
     val accounts = Accounts(db, hasher, nowMillis)
     val sessions = SessionStore(db, nowMillis)
@@ -88,6 +104,24 @@ class Services(
     val limiter = FailureLimiter(nowMillis)
     val sync = SyncStore(db, nowMillis, syncLimits)
     val vault: Vault by lazy { Vault.open(db, vaultKeyFile, credentialChecker, nowMillis) }
+
+    /** Each PUT of a credential asks the real service: 20 per 15 minutes per account. */
+    val credentialsLimiter = RateLimiter(nowMillis, max = 20, windowMillis = 15 * 60_000L)
+    /** Listing versions asks every site: 30 per 10 minutes per account. */
+    val versionsLimiter = RateLimiter(nowMillis, max = 30, windowMillis = 10 * 60_000L)
+    /** Starting a stream asks a host and may start ffmpeg: 20 per 10 minutes per account. */
+    val startLimiter = RateLimiter(nowMillis, max = 20, windowMillis = 10 * 60_000L)
+
+    val tmdb = TmdbGateway(upstreamHttp, tmdbBaseUrl, nowMillis)
+    val catalog = Catalog(tmdb, { userId -> vault.reveal(userId, "tmdb") }, db)
+    val relay = StreamRelay(
+        upstreamHttp, remuxer,
+        sessionLive = sessions::isLive,
+        sessionOfToken = { token -> sessions.lookup(token)?.sessionId },
+        nowMillis = nowMillis,
+        allowPrivate = relayAllowPrivate,
+    )
+    val playback = Playback(catalog, tmdb, sourceFactory, hostFor, relay, nowMillis)
 }
 
 private val log = LoggerFactory.getLogger("com.sokoul.server.Server")
@@ -105,6 +139,8 @@ fun Application.module(
     services: Services,
     access: AccessGate = AccessGate(config),
     sessions: SessionAuthenticator = services.sessions,
+    /** The web client's folder; Main fills it from `web.dir` or [WebFiles.locate]. Null: no web client. */
+    webDir: File? = config.webDir,
 ) {
     install(ContentNegotiation) {
         json(Json { encodeDefaults = true; explicitNulls = false; ignoreUnknownKeys = true })
@@ -118,6 +154,9 @@ fun Application.module(
     }
 
     install(StatusPages) {
+        exception<NeedsKeyException> { call, e ->
+            call.respond(HttpStatusCode.Conflict, NeedsKeyBody("needs_key", e.service, e.reason))
+        }
         exception<UnauthorizedException> { call, _ ->
             call.respond(HttpStatusCode.Unauthorized, ErrorBody("unauthorized"))
         }
@@ -152,6 +191,20 @@ fun Application.module(
         }
     }
 
+    // Expired streams and idle remuxes go every minute; every ffmpeg stops with the server.
+    val sweeper = launch {
+        while (isActive) {
+            delay(60_000)
+            runCatching { services.relay.sweep() }
+        }
+    }
+    monitor.subscribe(ApplicationStopped) {
+        sweeper.cancel()
+        services.relay.stopAll()
+    }
+
+    val web = webDir?.let(::WebFiles)
+
     routing {
         get(AccessGate.HEALTH_PATH) {
             call.respond(HealthBody(status = "ok", version = SERVER_VERSION))
@@ -159,10 +212,83 @@ fun Application.module(
         get(LinkPage.PATH) { LinkPage.respond(call) }
         route("/api") {
             publicRoutes(services)
-            withSession(sessions) { sessionRoutes(services) }
+            withSession(sessions) {
+                sessionRoutes(services)
+                catalogRoutes(services)
+                playRoutes(services)
+            }
+            // The player cannot send a token: the stream id is the capability, bound to its session (StreamRelay).
+            get("/stream/{id}/{rest...}") {
+                services.relay.serve(call, call.parameters["id"].orEmpty(), call.parameters.getAll("rest").orEmpty())
+            }
+        }
+        if (web != null) {
+            get("/") { web.respond(call, emptyList()) }
+            get("/{path...}") {
+                val segments = call.parameters.getAll("path").orEmpty()
+                // An unknown API route stays a JSON 404, never the app shell.
+                if (segments.firstOrNull() == "api") throw NotFoundException()
+                web.respond(call, segments)
+            }
         }
     }
 }
+
+/** The web client's catalogue (openspec web-client 1.2), with the caller's own TMDB key. */
+private fun Route.catalogRoutes(services: Services) {
+    val catalog = services.catalog
+    fun ApplicationCall.language() = TmdbGateway.languageOf(request.headers[HttpHeaders.AcceptLanguage])
+
+    get("/catalog/home") {
+        val profile = call.request.queryParameters["profile"]?.takeIf { it.isNotEmpty() }
+        if (profile != null && !PROFILE_ID.matches(profile)) throw ApiError(400, "invalid_profile")
+        call.respond(catalog.home(call.session.userId, call.language(), profile))
+    }
+
+    get("/catalog/title/{kind}/{id}") {
+        val kind = kindParam(call.parameters["kind"])
+        call.respond(catalog.title(call.session.userId, call.language(), kind, idParam(call.parameters["id"])))
+    }
+
+    get("/catalog/season/{id}/{season}") {
+        val season = call.parameters["season"]?.toIntOrNull()?.takeIf { it in 0..999 } ?: throw ApiError(400, "invalid_season")
+        call.respond(catalog.season(call.session.userId, call.language(), idParam(call.parameters["id"]), season))
+    }
+
+    get("/catalog/search") {
+        val q = call.request.queryParameters["q"].orEmpty()
+        if (q.length > 100) throw ApiError(400, "query_too_long")
+        call.respond(catalog.search(call.session.userId, call.language(), q))
+    }
+}
+
+/** Versions, start (sokoul-server 8.1). */
+private fun Route.playRoutes(services: Services) {
+    get("/play/versions") {
+        val p = call.request.queryParameters
+        val kind = kindParam(p["kind"])
+        val id = idParam(p["id"])
+        val season = p["season"]?.let { it.toIntOrNull()?.takeIf { n -> n in 0..999 } ?: throw ApiError(400, "invalid_season") }
+        val episode = p["episode"]?.let { it.toIntOrNull()?.takeIf { n -> n in 1..9999 } ?: throw ApiError(400, "invalid_episode") }
+        if (kind == "tv" && (season == null || episode == null)) throw ApiError(400, "episode_required")
+        services.versionsLimiter.check("user:" + call.session.userId)
+        val query = SourceQuery(kind, id, season.takeIf { kind == "tv" }, episode.takeIf { kind == "tv" })
+        call.respond(services.playback.versions(call.session, query))
+    }
+
+    post("/play/start") {
+        val body = call.receive<StartRequest>()
+        if (body.versionId.length > 64) throw ApiError(404, "unknown_version")
+        services.startLimiter.check("user:" + call.session.userId)
+        call.respond(services.playback.start(call.session, body.versionId))
+    }
+}
+
+private val PROFILE_ID = Regex("^[A-Za-z0-9_-]{1,64}$")
+
+private fun kindParam(raw: String?): String = raw?.takeIf { it in Catalog.KINDS } ?: throw ApiError(400, "invalid_kind")
+
+private fun idParam(raw: String?): Int = raw?.toIntOrNull()?.takeIf { it > 0 } ?: throw ApiError(400, "invalid_id")
 
 /** Routes reachable without a session (still behind the network lock): setup, sign-in, joining, the TV side of linking. */
 private fun Route.publicRoutes(services: Services) {
@@ -299,6 +425,7 @@ private fun Route.sessionRoutes(services: Services) {
     put("/credentials/{service}") {
         val service = call.parameters["service"].orEmpty()
         if (service !in Vault.SERVICES) throw ApiError(404, "unknown_service")
+        services.credentialsLimiter.check("user:" + call.session.userId)
         val length = call.request.headers[HttpHeaders.ContentLength]?.toLongOrNull() ?: throw ApiError(411, "length_required")
         if (length > Vault.MAX_BODY_BYTES) throw ApiError(413, "too_large")
         val body = call.receive<CredentialPutRequest>()
@@ -329,6 +456,12 @@ fun defaultCheckHttp(): OkHttpClient = OkHttpClient.Builder()
     .connectTimeout(10, TimeUnit.SECONDS)
     .readTimeout(15, TimeUnit.SECONDS)
     .callTimeout(30, TimeUnit.SECONDS)
+    .build()
+
+/** TMDB, the streaming sites, the hosts and the relay: bounded, as a person waits for each. */
+fun defaultUpstreamHttp(): OkHttpClient = OkHttpClient.Builder()
+    .connectTimeout(10, TimeUnit.SECONDS)
+    .readTimeout(30, TimeUnit.SECONDS)
     .build()
 
 /** 1 000 changes with long overviews stay far below this. */
