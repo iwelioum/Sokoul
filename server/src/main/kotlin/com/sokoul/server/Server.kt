@@ -72,11 +72,13 @@ class Services(
     val db: Database,
     val nowMillis: () -> Long = System::currentTimeMillis,
     hasher: PassphraseHasher = PassphraseHasher(),
+    syncLimits: SyncLimits = SyncLimits(),
 ) {
     val accounts = Accounts(db, hasher, nowMillis)
     val sessions = SessionStore(db, nowMillis)
     val links = DeviceLinks(db, sessions, nowMillis)
     val limiter = FailureLimiter(nowMillis)
+    val sync = SyncStore(db, nowMillis, syncLimits)
 }
 
 private val log = LoggerFactory.getLogger("com.sokoul.server.Server")
@@ -267,12 +269,28 @@ private fun Route.sessionRoutes(services: Services) {
         call.respond(HttpStatusCode.Created, InviteBody(invite.code, invite.expiresAt))
     }
 
+    // Profiles and progress of the caller's account (Lot 6): what changed after a cursor, and this device's changes.
+    get("/sync") {
+        val raw = call.request.queryParameters["since"]
+        val since = if (raw == null) 0L else raw.toLongOrNull() ?: throw ApiError(400, "invalid_cursor")
+        call.respond(io { services.sync.pull(call.session.userId, since) })
+    }
+
+    post("/sync") {
+        call.request.headers[HttpHeaders.ContentLength]?.toLongOrNull()?.let { if (it > MAX_SYNC_BODY_BYTES) throw ApiError(413, "too_large") }
+        val body = call.receive<SyncPushRequest>()
+        call.respond(io { services.sync.push(call.session.userId, body.changes) })
+    }
+
     post("/link/confirm") {
         val body = call.receive<LinkConfirmRequest>()
         val name = io { services.links.confirm(body.userCode, call.session.userId) } ?: throw ApiError(404, "invalid_code")
         call.respond(LinkConfirmBody(name))
     }
 }
+
+/** 1 000 changes with long overviews stay far below this. */
+private const val MAX_SYNC_BODY_BYTES = 8L * 1024 * 1024
 
 private fun sessionBody(user: User, issued: IssuedSession) =
     SessionBody(issued.token, issued.sessionId, MeBody(user.id, user.name, user.role.wire))

@@ -241,6 +241,13 @@ class SokoulAccount(
         return if (r is AccountResult.Failed && r.problem.code == "unauthorized") AccountResult.Ok(Unit) else r
     }
 
+    /** `GET` [path] with this device's session (account sync): the body, or the plain-language problem. */
+    suspend fun getWithSession(path: String): AccountResult<String> = authed(Request.Builder().get(), path) { it }
+
+    /** `POST` [body] as JSON to [path] with this device's session (account sync). */
+    suspend fun postWithSession(path: String, body: String): AccountResult<String> =
+        authed(Request.Builder().post(body.toRequestBody(JSON_TYPE)), path) { it }
+
     /** A call with this device's session. A `401` means the session is gone: the device forgets it. */
     private suspend fun <T> authed(builder: Request.Builder, path: String, read: (String) -> T): AccountResult<T> {
         val base = store.serverUrl ?: return AccountResult.Failed(Problems.noServer)

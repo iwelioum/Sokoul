@@ -153,6 +153,46 @@ object Migrations {
                 """,
             ),
         ),
+        Migration(
+            3, "profiles and progress sync",
+            buildList {
+                // The account's change counter: every applied change takes the next number, the cursor of GET /api/sync.
+                add(
+                    """
+                    CREATE TABLE sync_cursor (
+                        user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+                        seq INTEGER NOT NULL
+                    )
+                    """,
+                )
+                // One table per kind of item. Every row is keyed by (user, profile, item); a profile's own row has
+                // item_key = profile_id. A deleted item stays as a tombstone (deleted = 1, its fields null).
+                val tables = mapOf(
+                    "sync_profiles" to "name TEXT, avatar INTEGER, kids INTEGER, pin_hash TEXT, pin_salt TEXT",
+                    "sync_resume" to "kind TEXT, tmdb_id INTEGER, season INTEGER, episode INTEGER, position_ms INTEGER, " +
+                        "duration_ms INTEGER, finished INTEGER, title TEXT, subtitle TEXT, image TEXT",
+                    "sync_my_list" to "kind TEXT, tmdb_id INTEGER, title TEXT, poster TEXT, backdrop TEXT, year INTEGER, overview TEXT",
+                    "sync_title_alerts" to "kind TEXT, tmdb_id INTEGER, title TEXT, image TEXT, told TEXT",
+                )
+                tables.forEach { (table, columns) ->
+                    add(
+                        """
+                        CREATE TABLE $table (
+                            user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                            profile_id TEXT NOT NULL,
+                            item_key TEXT NOT NULL,
+                            $columns,
+                            updated_at INTEGER NOT NULL,
+                            deleted INTEGER NOT NULL DEFAULT 0,
+                            seq INTEGER NOT NULL,
+                            PRIMARY KEY (user_id, profile_id, item_key)
+                        )
+                        """,
+                    )
+                    add("CREATE INDEX ${table}_seq ON $table(user_id, seq)")
+                }
+            },
+        ),
     )
 
     fun currentVersion(c: Connection): Int {

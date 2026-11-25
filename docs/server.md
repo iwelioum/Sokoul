@@ -119,6 +119,41 @@ The TV never shows a keyboard. It shows a code and a QR; a signed-in phone or co
 Both codes are stored hashed. At most 50 links can wait at once (`429 too_many_links`). `/link`, `/api/link/start` and
 `/api/link/poll` need no session but stay behind the network lock.
 
+## Sync
+
+One account carries its profiles and progress across the TV, the tablet and the PC (openspec task 7). Both routes
+need a session and only ever see the caller's account.
+
+What syncs, per account:
+
+- **profiles**: id (a UUID chosen by the device that created it), name, avatar colour, kids flag, and the profile
+  code's digest with the id it was salted with. The clear code never leaves the device. The first profile of every
+  device is the same account profile (its UUID is derived from the user id).
+- per profile: **resume points** (they are also the history: kind, TMDB id, season, episode, position, duration,
+  finished, title, subtitle, picture), **My List** entries and **title alerts** (with the last news told).
+
+What stays on the device: playback settings, IPTV playlists, favourites and the IPTV providers' own resume points
+(their ids belong to one provider account), service keys, and the server address and session.
+
+Every item has a stable key (the app's resume key, or `movie:603` for a list entry or an alert), an `updatedAt` in
+milliseconds and a `deleted` flag. A deletion is kept as a tombstone, so it beats older copies on other devices.
+
+- `GET /api/sync?since=<cursor>` returns `{"changes":[…],"cursor":N,"more":bool}`: the changes after `cursor`, oldest
+  first, at most 1,000 per page. The cursor is the account's own sequence number, raised by every applied change, not
+  a clock. `409 cursor_ahead` means the server never gave that cursor (its database was replaced): the device starts
+  again from 0 and sends everything it has.
+- `POST /api/sync` with `{"changes":[…]}` applies each change whose `updatedAt` is later than the stored one (last
+  writer wins per item; on a tie the server keeps its copy) and answers `{"applied":n,"ignored":n,"cursor":N}`.
+  Limits: 1,000 changes per request, 8 MiB per body, 64 profiles and 200,000 items per account, and string lengths
+  (key 200, name 40, title 300, address 1,000, overview 4,000). Anything outside them refuses the whole request
+  (`invalid_change`, `too_many_changes`, `too_many_items`, `too_many_profiles`, `too_large`). A device clock more
+  than a minute ahead is brought back to the server's time.
+
+The apps (`com.sokoul.pc.sync.SyncEngine`) keep a `sync_shadow` table: comparing it with the live data finds local
+changes, which wait there while the device is offline. A cycle pushes them, then pulls and merges, never overwriting a
+newer local value. It runs at start, every 5 minutes while the app is in front, when the app comes back to the front,
+when the account panel opens, and 5 s after saved progress. The account panel shows "Last synced at …" or the reason.
+
 ## Remote access: Cloudflare Tunnel + Access (free plan)
 
 `.\tools\server.ps1 tunnel -Hostname sokoul.example.com -Email you@example.com` prints every command with your values
@@ -183,10 +218,13 @@ There is one file, `sokoul-server.db`, set up as follows:
 - migration 1 creates `users` and `sessions`;
 - migration 2 adds the users' name (unique, ignoring case), role (`owner` or `member`, one owner at most) and
   passphrase hash, salt and iterations, plus the `invites` and `device_links` tables.
+- migration 3 adds `sync_cursor` (each account's sequence number) and one table per synced kind: `sync_profiles`,
+  `sync_resume`, `sync_my_list` and `sync_title_alerts`, keyed by (user, profile, item), with `updated_at`, `deleted`
+  and `seq`.
 
 To change the schema, append a migration. Never edit a shipped one.
 
 ## Next
 
 - **Lot 4, still open**: passkeys, a real TV → phone link check, and the app side (task 5.4).
-- **Lot 5 onwards**: the credentials vault, sync, streams, and the watch party.
+- **Lot 5 onwards**: the credentials vault, streams, and the watch party.

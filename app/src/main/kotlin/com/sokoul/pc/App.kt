@@ -130,6 +130,24 @@ class AppDeps(
     val bridge by lazy { com.sokoul.pc.control.AppBridge(this) }
     /** This device's Sokoul account on the private server; `account.session()` is what sync will call with. */
     val account by lazy { com.sokoul.pc.account.SokoulAccount(com.sokoul.pc.account.DbAccountStore(db), smallHttp) }
+    /**
+     * Profiles, resume points, My List and alerts across the account's devices (Lot 6). Does nothing signed out; only
+     * [realDeps] starts it, so tests and renders never reach a server.
+     */
+    val sync by lazy {
+        com.sokoul.pc.sync.SyncEngine(
+            db, com.sokoul.pc.sync.HttpSyncTransport(account),
+            userId = {
+                account.session()?.let { s -> s.user?.id ?: (account.me() as? com.sokoul.pc.account.AccountResult.Ok)?.value?.id }
+            },
+            onUi = { block -> kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) { block() } },
+            afterRemoteChange = {
+                profiles.reload()
+                myList.reload()
+                alerts.reload()
+            },
+        )
+    }
     /** Pictures of live programmes: the guide's, else TMDB's for an unambiguous title. */
     val programArt by lazy { com.sokoul.pc.live.ProgramArtCache { title -> catalog.search(title) } }
 
@@ -259,7 +277,8 @@ class AppDeps(
         sourcePreferences = prefs::sourceOrder,
         rememberSourceHoster = prefs::rememberSourceHoster,
         prefs = prefs::playback,
-        saveResume = db::saveResume,
+        // Saved progress reaches the account's other devices a few seconds after the last save.
+        saveResume = { r -> db.saveResume(r); sync.noteLocalChange() },
         readResume = db::resume,
         saveDirectResume = { key, position, length ->
             db.putSetting(profiles.key("provider.resume.$key"), "$position\t$length")
@@ -777,8 +796,12 @@ private fun MainInterface(deps: AppDeps, onProfiles: () -> Unit = {}, onSourcesS
                     keyboard = !Platform.IS_TV || com.sokoul.pc.ui.Form.tablet,
                     deviceName = com.sokoul.pc.account.defaultDeviceName(),
                     serverPc = !Platform.IS_TV,
+                    syncStatus = deps.sync.status,
                 )
             }
+            // Opening the panel, and signing in from it, syncs at once (a first sign-in uploads this device's data).
+            val signedIn = model.view is com.sokoul.pc.account.AccountView.SignedIn
+            androidx.compose.runtime.LaunchedEffect(signedIn) { deps.sync.request() }
             com.sokoul.pc.account.AccountScreen(model, onBack = { editingAccount = false })
             return@Box
         }

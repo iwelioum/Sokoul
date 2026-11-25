@@ -34,6 +34,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
@@ -388,6 +389,11 @@ private fun SignedInSection(view: AccountView.SignedIn, model: AccountPanelModel
         Label(L("This device: $here", "Cet appareil : $here").text(), AccType.Secondary, Secondary, maxLines = 1)
         Spacer(Modifier.height(6.dp))
         ServerLine(model)
+        model.syncStatus?.let { flow ->
+            val sync by flow.collectAsState()
+            Spacer(Modifier.height(6.dp))
+            Label(syncLine(sync, model.clock()), AccType.Secondary, Secondary, Modifier.testTag("account-sync"), maxLines = 2)
+        }
         view.problem?.let {
             Spacer(Modifier.height(20.dp))
             Problem(it.text())
@@ -421,6 +427,21 @@ private fun SignedInSection(view: AccountView.SignedIn, model: AccountPanelModel
             Column(Modifier.weight(0.9f)) { who() }
             Column(Modifier.weight(1.1f)) { devices() }
         }
+    }
+}
+
+/** "Last synced at 14:32", or the plain reason it did not work. */
+internal fun syncLine(status: com.sokoul.pc.sync.SyncStatus, now: Long): String {
+    status.problem?.let { return L("Not synced: ${it.text()}", "Pas synchronisé : ${it.text()}").text() }
+    val at = status.lastSyncedAt ?: return L("Not synced yet", "Pas encore synchronisé").text()
+    val zone = java.time.ZoneId.systemDefault()
+    val time = java.time.Instant.ofEpochMilli(at).atZone(zone)
+    val clock = "%02d:%02d".format(time.hour, time.minute)
+    return if (time.toLocalDate() == java.time.Instant.ofEpochMilli(now).atZone(zone).toLocalDate()) {
+        L("Last synced at $clock", "Dernière synchronisation à $clock").text()
+    } else {
+        val day = "${time.dayOfMonth}/${time.monthValue}"
+        L("Last synced on $day at $clock", "Dernière synchronisation le $day à $clock").text()
     }
 }
 

@@ -7,8 +7,9 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
+/** A title of My List as stored; also what the account sync sends. */
 @Serializable
-private data class SavedTitle(val id: Int, val kind: String, val title: String, val poster: String?, val backdrop: String?, val year: Int?, val overview: String?)
+internal data class SavedTitle(val id: Int, val kind: String, val title: String, val poster: String?, val backdrop: String?, val year: Int?, val overview: String?)
 
 /** The user's own list, shown in the Library. Stored in the settings table as JSON. */
 /** The titles the user keeps. [key] is the setting of the current profile (see Profiles). */

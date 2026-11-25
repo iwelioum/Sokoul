@@ -55,6 +55,8 @@ class AccountPanelModel(
     val kind: DeviceKind = DeviceKind.current(),
     /** The wait before asking again after a failed start of a link. */
     private val retryWait: suspend (Long) -> Unit = { delay(it) },
+    /** The account sync's last result, for the "Last synced" line; null where nothing syncs (renders, tests). */
+    val syncStatus: kotlinx.coroutines.flow.StateFlow<com.sokoul.pc.sync.SyncStatus>? = null,
 ) {
     var view by mutableStateOf<AccountView>(AccountView.Loading)
         private set

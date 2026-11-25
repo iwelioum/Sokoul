@@ -230,3 +230,11 @@ tasks.register<JavaExec>("hostsCompare") {
     jvmArgs("-Dfile.encoding=UTF-8")
     providers.gradleProperty("failedEmbeds").orNull?.let { systemProperty("sokoul.failedEmbeds", it) }
 }
+
+// Task 7.2: a copy of a real database round-trips through a Sokoul server (see SyncRoundTrip.kt). Never the live file.
+tasks.register<JavaExec>("syncRoundTrip") {
+    classpath = dev.runtimeClasspath
+    mainClass.set("com.sokoul.pc.dev.SyncRoundTripKt")
+    jvmArgs("-Dfile.encoding=UTF-8")
+    args((project.findProperty("roundTrip") as String? ?: "").split("|").filter { it.isNotEmpty() })
+}

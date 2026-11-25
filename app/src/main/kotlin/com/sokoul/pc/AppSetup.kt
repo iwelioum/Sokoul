@@ -180,6 +180,8 @@ fun realDeps(db: DesktopDb, player: CompletableFuture<DesktopPlayer?>, loaded: (
     )
     deps.tv.recorder.start(deps.tv::playlist)
     deps.clearSearchCache = debrid::clearCache
+    // Account sync (Lot 6): in the background from start, idle while this device is signed out.
+    deps.sync.start(appScope, com.sokoul.pc.ui.AppFocus.active)
     // A Real-Debrid sign-in made with a device code is renewed before its token ends.
     appScope.launch(Dispatchers.IO) {
         runCatching { com.sokoul.desktop.data.RealDebridAuth(db, com.sokoul.iptv.data.debrid.RealDebridOAuth(http)).refreshIfNeeded() }

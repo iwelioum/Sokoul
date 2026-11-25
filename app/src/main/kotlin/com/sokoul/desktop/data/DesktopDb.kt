@@ -120,6 +120,13 @@ class DesktopDb(file: File) : AutoCloseable {
         runCatching { exec("ALTER TABLE channels ADD COLUMN catchup_type TEXT") }
         runCatching { exec("ALTER TABLE channels ADD COLUMN catchup_source TEXT") }
         runCatching { exec("ALTER TABLE channels ADD COLUMN catchup_days INTEGER NOT NULL DEFAULT 0") }
+        // Account sync (com.sokoul.pc.sync): the last state of every synced item as the server knows it, and whether
+        // this device changed it since its last push. Comparing it with the live tables finds local changes.
+        exec(
+            """CREATE TABLE IF NOT EXISTS sync_shadow(type TEXT NOT NULL, profile TEXT NOT NULL, key TEXT NOT NULL, payload TEXT,
+                updated_at INTEGER NOT NULL, deleted INTEGER NOT NULL DEFAULT 0, dirty INTEGER NOT NULL DEFAULT 1, PRIMARY KEY(type, profile, key))""",
+            "CREATE INDEX IF NOT EXISTS sync_shadow_dirty ON sync_shadow(dirty)",
+        )
     }
 
     /** The profile whose resume points and history are read and written. "" is the first profile. */
@@ -728,6 +735,62 @@ class DesktopDb(file: File) : AutoCloseable {
 
     fun lastOf(kind: String, tmdbId: Int): Resume? =
         light("SELECT * FROM resume WHERE profile=? AND kind=? AND tmdb_id=? ORDER BY updated_at DESC LIMIT 1", profile, kind, tmdbId) { it.toResume() }.firstOrNull()
+
+    // --- account sync (com.sokoul.pc.sync) ------------------------------------------------------------
+
+    /** One synced item as last pushed or pulled. [profile] is the profile's account UUID; [payload] null when deleted. */
+    data class ShadowRow(val type: String, val profile: String, val key: String, val payload: String?, val updatedAt: Long, val deleted: Boolean, val dirty: Boolean)
+
+    @Synchronized
+    fun shadowRows(): List<ShadowRow> = query("SELECT * FROM sync_shadow") { it.toShadow() }
+
+    @Synchronized
+    fun dirtyShadowRows(limit: Int): List<ShadowRow> =
+        query("SELECT * FROM sync_shadow WHERE dirty=1 ORDER BY CASE type WHEN 'profile' THEN 0 ELSE 1 END, updated_at LIMIT ?", limit) { it.toShadow() }
+
+    @Synchronized
+    fun putShadow(rows: List<ShadowRow>) = tx {
+        rows.forEach { r ->
+            update("INSERT OR REPLACE INTO sync_shadow VALUES(?,?,?,?,?,?,?)", r.type, r.profile, r.key, r.payload, r.updatedAt, r.deleted, r.dirty)
+        }
+    }
+
+    /** Pushed: clean again, unless the item changed meanwhile (its time moved on). */
+    @Synchronized
+    fun markShadowClean(rows: List<ShadowRow>) = tx {
+        rows.forEach { r -> update("UPDATE sync_shadow SET dirty=0 WHERE type=? AND profile=? AND key=? AND updated_at=?", r.type, r.profile, r.key, r.updatedAt) }
+    }
+
+    @Synchronized
+    fun dropShadow(type: String, profile: String, key: String) = update("DELETE FROM sync_shadow WHERE type=? AND profile=? AND key=?", type, profile, key)
+
+    /** Everything of a profile but its own row: its items went with it. */
+    @Synchronized
+    fun dropShadowItems(profile: String) = update("DELETE FROM sync_shadow WHERE profile=? AND type<>'profile'", profile)
+
+    @Synchronized
+    fun clearShadow() = update("DELETE FROM sync_shadow")
+
+    /** Every resume point (history included) of the profile [scope], whatever the current profile is. */
+    fun resumeRowsOf(scope: String): List<Resume> = light("SELECT * FROM resume WHERE profile=?", scope) { it.toResume() }
+
+    fun resumeOf(scope: String, key: String): Resume? = light("SELECT * FROM resume WHERE key=?", scopedFor(key, scope)) { it.toResume() }.firstOrNull()
+
+    /** Writes a resume point of the profile [scope], synchronously (the sync runs on Dispatchers.IO). */
+    @Synchronized
+    fun putResumeOf(scope: String, r: Resume) {
+        update(
+            "INSERT OR REPLACE INTO resume(key, kind, tmdb_id, season, episode, title, subtitle, image, position_ms, duration_ms, updated_at, finished, profile) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            scopedFor(r.key, scope), r.kind, r.tmdbId, r.season, r.episode, r.title, r.subtitle, r.image, r.positionMs, r.durationMs, r.updatedAt, r.finished, scope,
+        )
+    }
+
+    @Synchronized
+    fun deleteResumeOf(scope: String, key: String) = update("DELETE FROM resume WHERE key=?", scopedFor(key, scope))
+
+    private fun ResultSet.toShadow() = ShadowRow(
+        getString("type"), getString("profile"), getString("key"), getString("payload"), getLong("updated_at"), getInt("deleted") == 1, getInt("dirty") == 1,
+    )
 
     private fun ResultSet.toResume() = Resume(
         getString("key").substringAfter('|'), getString("kind"), getInt("tmdb_id"), (getObject("season") as? Number)?.toInt(), (getObject("episode") as? Number)?.toInt(),
