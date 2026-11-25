@@ -100,6 +100,7 @@ import com.sokoul.pc.ui.SmartLandscape
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import com.sokoul.pc.ui.focusIfPresent
 
 private val TileWidth = 414.dp
 private val TileHeight = 232.dp
@@ -447,7 +448,7 @@ fun SagaShelfScreen(
         if (!active) return@LaunchedEffect
         withFrameNanos { }
         FocusSource.lastWasMouse = false
-        if (runCatching { first.requestFocus() }.isFailure) runCatching { root.requestFocus() }
+        if (!first.focusIfPresent()) runCatching { root.requestFocus() }
     }
     Box(
         Modifier

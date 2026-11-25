@@ -31,6 +31,7 @@ import com.sokoul.pc.data.L
 import com.sokoul.pc.theme.Palette
 import com.sokoul.pc.theme.Type
 import com.sokoul.pc.ui.*
+import com.sokoul.pc.ui.focusIfPresent
 
 internal enum class SourceLanguageFilter(val audio: AudioLanguage?) {
     All(null), French(AudioLanguage.VF), Multi(AudioLanguage.MULTI), Subtitled(AudioLanguage.VOSTFR), Original(AudioLanguage.VO), Unknown(null);
@@ -204,7 +205,7 @@ internal fun SourceBrowserContent(
     // Focus starts on the version playing, else on the first segment.
     LaunchedEffect(Unit) {
         withFrameNanos { }; withFrameNanos { }
-        if (runCatching { playing.requestFocus() }.isFailure) runCatching { first.requestFocus() }
+        if (!playing.focusIfPresent()) runCatching { first.requestFocus() }
     }
     LaunchedEffect(searchRevision, view, excludedView, deadView, origin) { state.scrollToItem(0) }
     TvPanel(

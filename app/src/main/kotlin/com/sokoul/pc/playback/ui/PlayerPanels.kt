@@ -62,6 +62,7 @@ import com.sokoul.pc.ui.glassSurface
 import com.sokoul.pc.ui.panelEnter
 import com.sokoul.pc.ui.PillButton
 import com.sokoul.pc.ui.tvFocusable
+import com.sokoul.pc.ui.focusIfPresent
 
 /** The sentence for each cause of failure. */
 fun failureText(f: PlayFailure): String = when (f) {
@@ -145,7 +146,7 @@ internal fun EpisodesPanel(source: EpisodeSource, request: PlayRequest, modifier
         if (episodes.isEmpty()) return@LaunchedEffect
         androidx.compose.runtime.withFrameNanos { }
         val here = if (season == request.season) request.episode?.let(rows::get) else null
-        if (here?.let { r -> runCatching { r.requestFocus() }.isSuccess } != true) runCatching { first.requestFocus() }
+        if (here?.focusIfPresent() != true) runCatching { first.requestFocus() }
     }
     com.sokoul.pc.ui.GlassMenu(
         com.sokoul.pc.data.L("Episodes", "Épisodes").text(),
@@ -310,7 +311,7 @@ internal fun SubtitlesMenu(
     LaunchedEffect(Unit) {
         repeat(4) {
             androidx.compose.runtime.withFrameNanos { }
-            if (runCatching { first.requestFocus() }.isSuccess) return@LaunchedEffect
+            if (first.focusIfPresent()) return@LaunchedEffect
         }
     }
     val active = online?.active
@@ -357,7 +358,7 @@ internal fun retryUseless(f: PlayFailure): Boolean = com.sokoul.pc.playback.sour
 @Composable
 internal fun FailurePanel(session: PlaybackSession, failure: PlayFailure, onVersions: () -> Unit, onClose: () -> Unit, modifier: Modifier = Modifier) {
     val first = remember { FocusRequester() }
-    LaunchedEffect(failure) { repeat(4) { androidx.compose.runtime.withFrameNanos { }; if (runCatching { first.requestFocus() }.isSuccess) return@LaunchedEffect } }
+    LaunchedEffect(failure) { repeat(4) { androidx.compose.runtime.withFrameNanos { }; if (first.focusIfPresent()) return@LaunchedEffect } }
     // As on the mock-up: a small card, "Playback unavailable" and the reason under it, then what helps first.
     Column(
         modifier.widthIn(min = 720.dp, max = 1240.dp).panelEnter().glassSurface(RoundedCornerShape(com.sokoul.pc.theme.Corners.Modal), com.sokoul.pc.theme.Corners.Modal).padding(horizontal = 56.dp, vertical = 48.dp),

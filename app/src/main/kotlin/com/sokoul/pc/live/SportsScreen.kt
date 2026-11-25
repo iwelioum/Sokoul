@@ -47,6 +47,7 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
+import com.sokoul.pc.ui.focusIfPresent
 
 internal fun SportsFailure.label(): String = when (this) {
     SportsFailure.NotConfigured -> L("Set up the Sokoul server in Settings > Content sources.", "Configurez le serveur Sokoul dans Réglages > Sources de contenu.")
@@ -135,7 +136,7 @@ internal fun SportsScreen(
         if (active && !Form.isPhone && !Form.tablet) {
             withFrameNanos { }
             if (event != null) runCatching { control.requestFocus() }
-            else if (lastEvent == null || runCatching { eventFocus.requestFocus() }.isFailure) {
+            else if (lastEvent == null || !eventFocus.focusIfPresent()) {
                 runCatching { first.requestFocus() }
             }
         }

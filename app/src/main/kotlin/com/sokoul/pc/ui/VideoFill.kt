@@ -23,7 +23,7 @@ import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
-import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.skiaCanvas
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.layout.ContentScale
 import com.sokoul.desktop.player.DesktopPlayer
@@ -58,7 +58,7 @@ fun VideoFill(player: DesktopPlayer, modifier: Modifier = Modifier, fit: Content
             val dh = if (stretch) size.height else h * ratio
             val img = org.jetbrains.skia.Image.makeFromBitmap(bmp)
             drawIntoCanvas { c ->
-                c.nativeCanvas.drawImageRect(
+                c.skiaCanvas.drawImageRect(
                     img,
                     org.jetbrains.skia.Rect.makeWH(w, h),
                     org.jetbrains.skia.Rect.makeXYWH((size.width - dw) / 2, (size.height - dh) / 2, dw, dh),

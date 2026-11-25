@@ -39,6 +39,7 @@ import com.sokoul.pc.theme.Type
 import com.sokoul.pc.ui.Label
 import com.sokoul.pc.ui.TvPanelNotice
 import com.sokoul.pc.ui.tvFocusable
+import com.sokoul.pc.ui.focusIfPresent
 
 internal val TV_COLUMN_WIDTH = 690.dp
 
@@ -90,7 +91,7 @@ internal fun TvGroupColumn(
         // A touch screen has no focus to show: nothing lit before a finger chooses (the search field looked selected).
         if (com.sokoul.pc.ui.Form.tablet || com.sokoul.pc.ui.Form.isPhone) return@LaunchedEffect
         val restore = television && query.isBlank() && selected != null
-        if (!restore || runCatching { activeGroup.requestFocus() }.isFailure) runCatching { search.requestFocus() }
+        if (!restore || !activeGroup.focusIfPresent()) runCatching { search.requestFocus() }
     }
     fun actions(group: LiveLogic.Group) {
         val id = TvPersonalization.collectionId(group.id)

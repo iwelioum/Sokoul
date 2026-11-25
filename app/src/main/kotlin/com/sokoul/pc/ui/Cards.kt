@@ -312,7 +312,7 @@ fun <T> CardRow(
                 if (upTarget != null && e.type == KeyEventType.KeyDown && e.key == Key.DirectionUp) {
                     FocusSource.lastWasMouse = false
                     onUp()
-                    runCatching { upTarget.requestFocus() }.isSuccess
+                    upTarget.focusIfPresent()
                 } else {
                     false
                 }

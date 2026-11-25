@@ -20,7 +20,7 @@ class FormulerGroupsTest {
         val applied = mutableListOf<String>()
         var closed = false
         setContent { GroupDrawer(groups, "g0", Modifier.width(500.dp).height(1080.dp), applied::add, { closed = true }, confirmOnly = true) }
-        waitForIdle()
+        awaitDrawerFocus()
         repeat(30) { onRoot().performKeyInput { pressKey(Key.DirectionDown) }; waitForIdle() }
         assertTrue(applied.isEmpty())
         onRoot().performKeyInput { pressKey(Key.Escape) }
@@ -31,7 +31,7 @@ class FormulerGroupsTest {
     fun only_ok_commits_the_highlighted_group_once() = runComposeUiTest {
         val applied = mutableListOf<String>()
         setContent { GroupDrawer(groups, "g0", Modifier.width(500.dp).height(1080.dp), applied::add, {}, confirmOnly = true) }
-        waitForIdle()
+        awaitDrawerFocus()
         onRoot().performKeyInput { pressKey(Key.DirectionDown) }
         waitForIdle()
         assertTrue(applied.isEmpty())
@@ -44,8 +44,11 @@ class FormulerGroupsTest {
         val applied = mutableListOf<String>()
         var closed = false
         setContent { GroupDrawer(groups, "g0", Modifier.width(500.dp).height(1080.dp), applied::add, { closed = true }, confirmOnly = true) }
-        waitForIdle()
+        awaitDrawerFocus()
         onRoot().performKeyInput { pressKey(Key.Enter) }
         runOnIdle { assertTrue(closed); assertTrue(applied.isEmpty()) }
     }
+
+    // The drawer takes its first focus one frame after it opens: wait for it, as waitForIdle() no longer runs that frame.
+    private fun ComposeUiTest.awaitDrawerFocus() = waitUntil(timeoutMillis = 3_000) { onAllNodes(isFocused()).fetchSemanticsNodes().isNotEmpty() }
 }

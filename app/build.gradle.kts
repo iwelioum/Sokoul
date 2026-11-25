@@ -58,8 +58,8 @@ dependencies {
     implementation(project(":core"))
     implementation(project(":sources"))
     implementation(compose.desktop.currentOs)
-    implementation(compose.material3)
-    implementation(compose.materialIconsExtended)
+    implementation(libs.compose.material3)
+    implementation(libs.compose.material.icons.extended)
     implementation(libs.okhttp)
     implementation(libs.zxing.core)
     // Streaming sites read by the app itself (Coflix…), as core already does.
@@ -75,8 +75,7 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(libs.okhttp.mockwebserver)
-    @OptIn(org.jetbrains.compose.ExperimentalComposeLibrary::class)
-    testImplementation(compose.uiTest)
+    testImplementation(libs.compose.ui.test)
 }
 
 // libVLC is supplied explicitly by the build environment and bundled into the distribution.

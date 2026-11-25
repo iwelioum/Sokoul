@@ -63,6 +63,7 @@ import com.sokoul.pc.theme.PanelType
 import com.sokoul.pc.ui.Label
 import com.sokoul.pc.ui.PanelMetrics
 import com.sokoul.pc.ui.tvFocusable
+import com.sokoul.pc.ui.focusIfPresent
 
 /** Graphite canvas of the redesigned Settings (Figma "Sokoul — Réglages", variable color/bg/canvas). */
 private val Canvas = Color(0xFF090909)
@@ -188,7 +189,7 @@ private fun WideSettings(
                     items.forEach { c ->
                         CategoryRow(
                             c, c == nav.current.category, if (c == start) firstRow else remember { FocusRequester() }, m.category, m.tablet,
-                            onEnter = { runCatching { panelEntry.requestFocus() }.isSuccess },
+                            onEnter = { panelEntry.focusIfPresent() },
                         ) { nav.select(c) }
                     }
                 }

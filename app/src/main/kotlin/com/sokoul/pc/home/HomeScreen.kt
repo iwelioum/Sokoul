@@ -123,6 +123,7 @@ import com.sokoul.pc.ui.PosterCard
 import com.sokoul.pc.ui.RoundButton
 import com.sokoul.pc.ui.VideoFill
 import com.sokoul.pc.ui.rememberHasFrames
+import com.sokoul.pc.ui.focusIfPresent
 
 /** The design the hero's text block was drawn for: its sizes follow the hero's own from there. */
 private const val HERO_DESIGN_WIDTH = 1920f
@@ -663,7 +664,7 @@ private fun Hero(
                             else -> null
                         } ?: return@onPreviewKeyEvent false
                         FocusSource.lastWasMouse = false
-                        runCatching { target.requestFocus() }.isSuccess
+                        target.focusIfPresent()
                     },
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(24.dp),

@@ -78,6 +78,13 @@ fun FocusManager.moveWithArrow(event: KeyEvent): Boolean {
 }
 
 /**
+ * Moves focus to this requester and says whether it got there. Since Compose 1.8 a requester whose element is not
+ * composed (a row scrolled away, a panel not open yet) no longer throws: requestFocus() only logs, so
+ * runCatching { requestFocus() }.isSuccess was always true and the fallback never ran.
+ */
+fun FocusRequester.focusIfPresent(): Boolean = runCatching { requestFocus(FocusDirection.Enter) }.getOrDefault(false)
+
+/**
  * One focus state for mouse and keyboard: hovering gives real focus, so survol and arrows share the same
  * highlight and only one element is ever focused. Enter activates like a click.
  */

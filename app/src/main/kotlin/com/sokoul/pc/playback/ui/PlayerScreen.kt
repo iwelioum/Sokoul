@@ -124,6 +124,7 @@ import com.sokoul.pc.ui.PillButton
 import com.sokoul.pc.ui.VideoFill
 import com.sokoul.pc.ui.tvFocusable
 import kotlinx.coroutines.delay
+import com.sokoul.pc.ui.focusIfPresent
 
 private const val HIDE_AFTER_MS = 3_500L
 private const val CONTROLS_HIDE_MS = 6_000L
@@ -199,7 +200,7 @@ fun PlayerScreen(
         val wanted = focusWanted ?: return@LaunchedEffect
         androidx.compose.runtime.withFrameNanos { }
         androidx.compose.runtime.withFrameNanos { }
-        if (runCatching { wanted.requestFocus() }.isFailure && runCatching { playFocus.requestFocus() }.isFailure) runCatching { focus.requestFocus() }
+        if (!wanted.focusIfPresent() && !playFocus.focusIfPresent()) runCatching { focus.requestFocus() }
     }
     var activity by remember { mutableIntStateOf(0) }
     var visible by remember { mutableStateOf(true) }

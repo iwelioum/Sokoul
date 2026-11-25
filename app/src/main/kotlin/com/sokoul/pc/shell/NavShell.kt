@@ -70,6 +70,7 @@ import com.sokoul.pc.ui.Label
 import com.sokoul.pc.ui.LocalActiveTab
 import com.sokoul.pc.ui.NavIcons
 import com.sokoul.pc.ui.tvFocusable
+import com.sokoul.pc.ui.focusIfPresent
 
 data class NavEntry(val id: String, val label: String, val icon: ImageVector)
 
@@ -163,7 +164,7 @@ fun NavShell(
     val homeNavTarget = MENU
 
     LaunchedEffect(homeNavRequested) {
-        if (homeNavRequested && runCatching { requester(homeNavTarget).requestFocus() }.isFailure) {
+        if (homeNavRequested && !requester(homeNavTarget).focusIfPresent()) {
             homeNavRequested = false
         }
     }

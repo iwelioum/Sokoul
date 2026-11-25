@@ -91,6 +91,7 @@ import com.sokoul.pc.ui.PinchActions
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import com.sokoul.pc.ui.focusIfPresent
 
 /** Everything the screens depend on. Tests and renders supply fakes for the network and the player. */
 class AppDeps(
@@ -537,7 +538,7 @@ private fun MainInterface(deps: AppDeps, onProfiles: () -> Unit = {}, onSourcesS
             if (section != revealedSection || overlays.lastOrNull() !== revealedOverlay) return@launch
             if (origin != null) {
                 FocusSource.lastWasMouse = true
-                if (runCatching { origin.requester.requestFocus() }.isSuccess) return@launch
+                if (origin.requester.focusIfPresent()) return@launch
             }
             val below = revealedOverlay?.let(overlayFocus::get) ?: sectionFocus()
             below?.let { runCatching { it.requestFocus() } }
