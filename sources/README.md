@@ -45,6 +45,14 @@ interface WebSource {
 `CatalogueDns` resolves the catalogue sites (anime-sama, coflix, french-stream) over DNS-over-HTTPS, because some
 providers answer a blocking address for them.
 
+## Sites still behind the old server
+
+Cpasmal, Wiflix, Omega, J1F, SwiftFlow, KissKH and Darkiworld are not implemented here: on 2026-11-25 none could be
+read end to end by plain HTTP. Cpasmal and J1F answer a Cloudflare challenge on their search, Wiflix sits behind a JS
+bot gate (its film mirror refuses TLS), KissKH signs its stream requests with keys from its web app, SwiftFlow does not
+answer and needs a partner key, Omega's domain expired and Darkiworld closed. What each site is, how it was matched and
+what would have to change are in [`SITES.md`](SITES.md).
+
 ## Adding a source
 
 1. Create `com.sokoul.sources.<site>.<Site>` implementing `WebSource`, with an `OkHttpClient` (and a TMDB lookup
@@ -59,6 +67,34 @@ providers answer a blocking address for them.
    it to the `direct` sources in `app/src/main/kotlin/com/sokoul/pc/AppSetup.kt`: `WebSources` turns its links into
    versions exactly as it does the server's.
 4. Test it in `sources/src/test` with `MockWebServer`: links found, `NotFound`, and `Unavailable`.
+
+## Host extractors (`com.sokoul.sources.hosts`)
+
+Sokoul's own extraction for the embed hosts the sources return as `Embed` links, meant to replace the derived
+JavaScript runtime in `extraction/` (and its QuickJS bridge in `:extractor`). Not wired into the apps yet.
+
+```kotlin
+interface HostExtractor { val host: String; fun handles(url: HttpUrl): Boolean; suspend fun extract(embedUrl: HttpUrl): HostResult }
+sealed interface HostResult { Media(url, format /* Hls | File */, headers, subtitles); Failed(reason: HostFailure) }
+enum class HostFailure { Removed, NotFound, HostChanged, Blocked, Timeout, Network, Unsupported }
+Hosts.forUrl(url)   // the host of a link: http(s) only, no IP literal, no credentials, default port
+Hosts.create(PageFetcher(client))  // the hosts over the app's own OkHttpClient
+```
+
+- Hosts: Voe, Vidmoly (+ `ansembed.net`), Sibnet, Uqload (+ subtitles), DoodStream, LuluStream, Veev, Vidara,
+  SeekStreaming, Fsvid and Vidzy (static pages only: a master built by the player's JavaScript answers `Unsupported`).
+- Failures are stable codes, never an upstream message or a signed address.
+- Shared pieces: `PageFetcher` (OkHttp on `Dispatchers.IO`, call timeout, 2 MiB bodies, redirects followed by hand with
+  a limit and a target check), `PackedScript` (reader for the classic JavaScript packer), `Codecs` (LZW, hex, AES-CBC,
+  Base64), `MediaText` (finding addresses in pages, script hops).
+- **Method.** The derived runtime is third-party code under CC BY-NC and is neither copied nor transliterated. It was
+  read only for facts about each host's protocol, written in our own words in
+  [`hosts/HOSTS.md`](src/main/kotlin/com/sokoul/sources/hosts/HOSTS.md); the Kotlin is written from that sheet with
+  Sokoul's own structure. A host change starts with the sheet.
+- Tests (`src/test/kotlin/com/sokoul/sources/hosts`) play each host with `MockWebServer`: extractors take the server's
+  addresses directly (Sibnet's `origin` and Fsvid/Vidzy's `gates` are constructor parameters) and a `PageFetcher` that
+  allows its local address.
+- `extraction/` (and the QuickJS bridge) will be deleted once these extractors pass live checks against the real hosts.
 
 ## Tests
 

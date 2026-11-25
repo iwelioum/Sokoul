@@ -223,3 +223,10 @@ tasks.withType<Test>().configureEach {
         exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.SHORT
     }
 }
+
+tasks.register<JavaExec>("hostsCompare") {
+    classpath = dev.runtimeClasspath
+    mainClass.set("com.sokoul.pc.dev.HostsCompareKt")
+    jvmArgs("-Dfile.encoding=UTF-8")
+    providers.gradleProperty("failedEmbeds").orNull?.let { systemProperty("sokoul.failedEmbeds", it) }
+}
