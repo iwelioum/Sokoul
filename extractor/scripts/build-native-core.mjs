@@ -6,7 +6,10 @@ import vm from 'node:vm';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, '../..');
 let quickjs = await readFile(path.join(root, 'extraction/runtime/fsvid-vidzy-quickjs-entry.js'), 'utf8');
-quickjs = quickjs.replace(/^import RELEASE_SYNC[^;]+;\s*import\s*\{[\s\S]*?\}\s*from 'quickjs-emscripten-core';/, '');
+// The entry's imports are dropped wherever they start (a licence comment may come first); QuickJS runs a plain script.
+const withoutImports = quickjs.replace(/^import RELEASE_SYNC[^;]+;\s*import\s*\{[\s\S]*?\}\s*from 'quickjs-emscripten-core';/m, '');
+if (withoutImports === quickjs || /^import\s/m.test(withoutImports)) throw new Error('Canonical QuickJS imports changed');
+quickjs = withoutImports;
 const begin = quickjs.indexOf('async function getQuickJsModule() {');
 const end = quickjs.indexOf('export function createBootstrap', begin);
 if (begin < 0 || end < 0) throw new Error('Canonical QuickJS adapter boundary changed');
