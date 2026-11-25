@@ -64,7 +64,8 @@ Errors are always `{"error":"<stable_code>"}`. Responses never include stack tra
 
 The instance is private: one owner, plus family members the owner invites. There is no sign-up and no payment.
 
-- **Owner (first start).** While the database has no user, the server logs `No account yet`. `POST /api/setup`
+- **Owner (first start).** While the database has no user, the server logs `No account yet` and `GET /api/setup`
+  answers `{"needsOwner":true}`. `POST /api/setup`
   `{"name","passphrase","deviceName"?}` creates the owner and returns a session. It is accepted only from this PC
   itself (loopback, no Cloudflare header), and only once: afterwards it answers `409 already_set_up`.
 
