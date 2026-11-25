@@ -251,13 +251,30 @@ class SettingsTest {
 
     @OptIn(ExperimentalTestApi::class)
     @Test
-    fun maintenanceActionsAskTwiceBeforeDoingAnything() = runComposeUiTest {
+    fun maintenanceActionsAskTwiceBeforeDoingAnything() = runComposeUiTest { maintenance() }
+
+    /** With eight starts listed above it, the maintenance group sits below the fold and has to be scrolled to. */
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun maintenanceWorksBelowALongStartLog() {
+        val log = File.createTempFile("start-log", ".txt").apply { deleteOnExit() }
+        log.writeText((1..8).joinToString("\n") { "## 25/11 20:0$it · Title $it\n+0 ms play movie $it\n+900 ms first image" })
+        com.sokoul.pc.playback.session.StartLog.open { log }
+        runComposeUiTest { maintenance() }
+    }
+
+    @OptIn(ExperimentalTestApi::class)
+    private fun ComposeUiTest.maintenance() {
         page()
         pane("tools")
+        // Bring the whole maintenance group into view while the clock runs: a page made longer by the start log above
+        // otherwise had to scroll with the clock frozen, and the scroll waited for ever.
+        onNodeWithTag("about-reset-display").performScrollTo()
+        waitForIdle()
         // The test clock would run the four seconds the confirmation waits for while a click settles: it is held still.
         mainClock.autoAdvance = false
         fun press(tag: String) {
-            onNodeWithTag(tag).performScrollTo().performClick()
+            onNodeWithTag(tag).performClick()
             mainClock.advanceTimeBy(300)
         }
         press("about-clear-history")

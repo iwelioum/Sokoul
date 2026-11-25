@@ -32,14 +32,18 @@ class NativeExtractionTest {
 
     @Test fun cancellationStopsTransportAndNextExtractionWorks() = runBlocking {
         var cancelled = false
+        // The transport must have been reached before the cancel: a fixed pause raced the runtime's start on a busy machine.
+        val reached = kotlinx.coroutines.CompletableDeferred<Unit>()
         val http = HttpBridge { request ->
+            reached.complete(Unit)
             try { delay(60_000) } finally { cancelled = true }
             BridgeResponse(200, "OK", emptyList(), request.url, ByteArray(0))
         }
         val runtime = ExtractorRuntime(http, { LocalExtractor.canonicalScript() }, "Fixture UA")
         try {
             val job = launch { runtime.extract("https://ansembed.net/embed-fixture.html") }
-            delay(500); job.cancelAndJoin()
+            kotlinx.coroutines.withTimeout(30_000) { reached.await() }
+            job.cancelAndJoin()
             assertTrue(cancelled)
             assertFalse(runtime.extract("https://unknown.example/embed-fixture.html").ok)
         } finally { runtime.close() }
