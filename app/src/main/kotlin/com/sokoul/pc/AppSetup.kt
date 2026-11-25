@@ -99,20 +99,21 @@ fun realDeps(db: DesktopDb, player: CompletableFuture<DesktopPlayer?>, loaded: (
             probe = StreamProbe(catalog.http),
             localResolver = nativeEmbedResolver,
             // Sources the app reads itself, without the Sokoul server (Docker): the others follow one by one.
-            direct = mapOf(
-                "PurStream" to com.sokoul.pc.playback.sources.PurStreamDirect(
+            // Each is keyed by its name, the name of its server route in WebRoutes.
+            direct = listOf<com.sokoul.sources.WebSource>(
+                com.sokoul.sources.purstream.PurStream(
                     catalog.http, tmdb = { kind, id -> catalog.tmdb.namesAndImages(catalog.key(), kind, id) },
-                )::find,
-                "Coflix" to com.sokoul.pc.playback.sources.CoflixDirect(
+                ),
+                com.sokoul.sources.coflix.Coflix(
                     catalog.http, tmdb = { kind, id, language -> catalog.tmdb.namesAndImages(catalog.key(), kind, id, language) },
-                )::find,
-                "FStream" to com.sokoul.pc.playback.sources.FStreamDirect(
+                ),
+                com.sokoul.sources.fstream.FStream(
                     catalog.http, tmdb = { kind, id, language -> catalog.tmdb.namesAndImages(catalog.key(), kind, id, language) },
-                )::find,
-                "VoirDrama" to com.sokoul.pc.playback.sources.VoirDramaDirect(
+                ),
+                com.sokoul.sources.voirdrama.VoirDrama(
                     catalog.http, tmdb = { kind, id, language -> catalog.tmdb.namesAndImages(catalog.key(), kind, id, language) },
-                )::find,
-            ),
+                ),
+            ).associateBy { it.name },
         ),
         animeWeb = com.sokoul.pc.playback.sources.AniProjectSources(
             catalog.http,
@@ -127,7 +128,7 @@ fun realDeps(db: DesktopDb, player: CompletableFuture<DesktopPlayer?>, loaded: (
             probe = StreamProbe(catalog.http),
             localResolver = nativeEmbedResolver,
             // Without the Sokoul server (Docker off, or a TV away from the PC), the app reads Anime-Sama itself.
-            direct = com.sokoul.pc.playback.sources.AnimeSamaDirect(catalog.http),
+            direct = com.sokoul.sources.animesama.AnimeSama(catalog.http),
         ),
         kidsProfile = { profiles.current.kids },
     )

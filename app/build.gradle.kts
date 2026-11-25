@@ -56,6 +56,7 @@ tasks.named("compileKotlin") { dependsOn(generateDesktopKeys) }
 dependencies {
     implementation(project(":extractor"))
     implementation(project(":core"))
+    implementation(project(":sources"))
     implementation(compose.desktop.currentOs)
     implementation(compose.material3)
     implementation(compose.materialIconsExtended)

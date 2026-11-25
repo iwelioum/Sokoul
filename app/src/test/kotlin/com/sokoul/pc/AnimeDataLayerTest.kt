@@ -20,8 +20,7 @@ import com.sokoul.pc.data.anime.MediaKind
 import com.sokoul.pc.data.providers.Pacer
 import com.sokoul.pc.data.providers.ProviderHttp
 import com.sokoul.pc.data.providers.RequestPriority
-import com.sokoul.pc.data.providers.SingleFlight
-import com.sokoul.pc.playback.sources.AnimeSamaSite
+import com.sokoul.iptv.data.net.SingleFlight
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -250,23 +249,7 @@ class AnimeDataLayerTest {
         assertEquals(7 * 24 * 3_600_000L, AnimeLists.maxAge(AnimeLists.FRIBB))
     }
 
-    // ---- Anime-Sama
-
-    @Test fun a_season_card_names_its_episodes() {
-        assertEquals(61, AnimeSamaSite.episodesInName("Saga 1 East Blue [Episode 1 à 61]"))
-        assertEquals(82, AnimeSamaSite.episodesInName("Saga 2 Alabasta [Episode 62 à 143]"))
-        assertEquals(12, AnimeSamaSite.episodesInName("Saison 2 (Épisodes 13 - 24)"))
-        assertNull(AnimeSamaSite.episodesInName("Saison 1"))
-        assertNull(AnimeSamaSite.episodesInName("Kai - Saga 1 (East Blue)"))
-    }
-
-    @Test fun the_site_address_is_read_from_the_official_page_only_when_it_lists_it() {
-        val page = """<a class="btn-primary" href="https://anime-sama.si">Accéder</a>
-            <li>anime-sama.store</li> const domains = [ { name: 'anime-sama.si' }, { name: 'anime-sama.to' }, ];"""
-        assertEquals(setOf("anime-sama.si", "anime-sama.to"), AnimeSamaSite.listedHosts(page))
-        assertEquals("anime-sama.si", AnimeSamaSite.officialHost(page))
-        assertNull(AnimeSamaSite.officialHost("""<a class="btn-primary" href="https://evil.example">x</a>"""))
-    }
+    // ---- Anime-Sama (the site's page rules are tested in the sources module: AnimeSamaSiteTest)
 
     @Test fun three_lookups_at_once_share_one_flight() = runBlocking {
         val flights = SingleFlight<String, Int>()

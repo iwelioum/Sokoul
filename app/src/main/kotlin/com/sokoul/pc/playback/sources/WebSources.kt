@@ -9,6 +9,14 @@ import com.sokoul.desktop.player.StreamRequest
 import com.sokoul.desktop.player.StreamSubtitle
 import com.sokoul.iptv.data.debrid.ReleaseName
 import com.sokoul.iptv.domain.AudioLanguage
+import com.sokoul.sources.LinkFormat
+import com.sokoul.sources.MediaUrls
+import com.sokoul.sources.SourceLink
+import com.sokoul.sources.SourceQuery
+import com.sokoul.sources.SourceResult
+import com.sokoul.sources.WebSource
+import com.sokoul.sources.audioLanguageOf
+import com.sokoul.sources.hostOf
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -28,7 +36,6 @@ import kotlinx.serialization.json.jsonObject
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.net.URI
-import java.text.Normalizer
 import java.util.concurrent.TimeUnit
 
 /** A playable link a Mainapi source answered, before it becomes a version. */
@@ -93,9 +100,6 @@ object WebParse {
 
     private fun text(e: JsonElement?): String? = (e as? JsonPrimitive)?.contentOrNull?.trim()?.takeIf { it.isNotEmpty() }
 
-    /** The player's site ("uqload.cx"), told apart when the server gives no player name. */
-    private fun hostOf(url: String?): String? = url?.let { runCatching { java.net.URI(it).host }.getOrNull() }?.removePrefix("www.")?.takeIf { it.isNotBlank() }
-
     private fun localPlayers(source: String, node: JsonElement, language: AudioLanguage?, out: MutableList<WebLink>, depth: Int = 0) {
         if (depth > MAX_DEPTH) return
         when (node) {
@@ -111,34 +115,8 @@ object WebParse {
         }
     }
 
-    fun languageOf(key: String): AudioLanguage? {
-        val normalized = Normalizer.normalize(key.trim().lowercase(), Normalizer.Form.NFD)
-            .replace(Regex("\\p{M}+"), "")
-        val tokens = normalized.split(Regex("[^a-z0-9]+")).filter(String::isNotEmpty).toSet()
-        val compact = tokens.joinToString("")
-        val explicitDub = tokens.any { it in FRENCH_DUB || NUMBERED_FRENCH.matches(it) }
-        val french = explicitDub || tokens.any { it in FRENCH_AUDIO } || compact in FRENCH_AUDIO_COMPACT
-        val original = tokens.any { it in ORIGINAL_AUDIO }
-        val subtitles = tokens.any { it in FRENCH_SUBTITLES } || (french && tokens.any { it in SUBTITLE_HINTS })
-
-        if (tokens.any { it in MULTI_AUDIO }) return AudioLanguage.MULTI
-        // “VO sous-titrée FR” names one audio track. Only an explicit VF marker can also promise a dub.
-        if (subtitles) return if (explicitDub) AudioLanguage.MULTI else AudioLanguage.VOSTFR
-        // Some provider payloads list both audio tracks explicitly instead of labelling the release "MULTI".
-        if (french && original) return AudioLanguage.MULTI
-        if (french) return AudioLanguage.VF
-        if (original) return AudioLanguage.VO
-        return null
-    }
-
-    private val FRENCH_DUB = setOf("vf", "vff", "vfq", "vfi", "truefrench")
-    private val NUMBERED_FRENCH = Regex("vf[0-9]+")
-    private val FRENCH_AUDIO = setOf("fr", "fra", "fre", "french", "francais", "francaise")
-    private val FRENCH_AUDIO_COMPACT = setOf("truefrench", "frenchdub", "francaisdub", "frfr", "frenchvf", "francaisvf")
-    private val ORIGINAL_AUDIO = setOf("voeng", "va", "vj", "vkr", "vo", "original", "japanese", "japonais", "ja", "jpn", "en", "eng", "english")
-    private val FRENCH_SUBTITLES = setOf("vostfr", "vost", "stfr", "subfr", "sousstitresfrancais")
-    private val MULTI_AUDIO = setOf("multi", "multiaudio", "dual", "dualaudio")
-    private val SUBTITLE_HINTS = setOf("sub", "subs", "subtitle", "subtitles", "subbed", "sous", "sous-titres")
+    /** The audio a key or label announces: the sources module's rule, one for the server's answers and the sites. */
+    fun languageOf(key: String): AudioLanguage? = audioLanguageOf(key)
 
     private const val MAX_DEPTH = 6
 }
@@ -146,15 +124,8 @@ object WebParse {
 /** Media acceptance is based on the URL path, or a signed relay owned by the configured server. */
 internal object SourceMedia {
     private val relays = setOf("/native-proxy", "/voe-proxy", "/fsvid-proxy", "/vidzy-proxy", "/vidmoly-proxy", "/sibnet-proxy", "/uqload-proxy", "/doodstream-proxy", "/lulustream-proxy", "/veev-proxy", "/vidara-proxy", "/seekstreaming-proxy", "/cinep-proxy", "/kisskh-proxy", "/streamed-proxy")
-    private val extensions = setOf("m3u8", "mp4", "mkv", "webm")
-    private fun uri(raw: String): URI? = runCatching { URI(raw) }.getOrNull()?.takeIf {
-        it.scheme?.lowercase() in setOf("http", "https") && !it.host.isNullOrBlank() && it.userInfo == null && it.fragment == null && raw.none { c -> c.isWhitespace() || c == '\u0000' }
-    }
-    private fun query(uri: URI): Map<String, String> = uri.rawQuery.orEmpty().split('&').mapNotNull {
-        val key = it.substringBefore('=')
-        val value = runCatching { java.net.URLDecoder.decode(it.substringAfter('=', ""), "UTF-8") }.getOrNull() ?: return@mapNotNull null
-        key to value
-    }.toMap()
+    private fun uri(raw: String): URI? = MediaUrls.parse(raw)
+    private fun query(uri: URI): Map<String, String> = MediaUrls.query(uri)
     private fun port(uri: URI) = uri.port.takeIf { it >= 0 } ?: if (uri.scheme.equals("https", true)) 443 else 80
 
     /** The IP literal of a host, or null for a name: names are never resolved here. "localhost" is the loopback. */
@@ -192,27 +163,16 @@ internal object SourceMedia {
     fun playable(url: String, format: String? = null, serverBase: String? = null): Boolean {
         val media = uri(url) ?: return false
         if (media.path in relays) return relay(url, serverBase)
-        val path = media.path.orEmpty().lowercase()
-        if (Regex("/(embed|player)(/|$)").containsMatchIn(path)) return false
-        return path.substringAfterLast('.', "") in extensions || (format == "hls" && "/hls/" in path)
+        return MediaUrls.file(url, format)
     }
-    fun hls(url: String, format: String?): Boolean = when (format?.lowercase()) {
-        "hls", "m3u8", "application/vnd.apple.mpegurl", "application/x-mpegurl" -> true
-        "mp4", "video/mp4" -> false
-        else -> {
-            val media = uri(url)
-            media?.path.orEmpty().endsWith(".m3u8", true) || media?.let(::query)?.get("url")?.substringBefore('?')?.endsWith(".m3u8", true) == true
-        }
-    }
-    fun type(url: String, format: String?): String? {
-        if (hls(url, format)) return "hls"
-        if (format?.lowercase() in setOf("mp4", "video/mp4")) return "mp4"
-        val media = uri(url)
-        return "mp4".takeIf { media?.path.orEmpty().endsWith(".mp4", true) || media?.let(::query)?.get("url")?.substringBefore('?')?.endsWith(".mp4", true) == true }
-    }
-    fun headers(obj: JsonObject): Map<String, String> = (obj["headers"] as? JsonObject).orEmpty().mapNotNull { (name, value) ->
+    fun hls(url: String, format: String?): Boolean = MediaUrls.hls(url, format)
+    fun type(url: String, format: String?): String? = MediaUrls.type(url, format)
+    fun headers(obj: JsonObject): Map<String, String> =
+        playerHeaders((obj["headers"] as? JsonObject).orEmpty().mapNotNull { (name, value) -> (value as? JsonPrimitive)?.contentOrNull?.let { name to it } }.toMap())
+    /** The headers a player may be given: User-Agent and Referer only, of a sane length and on one line. */
+    fun playerHeaders(given: Map<String, String>): Map<String, String> = given.mapNotNull { (name, value) ->
         val key = when (name.lowercase()) { "user-agent" -> "User-Agent"; "referer", "referrer" -> "Referer"; else -> return@mapNotNull null }
-        val text = (value as? JsonPrimitive)?.contentOrNull?.takeIf { it.length <= 2048 && it.none { c -> c == '\r' || c == '\n' || c == '\u0000' } } ?: return@mapNotNull null
+        val text = value.takeIf { it.length <= 2048 && it.none { c -> c == '\r' || c == '\n' || c == '\u0000' } } ?: return@mapNotNull null
         key to text
     }.toMap()
     fun subtitles(obj: JsonObject, serverBase: String?): List<StreamSubtitle> = (obj["subtitles"] as? JsonArray).orEmpty().mapNotNull { value ->
@@ -268,8 +228,9 @@ internal object WebRoutes {
 
 /**
  * The versions the web sources give for a title: each source is asked at once, one that fails or is slow is simply
- * missing, and the others are listed as they come. A source in [direct] is read by the app itself (no Sokoul server),
- * in the server's answer shape; the others are still asked of the Sokoul server (Mainapi) when one is set.
+ * missing, and the others are listed as they come. A source in [direct] (keyed by its route's source name) is read by
+ * the app itself through the sources module, without the Sokoul server; the others are still asked of the Sokoul
+ * server (Mainapi) when one is set.
  */
 class WebSources(
     http: OkHttpClient,
@@ -277,7 +238,7 @@ class WebSources(
     private val accessKey: () -> String?,
     private val probe: StreamProbe,
     private val localResolver: NativeEmbedResolver? = null,
-    private val direct: Map<String, suspend (PlayRequest) -> JsonElement?> = emptyMap(),
+    private val direct: Map<String, WebSource> = emptyMap(),
 ) {
     // A server that is off on the network may drop the connection instead of refusing it: 3 s to connect.
     private val client = http.newBuilder().callTimeout(CALL_SECONDS, TimeUnit.SECONDS).connectTimeout(3, TimeUnit.SECONDS).build()
@@ -303,11 +264,31 @@ class WebSources(
         }
     }
 
-    /** A source the app reads itself: its answer is parsed as the server's would be. */
-    private suspend fun read(source: suspend (PlayRequest) -> JsonElement?, route: WebRoute, request: PlayRequest, base: String?): List<PlayVersion> {
-        val payload = source(request) ?: return emptyList()
+    /** A source the app reads itself: its typed links become versions as the server's links do. */
+    private suspend fun read(source: WebSource, route: WebRoute, request: PlayRequest, base: String?): List<PlayVersion> {
+        val result = source.find(SourceQuery(if (request.kind == "movie") "movie" else "tv", request.tmdbId, request.season, request.episode))
+        if (result !is SourceResult.Found) {
+            com.sokoul.pc.playback.session.StartClock.note("${route.source.lowercase()} read by the app: ${(result as? SourceResult.Unavailable)?.reason ?: "not found"}")
+            return emptyList()
+        }
         com.sokoul.pc.playback.session.StartClock.note("${route.source.lowercase()} read by the app")
-        return WebParse.links(route.source, payload, request.episode, base.orEmpty(), localResolver != null).mapIndexed { i, link -> version(link, i, request) }
+        return result.links.mapNotNull { webLink(it, base.orEmpty()) }.distinctBy { it.url }.mapIndexed { i, link -> version(link, i, request) }
+    }
+
+    /**
+     * A source module link as the server's would be read: a player page only when it can be extracted here (and then by
+     * the local extractor), a media link only when [SourceMedia] accepts it.
+     */
+    private fun webLink(link: SourceLink, base: String): WebLink? = when (link.format) {
+        LinkFormat.Embed -> link.takeIf { localResolver != null && NativeEmbedResolver.supported(it.url) }
+            ?.let { WebLink(it.source, it.name, it.url, it.language, false, localExtraction = true) }
+        LinkFormat.Hls, LinkFormat.File -> {
+            val hls = link.format == LinkFormat.Hls
+            link.takeIf { SourceMedia.playable(it.url, if (hls) "hls" else null, base) }?.let {
+                WebLink(it.source, it.name, it.url, it.language, hls, SourceMedia.playerHeaders(it.headers),
+                    mediaType = if (hls) "hls" else MediaUrls.type(it.url, null))
+            }
+        }
     }
 
     private suspend fun ask(base: String, route: WebRoute, request: PlayRequest): List<PlayVersion> = withContext(Dispatchers.IO) {

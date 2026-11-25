@@ -55,7 +55,7 @@ fun main(args: Array<String>): Unit = runBlocking {
             accessKey = { ProviderConfig.key(db, "mainapi") ?: LocalServerKey.read() },
             probe = StreamProbe(catalog.http),
             localResolver = local,
-            direct = com.sokoul.pc.playback.sources.AnimeSamaDirect(catalog.http),
+            direct = com.sokoul.sources.animesama.AnimeSama(catalog.http),
         ),
     )
     println("configured: " + ProviderConfig.statuses(db).filter { it.configured }.joinToString { it.id })

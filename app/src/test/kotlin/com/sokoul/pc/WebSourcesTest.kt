@@ -4,6 +4,13 @@ import com.sokoul.iptv.domain.AudioLanguage
 import com.sokoul.pc.playback.session.PlayRequest
 import com.sokoul.pc.playback.sources.WebParse
 import com.sokoul.pc.playback.sources.WebRoutes
+import com.sokoul.pc.playback.sources.StreamProbe
+import com.sokoul.pc.playback.sources.WebSources
+import com.sokoul.sources.LinkFormat
+import com.sokoul.sources.SourceLink
+import com.sokoul.sources.SourceQuery
+import com.sokoul.sources.SourceResult
+import com.sokoul.sources.WebSource
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -136,4 +143,31 @@ class WebSourcesTest {
         assertTrue(!mp4.hls)
     }
 
+    @Test
+    fun `the ported answers give local extraction links with their language`() {
+        val answer = Json.parseToJsonElement("""{"extractionStatus":"authorized","players":{"VFF":[{"url":"https://uqload.vc/embed-a.html","player":"Uqload"}],"VOSTFR":[{"url":"https://voe.sx/e/b","player":"Voe"}]}}""")
+        val links = WebParse.links("FStream", answer, null, allowLocal = true)
+        assertEquals(listOf(AudioLanguage.VF, AudioLanguage.VOSTFR), links.map { it.language })
+        assertTrue(links.all { it.localExtraction })
+    }
+
+    @Test
+    fun `a source read by the app gives versions from its typed links`() = kotlinx.coroutines.runBlocking {
+        val http = okhttp3.OkHttpClient()
+        val purstream = object : WebSource {
+            override val name = "PurStream"
+            override suspend fun find(query: SourceQuery) = SourceResult.Found(listOf(
+                SourceLink(name, "pulse | 1080p", "https://cdn.example/a/master.m3u8", AudioLanguage.VF, format = LinkFormat.Hls),
+                // A player page goes to the local extractor, which this search has not: it is left out.
+                SourceLink(name, "uqload.cx", "https://uqload.cx/embed-x.html", AudioLanguage.VF, format = LinkFormat.Embed),
+                SourceLink(name, "page", "https://cdn.example/embed/b.m3u8", null, format = LinkFormat.Hls),
+            ))
+        }
+        val sources = WebSources(http, { null }, { null }, StreamProbe(http), localResolver = null, direct = mapOf("PurStream" to purstream))
+        assertTrue(sources.configured())
+        val found = ArrayList<com.sokoul.pc.playback.session.PlayVersion>()
+        sources.find(PlayRequest("movie", 603, null, null, "The Matrix", null, null)) { found += it }
+        assertEquals(listOf("PurStream · pulse | 1080p"), found.map { it.name })
+        assertEquals(AudioLanguage.VF, found.single().language)
+    }
 }

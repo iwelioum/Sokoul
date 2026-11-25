@@ -1,19 +1,22 @@
-package com.sokoul.pc.playback.sources
+package com.sokoul.sources.voirdrama
 
 import com.sokoul.iptv.data.net.TmdbClient
-import com.sokoul.pc.playback.session.PlayRequest
+import com.sokoul.sources.LinkFormat
+import com.sokoul.sources.SourceLink
+import com.sokoul.sources.SourceQuery
+import com.sokoul.sources.SourceResult
+import com.sokoul.sources.WebSource
+import com.sokoul.sources.audioLanguageOf
+import com.sokoul.sources.hostOf
+import com.sokoul.sources.siteTrace
+import com.sokoul.sources.traced
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.addJsonObject
-import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.put
-import kotlinx.serialization.json.putJsonArray
 import okhttp3.FormBody
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
@@ -61,29 +64,30 @@ internal object VoirDramaSite {
     }
 }
 
-/** VoirDrama read by the app (series only, VOSTFR): the season's page found by its first air date, then the episode's players. */
-class VoirDramaDirect(
+/** VoirDrama (series only, VOSTFR): the season's page found by its first air date, then the episode's players. */
+class VoirDrama(
     http: OkHttpClient,
     private val tmdb: suspend (kind: String, id: Int, language: String) -> TmdbClient.NamesAndImages?,
     private val site: String = "https://voirdrama.to",
     private val now: () -> Long = System::currentTimeMillis,
-) {
+) : WebSource {
+    override val name = "VoirDrama"
     private val client = http.newBuilder().callTimeout(15, TimeUnit.SECONDS).build()
     private val pages = ConcurrentHashMap<String, Pair<Long, String>>()
 
-    suspend fun find(request: PlayRequest): JsonElement? {
-        if (request.kind == "movie") return null
-        val season = request.season ?: return null
-        val episode = request.episode ?: return null
-        val page = page(request.tmdbId, season) ?: return null
+    override suspend fun find(query: SourceQuery): SourceResult = traced { links(query) }
+
+    private suspend fun links(query: SourceQuery): List<SourceLink>? {
+        if (query.movie) return null
+        val season = query.season ?: return null
+        val episode = query.episode ?: return null
+        val page = page(query.tmdbId, season) ?: return null
         val clean = page.trimEnd('/')
         val slug = clean.substringAfterLast('/')
         val html = get("$clean/$slug-${episode.toString().padStart(2, '0')}-vostfr/") ?: return null
-        val sources = VoirDramaSite.sources(html)
-        if (sources.isEmpty()) return null
-        return buildJsonObject {
-            put("extractionStatus", "authorized")
-            putJsonArray("data") { sources.forEach { (name, url) -> addJsonObject { put("name", name); put("link", url); put("language", "VOSTFR") } } }
+        return VoirDramaSite.sources(html).mapNotNull { (player, raw) ->
+            val url = raw.trim().takeIf { it.isNotEmpty() } ?: return@mapNotNull null
+            SourceLink(name, player.ifBlank { null } ?: hostOf(url) ?: name, url, audioLanguageOf("VOSTFR"), format = LinkFormat.Embed)
         }
     }
 
@@ -105,20 +109,28 @@ class VoirDramaDirect(
         return chosen
     }
 
-    private suspend fun search(query: String): String? = withContext(Dispatchers.IO) {
-        val body = FormBody.Builder().add("action", "ajaxsearchpro_search").add("aspp", query).add("asid", "7").add("asp_inst_id", "7_1")
-            .add("options", "aspf[vf__1]=vf&asp_gen[]=excerpt&asp_gen[]=content&asp_gen[]=title&filters_initial=1&filters_changed=0&qtranslate_lang=0&current_page_id=510").build()
-        try {
-            client.newCall(Request.Builder().url("$site/wp-admin/admin-ajax.php").header("User-Agent", USER_AGENT).header("Referer", "$site/").post(body).build())
-                .execute().use { r -> if (r.isSuccessful) r.body?.string() else null }
-        } catch (c: CancellationException) { throw c } catch (_: Exception) { null }
+    private suspend fun search(query: String): String? {
+        val trace = siteTrace()
+        return withContext(Dispatchers.IO) {
+            val body = FormBody.Builder().add("action", "ajaxsearchpro_search").add("aspp", query).add("asid", "7").add("asp_inst_id", "7_1")
+                .add("options", "aspf[vf__1]=vf&asp_gen[]=excerpt&asp_gen[]=content&asp_gen[]=title&filters_initial=1&filters_changed=0&qtranslate_lang=0&current_page_id=510").build()
+            val u = "$site/wp-admin/admin-ajax.php".toHttpUrlOrNull() ?: return@withContext null
+            try {
+                client.newCall(Request.Builder().url(u).header("User-Agent", USER_AGENT).header("Referer", "$site/").post(body).build())
+                    .execute().use { r -> trace?.answer(u, r); if (r.isSuccessful) r.body?.string() else null }
+            } catch (c: CancellationException) { throw c } catch (e: Exception) { trace?.error(e); null }
+        }
     }
 
-    private suspend fun get(url: String): String? = withContext(Dispatchers.IO) {
-        val u = url.toHttpUrlOrNull() ?: return@withContext null
-        try {
-            client.newCall(Request.Builder().url(u).header("User-Agent", USER_AGENT).header("Referer", "$site/").build()).execute().use { r -> if (r.isSuccessful) r.body?.string() else null }
-        } catch (c: CancellationException) { throw c } catch (_: Exception) { null }
+    private suspend fun get(url: String): String? {
+        val trace = siteTrace()
+        return withContext(Dispatchers.IO) {
+            val u = url.toHttpUrlOrNull() ?: return@withContext null
+            try {
+                client.newCall(Request.Builder().url(u).header("User-Agent", USER_AGENT).header("Referer", "$site/").build()).execute()
+                    .use { r -> trace?.answer(u, r); if (r.isSuccessful) r.body?.string() else null }
+            } catch (c: CancellationException) { throw c } catch (e: Exception) { trace?.error(e); null }
+        }
     }
 
     private companion object {

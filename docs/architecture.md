@@ -11,6 +11,7 @@ add accounts, server-side sources, a media proxy and watch parties.
 | `parser/` | `:parser` — M3U, XMLTV and Xtream parsing, release-title tags. Plain JVM |
 | `core/` | `:core` — TMDB, Xtream, IntroDB, Real-Debrid and anime clients, discovery logic. Plain JVM, depends on `:parser` |
 | `extractor/` | `:extractor` — host extraction runtime on QuickJS, built from `extraction/runtime` |
+| `sources/` | `:sources` — Sokoul's own web-source scrapers (Coflix, French-Stream, PurStream, VoirDrama, Anime-Sama) with a typed result model (`WebSource`, `SourceResult`), shared by the apps and the future Kotlin server. Plain JVM, depends on `:core` and `:extractor` ([README](../sources/README.md)) |
 | `app/` | `:app` — the shared screens and the Windows app (Compose Desktop, libVLC); dev tools in `app/src/dev` |
 | `tv/` | `:tv` — the Android app (TV and phone): activity, Media3 player, Android counterparts of PC-only files |
 | `API/` | Backend services: Mainapi (Node), watch party (Node), proxiesembed (Python) |
@@ -26,6 +27,9 @@ flowchart LR
   extractor[":extractor"] --> app
   core --> tv[":tv (Android)"]
   extractor --> tv
+  core --> sources[":sources"]
+  sources --> app
+  sources --> tv
   app -. "sources copied by syncShared" .-> tv
   ext["extraction/runtime"] -. "QuickJS bundle" .-> extractor
   ext -. "native bundle" .-> mainapi

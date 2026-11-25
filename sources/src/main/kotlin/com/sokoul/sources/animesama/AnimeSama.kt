@@ -1,5 +1,7 @@
-package com.sokoul.pc.playback.sources
+package com.sokoul.sources.animesama
 
+import com.sokoul.iptv.data.net.SingleFlight
+import com.sokoul.sources.CatalogueDns
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -24,13 +26,11 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
-import okhttp3.Dns
 import okhttp3.FormBody
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import java.net.InetAddress
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 
@@ -205,68 +205,20 @@ internal object AnimeSamaSite {
 }
 
 /**
- * DNS over HTTPS for the catalogue's hosts only: some providers answer a blocking address for anime-sama.*. Resolvers
- * are reached by IP; private, loopback or link-local answers are refused; every other host keeps the system resolver.
- */
-internal class AnimeSamaDns(http: OkHttpClient, private val now: () -> Long = System::currentTimeMillis) : Dns {
-    private val client = http.newBuilder().dns(Dns.SYSTEM).callTimeout(6, TimeUnit.SECONDS).build()
-    private val cache = ConcurrentHashMap<String, Pair<Long, List<InetAddress>>>()
-
-    override fun lookup(hostname: String): List<InetAddress> {
-        if (!CATALOGUE.matches(hostname)) return Dns.SYSTEM.lookup(hostname)
-        cache[hostname]?.takeIf { it.first > now() }?.let { return it.second }
-        for (resolver in RESOLVERS) {
-            val answer = runCatching { ask(resolver, hostname) }.getOrNull() ?: continue
-            cache[hostname] = (now() + answer.second * 1000L) to answer.first
-            return answer.first
-        }
-        throw java.net.UnknownHostException("anime_sama_dns_unavailable")
-    }
-
-    private fun ask(resolver: String, hostname: String): Pair<List<InetAddress>, Long>? {
-        val url = "$resolver?name=$hostname&type=A".toHttpUrlOrNull() ?: return null
-        client.newCall(Request.Builder().url(url).header("Accept", "application/dns-json").build()).execute().use { response ->
-            if (!response.isSuccessful) return null
-            return parse(response.body?.string() ?: return null)
-        }
-    }
-
-    companion object {
-        /** The catalogue hosts some providers block, as the server lists them (`API/Mainapi/utils/animeSamaDns.js`). */
-        val CATALOGUE = Regex("(?:[a-z0-9-]+\\.)*(?:anime-sama|coflix|french-?stream)\\.[a-z]{2,10}", RegexOption.IGNORE_CASE)
-        private val RESOLVERS = listOf("https://1.1.1.1/dns-query", "https://8.8.8.8/resolve")
-
-        /** Public A records of a DNS JSON answer and their shortest TTL (at least 60 s), or null when there is none. */
-        fun parse(body: String): Pair<List<InetAddress>, Long>? {
-            val o = runCatching { Json.parseToJsonElement(body).jsonObject }.getOrNull() ?: return null
-            if ((o["Status"] as? JsonPrimitive)?.contentOrNull != "0") return null
-            val records = (o["Answer"] as? JsonArray).orEmpty().mapNotNull { it as? JsonObject }
-                .filter { (it["type"] as? JsonPrimitive)?.contentOrNull == "1" }
-            val addresses = records.mapNotNull { r ->
-                (r["data"] as? JsonPrimitive)?.contentOrNull?.takeIf { it.matches(Regex("\\d{1,3}(\\.\\d{1,3}){3}")) }
-                    ?.let { runCatching { InetAddress.getByName(it) }.getOrNull() }
-            }.filter(com.sokoul.extract.PublicNetwork::isPublic)
-            if (addresses.isEmpty()) return null
-            val ttl = records.mapNotNull { (it["TTL"] as? JsonPrimitive)?.contentOrNull?.toLongOrNull() }.minOrNull() ?: 60L
-            return addresses to ttl.coerceAtLeast(60L)
-        }
-    }
-}
-
-/**
- * Anime-Sama read by the app itself, in the shape of the Sokoul server's `/anime/search` answer so that
- * [AnimeSamaParse] matches and links it unchanged. Players are left for the local extractor (no relay).
+ * Anime-Sama read without the Sokoul server, in the shape of the server's `/anime/search` answer so that the apps'
+ * `AnimeSamaParse` matches and links it unchanged. Players are left for host extraction (no relay). Episode-oriented
+ * (search a name, then resolve one episode of the answer), so not a [com.sokoul.sources.WebSource].
  *
  * The site's address: [site] when given (tests), else the one its official page (anime-sama.pw) sends to, checked and
  * kept for a day, else [DEFAULT_SITE] (2026-11-24: the address changes and was written in the code).
  */
-class AnimeSamaDirect(http: OkHttpClient, private val site: String? = null, private val now: () -> Long = System::currentTimeMillis) {
-    private val client = http.newBuilder().dns(AnimeSamaDns(http)).callTimeout(20, TimeUnit.SECONDS).followRedirects(true).build()
+class AnimeSama(http: OkHttpClient, private val site: String? = null, private val now: () -> Long = System::currentTimeMillis) {
+    private val client = http.newBuilder().dns(CatalogueDns(http)).callTimeout(20, TimeUnit.SECONDS).followRedirects(true).build()
     private val catalogues = ConcurrentHashMap<String, Pair<Long, JsonArray>>()
     private val works = ConcurrentHashMap<String, Pair<Long, JsonObject>>()
     private val searches = ConcurrentHashMap<String, Pair<Long, List<AnimeSamaSite.Result>>>()
     private val workPanels = ConcurrentHashMap<String, Pair<Long, List<AnimeSamaSite.Panel>>>()
-    private val workFlights = com.sokoul.pc.data.providers.SingleFlight<String, JsonObject?>()
+    private val workFlights = SingleFlight<String, JsonObject?>()
     private data class SeasonPage(val declared: List<String>?, val players: List<List<String>>)
     private val seasonPages = LinkedHashMap<String, Pair<Long, SeasonPage>>(16, 0.75f, true)
     private val seasonRequests = Semaphore(PARALLEL)
@@ -291,15 +243,18 @@ class AnimeSamaDirect(http: OkHttpClient, private val site: String? = null, priv
         return answer
     }
 
-    /** The works of [search] with the target episode's players in every declared language, references resolved. */
-    internal suspend fun resolve(name: String, target: AnimeSamaParse.Target): JsonArray? {
+    /**
+     * The works of [search] with one episode's players in every declared language, references resolved. [anime],
+     * [season] and [episode] are 1-based positions in that answer: the work, its season card, the episode.
+     */
+    suspend fun resolve(name: String, anime: Int, season: Int, episode: Int): JsonArray? {
         // The search the target was found in: the thorough one when it was needed.
         val root = catalogues["true:$name"]?.takeIf { it.first > now() }?.second ?: search(name) ?: return null
-        val work = root.getOrNull(target.anime - 1)?.jsonObject ?: return null
+        val work = root.getOrNull(anime - 1)?.jsonObject ?: return null
         val seasons = work["seasons"]?.jsonArray ?: return null
-        val season = seasons.getOrNull(target.season - 1)?.jsonObject ?: return null
-        val base = season["url"]?.jsonPrimitive?.contentOrNull ?: return null
-        val panelLanguage = season["panelLanguage"]?.jsonPrimitive?.contentOrNull
+        val card = seasons.getOrNull(season - 1)?.jsonObject ?: return null
+        val base = card["url"]?.jsonPrimitive?.contentOrNull ?: return null
+        val panelLanguage = card["panelLanguage"]?.jsonPrimitive?.contentOrNull
         val firstLanguage = panelLanguage ?: "vostfr"
         val first = seasonPage(base, firstLanguage)
         val languages = AnimeSamaSite.seasonLanguages(first?.declared, panelLanguage)
@@ -307,28 +262,28 @@ class AnimeSamaDirect(http: OkHttpClient, private val site: String? = null, priv
             languages.map { language ->
                 async {
                     val page = if (language == firstLanguage) first else seasonPage(base, language)
-                    val players = page?.players?.getOrNull(target.episode - 1).orEmpty()
+                    val players = page?.players?.getOrNull(episode - 1).orEmpty()
                     language to resolvePlayers(players)
                 }
             }.awaitAll()
         }.filter { it.second.isNotEmpty() }
         // A season counted by its card may list fewer episodes than the pages hold: the target's place is made.
-        val listed = season["episodes"]?.jsonArray.orEmpty()
-        val padded = if (listed.size >= target.episode) listed else listed + (listed.size until target.episode).map { i ->
+        val listed = card["episodes"]?.jsonArray.orEmpty()
+        val padded = if (listed.size >= episode) listed else listed + (listed.size until episode).map { i ->
             buildJsonObject { put("index", i + 1); putJsonArray("streaming_links") { } }
         }
         val episodes = padded.mapIndexed { i, e ->
-            if (i != target.episode - 1) e else buildJsonObject {
+            if (i != episode - 1) e else buildJsonObject {
                 e.jsonObject.forEach { (k, v) -> if (k != "streaming_links") put(k, v) }
                 putJsonArray("streaming_links") {
                     links.forEach { (language, players) -> addJsonObject { put("language", language); putJsonArray("players") { players.forEach { add(it) } } } }
                 }
             }
         }
-        val resolvedSeason = JsonObject(season + ("episodes" to JsonArray(episodes)))
-        val resolvedWork = JsonObject(work + ("seasons" to JsonArray(seasons.mapIndexed { i, s -> if (i == target.season - 1) resolvedSeason else s })) +
+        val resolvedSeason = JsonObject(card + ("episodes" to JsonArray(episodes)))
+        val resolvedWork = JsonObject(work + ("seasons" to JsonArray(seasons.mapIndexed { i, s -> if (i == season - 1) resolvedSeason else s })) +
             ("extractionStatus" to JsonPrimitive("resolved")))
-        return JsonArray(root.mapIndexed { i, w -> if (i == target.anime - 1) resolvedWork else w })
+        return JsonArray(root.mapIndexed { i, w -> if (i == anime - 1) resolvedWork else w })
     }
 
     /** The site's search for [name], kept 30 minutes: the thorough search after a quick one does not ask again. */

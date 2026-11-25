@@ -137,6 +137,7 @@ dependencies {
     implementation(project(":extractor"))
     testImplementation(libs.junit)
     implementation(project(":core")) { exclude(group = "xmlpull") }
+    implementation(project(":sources")) { exclude(group = "xmlpull") }
     implementation(platform("androidx.compose:compose-bom:2024.12.01"))
     // Installs the baseline profiles that Compose ships, also when the APK is installed with adb: without it the app ran
     // interpreted (dexopt "verify") and the Chromecast HD dropped 41 % of frames while browsing (2026-11-22).

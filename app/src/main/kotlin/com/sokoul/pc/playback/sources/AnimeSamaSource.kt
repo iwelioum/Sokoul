@@ -17,6 +17,7 @@ import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+import com.sokoul.sources.animesama.AnimeSama
 import kotlinx.serialization.json.*
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -125,7 +126,7 @@ internal object AnimeSamaParse {
  * reached, [direct] reads the site from the app and its players go to the local extractor.
  */
 class AnimeSamaSource(http: OkHttpClient, private val baseUrl: () -> String?, private val accessKey: () -> String?, private val probe: StreamProbe, private val localResolver: NativeEmbedResolver? = null,
-                      private val direct: AnimeSamaDirect? = null) {
+                      private val direct: AnimeSama? = null) {
     data class Result(val versions: List<PlayVersion> = emptyList(), val notices: List<SourceNotice> = emptyList())
     // A server that is off on the network may drop the connection instead of refusing it: 3 s to connect, so the
     // TV turns to the site without waiting the whole call time (29 s seen on the Formuler with Docker off).
@@ -217,7 +218,7 @@ class AnimeSamaSource(http: OkHttpClient, private val baseUrl: () -> String?, pr
         }
         val site = direct ?: return Lookup(unavailable = true)
         val payload = try {
-            if (target == null) site.search(name) else site.resolve(name, target)
+            if (target == null) site.search(name) else site.resolve(name, target.anime, target.season, target.episode)
         } catch (c: CancellationException) { throw c } catch (_: Exception) { null }
         return Lookup(payload, unavailable = payload == null, direct = true)
     }

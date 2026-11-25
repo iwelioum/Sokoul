@@ -1,21 +1,26 @@
-package com.sokoul.pc.playback.sources
+package com.sokoul.sources.fstream
 
+import com.sokoul.iptv.data.debrid.ReleaseName
 import com.sokoul.iptv.data.net.TmdbClient
-import com.sokoul.pc.playback.session.PlayRequest
+import com.sokoul.sources.CatalogueDns
+import com.sokoul.sources.LinkFormat
+import com.sokoul.sources.MediaUrls
+import com.sokoul.sources.SourceLink
+import com.sokoul.sources.SourceQuery
+import com.sokoul.sources.SourceResult
+import com.sokoul.sources.WebSource
+import com.sokoul.sources.audioLanguageOf
+import com.sokoul.sources.coflix.CoflixSite
+import com.sokoul.sources.siteTrace
+import com.sokoul.sources.traced
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.addJsonObject
-import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.put
-import kotlinx.serialization.json.putJsonArray
-import kotlinx.serialization.json.putJsonObject
 import okhttp3.FormBody
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
@@ -48,7 +53,7 @@ internal object FStreamSite {
 
     private val VERSIONS = mapOf("default" to "Default", "vf" to "VF", "vfq" to "VFQ", "vff" to "VFF", "vostfr" to "VOSTFR")
 
-    /** A film's players (`film_api.php`): `{provider: {version: url}}` regrouped by version, for [WebParse]. */
+    /** A film's players (`film_api.php`): `{provider: {version: url}}` regrouped by version. */
     fun filmPlayers(o: JsonObject): Map<String, List<Pair<String, String>>> {
         val out = LinkedHashMap<String, MutableList<Pair<String, String>>>()
         (o["players"] as? JsonObject)?.forEach { (provider, versions) ->
@@ -69,38 +74,41 @@ internal object FStreamSite {
 }
 
 /**
- * French-Stream read by the app: its search (TMDB posters identify the work), the season page of a series (directly,
- * or through the series page's season list keyed by the TMDB id), then the players, handed to the local extractor.
+ * French-Stream: its search (TMDB posters identify the work), the season page of a series (directly, or through the
+ * series page's season list keyed by the TMDB id), then the players, for host extraction.
  */
-class FStreamDirect(
+class FStream(
     http: OkHttpClient,
     private val tmdb: suspend (kind: String, id: Int, language: String) -> TmdbClient.NamesAndImages?,
     private val site: String = "https://french-stream.net",
     private val now: () -> Long = System::currentTimeMillis,
-    dns: okhttp3.Dns = AnimeSamaDns(http),
-) {
+    dns: okhttp3.Dns = CatalogueDns(http),
+) : WebSource {
+    override val name = "FStream"
     private val client = http.newBuilder().dns(dns).callTimeout(15, TimeUnit.SECONDS).build()
     private val json = Json { ignoreUnknownKeys = true; isLenient = true }
     private val pages = ConcurrentHashMap<String, Pair<Long, String>>()
 
-    suspend fun find(request: PlayRequest): JsonElement? {
-        val movie = request.kind == "movie"
-        val season = if (movie) null else request.season ?: return null
-        val episode = if (movie) null else request.episode ?: return null
-        val page = page(if (movie) "movie" else "tv", request.tmdbId, season) ?: return null
+    override suspend fun find(query: SourceQuery): SourceResult = traced { links(query) }
+
+    private suspend fun links(query: SourceQuery): List<SourceLink>? {
+        val movie = query.movie
+        val season = if (movie) null else query.season ?: return null
+        val episode = if (movie) null else query.episode ?: return null
+        val page = page(if (movie) "movie" else "tv", query.tmdbId, season) ?: return null
         val id = FStreamSite.pageId(page) ?: return null
         val answer = get("$site/engine/ajax/${if (movie) "film_api" else "episodes_p"}.php?id=$id", page, json = true)
             ?.let { runCatching { json.parseToJsonElement(it) as? JsonObject }.getOrNull() } ?: return null
         val players = if (movie) FStreamSite.filmPlayers(answer) else FStreamSite.episodePlayers(answer, episode!!)
-        if (players.isEmpty()) return null
-        return buildJsonObject {
-            put("extractionStatus", "authorized")
-            val byLanguage: kotlinx.serialization.json.JsonObjectBuilder.() -> Unit = {
-                players.forEach { (language, list) ->
-                    putJsonArray(language) { list.forEach { (provider, url) -> addJsonObject { put("url", url); put("player", provider.replaceFirstChar(Char::uppercase)) } } }
-                }
+        return players.flatMap { (label, list) ->
+            val language = audioLanguageOf(label)
+            list.mapNotNull { (provider, raw) ->
+                val url = raw.trim().takeIf { it.isNotEmpty() } ?: return@mapNotNull null
+                val player = provider.replaceFirstChar(Char::uppercase)
+                // A player that is already a media file is opened as is; a player page goes to host extraction.
+                if (MediaUrls.file(url)) SourceLink(name, player, url, language ?: ReleaseName.parse(player).language, format = MediaUrls.format(url, null))
+                else SourceLink(name, player, url, language, format = LinkFormat.Embed)
             }
-            if (movie) putJsonObject("players", byLanguage) else putJsonObject("episodes") { putJsonObject(episode.toString(), byLanguage) }
         }
     }
 
@@ -148,27 +156,39 @@ class FStreamDirect(
         }?.let { (it["full_url"] as? JsonPrimitive)?.contentOrNull }?.let { site.toHttpUrlOrNull()?.resolve("/" + it.trimStart('/'))?.toString() }
     }
 
-    private suspend fun post(query: String): String? = withContext(Dispatchers.IO) {
-        try {
-            client.newCall(Request.Builder().url("$site/engine/ajax/search.php").header("User-Agent", USER_AGENT).header("Referer", "$site/")
-                .post(FormBody.Builder().add("query", query).add("page", "1").build()).build()).execute().use { r ->
-                r.body?.string()?.takeIf { r.isSuccessful && !Regex("cf-chl-|just a moment", RegexOption.IGNORE_CASE).containsMatchIn(it) }
-            }
-        } catch (c: CancellationException) { throw c } catch (_: Exception) { null }
+    private suspend fun post(query: String): String? {
+        val trace = siteTrace()
+        return withContext(Dispatchers.IO) {
+            val u = "$site/engine/ajax/search.php".toHttpUrlOrNull() ?: return@withContext null
+            try {
+                client.newCall(Request.Builder().url(u).header("User-Agent", USER_AGENT).header("Referer", "$site/")
+                    .post(FormBody.Builder().add("query", query).add("page", "1").build()).build()).execute().use { r ->
+                    trace?.answer(u, r)
+                    val body = r.body?.string()
+                    if (body != null && CHALLENGE.containsMatchIn(body)) trace?.note(SourceResult.BLOCKED)
+                    body?.takeIf { r.isSuccessful && !CHALLENGE.containsMatchIn(it) }
+                }
+            } catch (c: CancellationException) { throw c } catch (e: Exception) { trace?.error(e); null }
+        }
     }
 
-    private suspend fun get(url: String, referer: String, json: Boolean = false): String? = withContext(Dispatchers.IO) {
-        val u = url.toHttpUrlOrNull() ?: return@withContext null
-        try {
-            val b = Request.Builder().url(u).header("User-Agent", USER_AGENT).header("Referer", referer)
-            if (json) b.header("Accept", "application/json, text/plain, */*").header("X-Requested-With", "XMLHttpRequest")
-            client.newCall(b.build()).execute().use { r -> if (r.isSuccessful) r.body?.string() else null }
-        } catch (c: CancellationException) { throw c } catch (_: Exception) { null }
+    private suspend fun get(url: String, referer: String, json: Boolean = false): String? {
+        val trace = siteTrace()
+        return withContext(Dispatchers.IO) {
+            val u = url.toHttpUrlOrNull() ?: return@withContext null
+            try {
+                val b = Request.Builder().url(u).header("User-Agent", USER_AGENT).header("Referer", referer)
+                if (json) b.header("Accept", "application/json, text/plain, */*").header("X-Requested-With", "XMLHttpRequest")
+                client.newCall(b.build()).execute().use { r -> trace?.answer(u, r); if (r.isSuccessful) r.body?.string() else null }
+            } catch (c: CancellationException) { throw c } catch (e: Exception) { trace?.error(e); null }
+        }
     }
 
     private companion object {
         const val HOUR_MS = 60 * 60_000L
         const val DAY_MS = 24 * HOUR_MS
         const val USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+        /** Cloudflare's challenge page, answered instead of the search. */
+        val CHALLENGE = Regex("cf-chl-|just a moment", RegexOption.IGNORE_CASE)
     }
 }

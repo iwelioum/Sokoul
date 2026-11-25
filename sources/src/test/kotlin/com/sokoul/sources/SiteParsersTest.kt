@@ -1,10 +1,8 @@
-package com.sokoul.pc
+package com.sokoul.sources
 
-import com.sokoul.pc.playback.sources.CoflixSite
-import com.sokoul.pc.playback.sources.FStreamSite
-import com.sokoul.pc.playback.sources.VoirDramaSite
-import com.sokoul.pc.playback.sources.WebParse
-import com.sokoul.iptv.domain.AudioLanguage
+import com.sokoul.sources.coflix.CoflixSite
+import com.sokoul.sources.fstream.FStreamSite
+import com.sokoul.sources.voirdrama.VoirDramaSite
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import org.junit.Assert.assertEquals
@@ -12,7 +10,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /** The pages of Coflix, French-Stream and VoirDrama read as the Sokoul server reads them (shapes seen on 2026-11-18). */
-class WebSitesParseTest {
+class SiteParsersTest {
     @Test fun coflixSearchCardsServersAndHosts() {
         val search = """<div class="md-manga-card"><a href="https://coflix.esq/film/inception/"><img data-src="//image.tmdb.org/t/p/w342/aej3.jpg"></a>
             <div class="md-manga-card-name">Inception</div><span class="md-card-badge year">2010</span></div>
@@ -49,12 +47,5 @@ class WebSitesParseTest {
         assertEquals(listOf("https://voirdrama.to/drama/squid-game/" to "Sep 17, 2021"), VoirDramaSite.results(raw))
         val page = """<script>var thisChapterSources = {"LECTEUR 1 VOE":"<iframe src=\"https://voe.sx/e/abc\"></iframe>","UQLOAD":"https://uqload.cx/embed-x.html"};</script>"""
         assertEquals(listOf("Voe" to "https://voe.sx/e/abc", "Uqload" to "https://uqload.cx/embed-x.html"), VoirDramaSite.sources(page))
-    }
-
-    @Test fun thePortedAnswersGiveLocalExtractionLinksWithTheirLanguage() {
-        val answer = Json.parseToJsonElement("""{"extractionStatus":"authorized","players":{"VFF":[{"url":"https://uqload.vc/embed-a.html","player":"Uqload"}],"VOSTFR":[{"url":"https://voe.sx/e/b","player":"Voe"}]}}""")
-        val links = WebParse.links("FStream", answer, null, allowLocal = true)
-        assertEquals(listOf(AudioLanguage.VF, AudioLanguage.VOSTFR), links.map { it.language })
-        assertTrue(links.all { it.localExtraction })
     }
 }

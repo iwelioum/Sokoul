@@ -1,5 +1,6 @@
 package com.sokoul.pc.data.providers
 
+import com.sokoul.iptv.data.net.SingleFlight
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit

@@ -1,20 +1,24 @@
-package com.sokoul.pc.playback.sources
+package com.sokoul.sources.coflix
 
 import com.sokoul.iptv.data.net.TmdbClient
-import com.sokoul.pc.playback.session.PlayRequest
+import com.sokoul.sources.CatalogueDns
+import com.sokoul.sources.LinkFormat
+import com.sokoul.sources.SourceLink
+import com.sokoul.sources.SourceQuery
+import com.sokoul.sources.SourceResult
+import com.sokoul.sources.WebSource
+import com.sokoul.sources.audioLanguageOf
+import com.sokoul.sources.hostOf
+import com.sokoul.sources.siteTrace
+import com.sokoul.sources.traced
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.addJsonObject
-import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.put
-import kotlinx.serialization.json.putJsonArray
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -153,36 +157,34 @@ internal object CoflixSite {
     }
 }
 
-/**
- * Coflix read by the app, in the server's answer shape (`player_links` of hosts, `extractionStatus: authorized`), so
- * that [WebParse] hands its hosts to the local extractor.
- */
-class CoflixDirect(
+/** Coflix: the work's page found by its titles and a TMDB poster, then its hosts' player pages, for host extraction. */
+class Coflix(
     http: OkHttpClient,
     private val tmdb: suspend (kind: String, id: Int, language: String) -> TmdbClient.NamesAndImages?,
     private val site: String = "https://coflix.esq",
     private val now: () -> Long = System::currentTimeMillis,
-    dns: okhttp3.Dns = AnimeSamaDns(http),
-) {
+    dns: okhttp3.Dns = CatalogueDns(http),
+) : WebSource {
+    override val name = "Coflix"
     private val client = http.newBuilder().dns(dns).callTimeout(15, TimeUnit.SECONDS).followRedirects(true).build()
     /** TMDB work → Coflix page; "" when the site has no such work (kept an hour). */
     private val pages = ConcurrentHashMap<String, Pair<Long, String>>()
 
-    suspend fun find(request: PlayRequest): JsonElement? {
-        val kind = if (request.kind == "movie") "movie" else "tv"
-        val page = page(kind, request.tmdbId) ?: return null
+    override suspend fun find(query: SourceQuery): SourceResult = traced { links(query) }
+
+    private suspend fun links(query: SourceQuery): List<SourceLink>? {
+        val kind = if (query.movie) "movie" else "tv"
+        val page = page(kind, query.tmdbId) ?: return null
         val url = if (kind == "movie") page else {
             val slug = Regex("/(?:serie|animes|drames)/([^/]+)", RegexOption.IGNORE_CASE).find(page)?.groupValues?.get(1) ?: return null
-            "${site.trimEnd('/')}/episode/$slug-${request.season ?: return null}x${request.episode ?: return null}/"
+            "${site.trimEnd('/')}/episode/$slug-${query.season ?: return null}x${query.episode ?: return null}/"
         }
         val html = get(url, "${site.trimEnd('/')}/") ?: return null
         val players = CoflixSite.embeds(html).flatMap { embed -> get(embed.url, "${site.trimEnd('/')}/")?.let(CoflixSite::players).orEmpty() }
-        if (players.isEmpty()) return null
-        return buildJsonObject {
-            put("extractionStatus", "authorized")
-            putJsonArray("player_links") {
-                players.forEach { p -> addJsonObject { put("decoded_url", p.url); put("quality", p.quality); put("language", p.language) } }
-            }
+        return players.mapNotNull { p ->
+            val player = p.url.trim().takeIf { it.isNotEmpty() } ?: return@mapNotNull null
+            // The host names the link: the site gives no player name ("Coflix" four times told nothing apart).
+            SourceLink(name, hostOf(player) ?: name, player, audioLanguageOf(p.language), p.quality.ifBlank { null }, LinkFormat.Embed)
         }
     }
 
@@ -216,12 +218,15 @@ class CoflixDirect(
 
     private fun normalizeQuery(title: String) = title.replace(Regex("[\\\\/]+"), " ").replace(Regex("\\s+"), " ").trim()
 
-    private suspend fun get(url: String, referer: String): String? = withContext(Dispatchers.IO) {
-        val u = url.toHttpUrlOrNull() ?: return@withContext null
-        try {
-            client.newCall(Request.Builder().url(u).header("User-Agent", USER_AGENT).header("Accept-Language", "fr-FR,fr;q=0.8").header("Referer", referer).build())
-                .execute().use { r -> if (r.isSuccessful) r.body?.string() else null }
-        } catch (c: CancellationException) { throw c } catch (_: Exception) { null }
+    private suspend fun get(url: String, referer: String): String? {
+        val trace = siteTrace()
+        return withContext(Dispatchers.IO) {
+            val u = url.toHttpUrlOrNull() ?: return@withContext null
+            try {
+                client.newCall(Request.Builder().url(u).header("User-Agent", USER_AGENT).header("Accept-Language", "fr-FR,fr;q=0.8").header("Referer", referer).build())
+                    .execute().use { r -> trace?.answer(u, r); if (r.isSuccessful) r.body?.string() else null }
+            } catch (c: CancellationException) { throw c } catch (e: Exception) { trace?.error(e); null }
+        }
     }
 
     private companion object {

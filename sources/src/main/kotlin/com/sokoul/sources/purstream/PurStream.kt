@@ -1,7 +1,14 @@
-package com.sokoul.pc.playback.sources
+package com.sokoul.sources.purstream
 
+import com.sokoul.iptv.data.debrid.ReleaseName
 import com.sokoul.iptv.data.net.TmdbClient
-import com.sokoul.pc.playback.session.PlayRequest
+import com.sokoul.sources.MediaUrls
+import com.sokoul.sources.SourceLink
+import com.sokoul.sources.SourceQuery
+import com.sokoul.sources.SourceResult
+import com.sokoul.sources.WebSource
+import com.sokoul.sources.siteTrace
+import com.sokoul.sources.traced
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -10,13 +17,8 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.addJsonObject
-import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.put
-import kotlinx.serialization.json.putJsonArray
-import kotlinx.serialization.json.putJsonObject
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -24,47 +26,45 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 
 /**
- * PurStream read by the app, as the Sokoul server's `routes/purstream.js` does: the API host from the site's status page,
- * the work found by its title and recognised by a TMDB image, then the film's or episode's streams. The answer has the
- * server's shape (`{"sources":[{"url","name","format"}]}`) so that [WebParse] reads it unchanged.
+ * PurStream, as the Sokoul server's `routes/purstream.js` reads it: the API host from the site's status page, the work
+ * found by its title and recognised by a TMDB image, then the film's or episode's streams (HLS or files, with the site
+ * of the day as Referer).
  */
-class PurStreamDirect(
+class PurStream(
     http: OkHttpClient,
     private val tmdb: suspend (kind: String, id: Int) -> TmdbClient.NamesAndImages?,
     private val now: () -> Long = System::currentTimeMillis,
     private val statusUrl: String = "https://purstream.wiki/api/status",
     private val fallbackApi: String = "https://api.purstream.id/api/v1",
-) {
+) : WebSource {
+    override val name = "PurStream"
     private val client = http.newBuilder().callTimeout(12, TimeUnit.SECONDS).build()
     private val json = Json { ignoreUnknownKeys = true; isLenient = true }
     @Volatile private var api: Pair<Long, String>? = null
     /** TMDB work → PurStream id; 0 when the site has no such work (kept for an hour, so as not to search again at once). */
     private val ids = ConcurrentHashMap<String, Pair<Long, Int>>()
 
-    /** The film's or episode's streams in the server's shape, or null when PurStream has none or does not answer. */
-    suspend fun find(request: PlayRequest): JsonElement? {
-        val kind = if (request.kind == "movie") "movie" else "tv"
-        val id = purstreamId(kind, request.tmdbId) ?: return null
-        val path = if (kind == "movie") "/stream/$id" else "/stream/$id/episode?season=${request.season ?: return null}&episode=${request.episode ?: return null}"
+    override suspend fun find(query: SourceQuery): SourceResult = traced { links(query) }
+
+    /** The film's or episode's streams, or null when PurStream has none or does not answer. */
+    private suspend fun links(query: SourceQuery): List<SourceLink>? {
+        val kind = if (query.movie) "movie" else "tv"
+        val id = purstreamId(kind, query.tmdbId) ?: return null
+        val path = if (kind == "movie") "/stream/$id" else "/stream/$id/episode?season=${query.season ?: return null}&episode=${query.episode ?: return null}"
         val items = (get(path) as? JsonObject)?.let(::items) ?: return null
         val sources = (items["sources"] as? JsonArray).orEmpty().mapNotNull { it as? JsonObject }
-        if (sources.isEmpty()) return null
-        return buildJsonObject {
-            put("purstream_id", id)
-            putJsonArray("sources") {
-                sources.forEach { s ->
-                    val url = (s["stream_url"] as? JsonPrimitive)?.contentOrNull ?: return@forEach
-                    addJsonObject {
-                        put("url", url)
-                        // The CDN sends any other site to a Telegram page: the site of the day, as its own player does.
-                        putJsonObject("headers") { put("Referer", siteReferer()) }
-                        (s["source_name"] as? JsonPrimitive)?.contentOrNull?.let { put("name", it) }
-                        (s["format"] as? JsonPrimitive)?.contentOrNull?.let { put("format", it) }
-                    }
-                }
-            }
+        // The CDN sends any other site to a Telegram page: the site of the day, as its own player does.
+        val headers = mapOf("Referer" to siteReferer())
+        return sources.mapNotNull { s ->
+            val url = text(s["stream_url"]) ?: return@mapNotNull null
+            val format = text(s["format"])?.lowercase()
+            if (!MediaUrls.file(url, format)) return@mapNotNull null
+            val label = text(s["source_name"]) ?: name
+            SourceLink(name, label, url, ReleaseName.parse(label).language, format = MediaUrls.format(url, format), headers = headers)
         }
     }
+
+    private fun text(e: JsonElement?): String? = (e as? JsonPrimitive)?.contentOrNull?.trim()?.takeIf { it.isNotEmpty() }
 
     private suspend fun purstreamId(kind: String, tmdbId: Int): Int? {
         val key = "$kind:$tmdbId"
@@ -107,7 +107,7 @@ class PurStreamDirect(
     /** The API host named by the status page ("purstream.gg" → "https://api.purstream.gg/api/v1"), for five minutes. */
     private suspend fun apiBase(): String {
         api?.takeIf { it.first > now() }?.let { return it.second }
-        val domain = (fetch(statusUrl)?.let { runCatching { json.parseToJsonElement(it).jsonObject }.getOrNull() }?.get("domain") as? JsonPrimitive)?.contentOrNull?.trim()
+        val domain = (fetch(statusUrl, noted = false)?.let { runCatching { json.parseToJsonElement(it).jsonObject }.getOrNull() }?.get("domain") as? JsonPrimitive)?.contentOrNull?.trim()
         val base = domain?.takeIf { it.isNotEmpty() }?.let { d ->
             val bare = d.replace(Regex("^https?://", RegexOption.IGNORE_CASE), "").trimEnd('/')
             val host = bare.substringBefore('/')
@@ -120,13 +120,18 @@ class PurStreamDirect(
     private suspend fun get(path: String): JsonElement? =
         fetch(apiBase() + path)?.let { runCatching { json.parseToJsonElement(it) }.getOrNull() }
 
-    private suspend fun fetch(url: String): String? = withContext(Dispatchers.IO) {
-        val u = url.toHttpUrlOrNull() ?: return@withContext null
-        try {
-            client.newCall(Request.Builder().url(u).header("User-Agent", USER_AGENT).header("Accept", "application/json").build()).execute().use { r ->
-                if (r.isSuccessful) r.body?.string() else null
-            }
-        } catch (c: CancellationException) { throw c } catch (_: Exception) { null }
+    /** The body of [url], or null; a failure is noted for the search unless [noted] is false (the status page has a fallback). */
+    private suspend fun fetch(url: String, noted: Boolean = true): String? {
+        val trace = siteTrace()?.takeIf { noted }
+        return withContext(Dispatchers.IO) {
+            val u = url.toHttpUrlOrNull() ?: return@withContext null
+            try {
+                client.newCall(Request.Builder().url(u).header("User-Agent", USER_AGENT).header("Accept", "application/json").build()).execute().use { r ->
+                    trace?.answer(u, r)
+                    if (r.isSuccessful) r.body?.string() else null
+                }
+            } catch (c: CancellationException) { throw c } catch (e: Exception) { trace?.error(e); null }
+        }
     }
 
     private companion object {

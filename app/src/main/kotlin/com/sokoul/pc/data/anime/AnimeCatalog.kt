@@ -16,7 +16,7 @@ import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import com.sokoul.iptv.data.anime.AnimeType
 import com.sokoul.pc.data.providers.RequestPriority
-import com.sokoul.pc.data.providers.SingleFlight
+import com.sokoul.iptv.data.net.SingleFlight
 
 /** A kind of story the categories are sorted into. */
 enum class CategoryGroup { Genres, Audience, Characters, Worlds, Action, Fantasy, SciFi, Drama, Comedy, Romance, SliceOfLife, Sports, Arts, Society }
