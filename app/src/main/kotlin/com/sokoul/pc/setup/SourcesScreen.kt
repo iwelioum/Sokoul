@@ -58,6 +58,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
@@ -93,10 +94,12 @@ import com.sokoul.pc.theme.Inter
 import com.sokoul.pc.theme.InterDisplay
 import com.sokoul.pc.ui.Form
 import com.sokoul.pc.ui.Label
+import com.sokoul.pc.ui.PillButton
 import com.sokoul.pc.ui.QrCode
 import com.sokoul.pc.ui.moveWithArrow
 import com.sokoul.pc.ui.softShadow
 import com.sokoul.pc.ui.tvFocusable
+import kotlinx.coroutines.launch
 
 /** DESIGN.md §4 on the 1920 frame: the floors are body 29, secondary 25, titles 48. */
 private object SrcType {
@@ -174,6 +177,9 @@ fun SourcesScreen(
     }
     // Read by every card: a sheet that closes may have stored a key, which the model's state alone may not report.
     var revision by remember { mutableStateOf(0) }
+    var importing by remember { mutableStateOf(false) }
+    var importStatus by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
     val requesters = remember { SourcesPage.cards.associate { it.id to FocusRequester() } }
     var lastCard by remember { mutableStateOf(SourcesPage.cards.first().id) }
     val narrow = Form.tabletPortrait || Form.isPhone
@@ -221,6 +227,27 @@ fun SourcesScreen(
                 ).text(),
                 SrcType.Body, Secondary, Modifier.widthIn(max = 1560.dp),
             )
+            if (model.canImportKeys) {
+                Spacer(Modifier.height(24.dp))
+                PillButton(
+                    if (importing) L("Checking credentials…", "Vérification des identifiants…").text()
+                    else L("Import local credentials to my account", "Importer mes identifiants dans mon compte").text(),
+                    onClick = {
+                        if (!importing && layer == null) {
+                            importing = true
+                            scope.launch {
+                                try {
+                                    importStatus = model.importSavedKeys()
+                                    revision++
+                                } finally {
+                                    importing = false
+                                }
+                            }
+                        }
+                    },
+                )
+                importStatus?.let { Label(it, SrcType.Secondary, Secondary, Modifier.padding(top = 12.dp)) }
+            }
             val columns = if (narrow) 1 else 2
             SourcesSection.entries.forEach { section ->
                 Spacer(Modifier.height(56.dp))

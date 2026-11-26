@@ -1,79 +1,161 @@
-// Sources et clés: what the account's vault holds, read-only (masks and verdicts; keys never come back).
-// Keys are entered from the PC or TV app for now.
-
 import { api } from '../api.js';
 import { t, shortDate } from '../i18n.js';
-import { h, problem, skeletonLines, serviceName, SERVICE_ORDER, setTitle } from '../ui.js';
+import { h, icon, problem, skeletonLines, setTitle } from '../ui.js';
 
-/** What each service adds, in plain words. */
-const ADDS = {
-  fr: {
-    tmdb: 'Le catalogue, les affiches et les fiches.',
-    realdebrid: 'Les liens rapides vers les films et les épisodes.',
-    iptv: 'Vos chaînes et la VOD de votre abonnement.',
-    omdb: 'Des informations en plus sur les films.',
-    fanart: 'Des logos et des images de meilleure qualité.',
-    tvdb: 'Les épisodes des séries peu connues.',
-    watchmode: 'Où un titre se regarde.',
-    tastedive: 'Des suggestions proches de ce que vous aimez.',
-    motn: 'Les plateformes qui proposent un titre.',
-    opensubtitles: 'Des sous-titres.',
-    subdl: 'D’autres sous-titres.',
-  },
-  en: {
-    tmdb: 'The catalogue, posters and title pages.',
-    realdebrid: 'Fast links to films and episodes.',
-    iptv: 'Your subscription’s channels and VOD.',
-    omdb: 'More information about films.',
-    fanart: 'Logos and better pictures.',
-    tvdb: 'Episodes of lesser-known series.',
-    watchmode: 'Where a title can be watched.',
-    tastedive: 'Suggestions close to what you like.',
-    motn: 'Which services offer a title.',
-    opensubtitles: 'Subtitles.',
-    subdl: 'More subtitles.',
-  },
-};
+const CONTENT = ['iptv', 'realdebrid', 'subtitles', 'mainapi'];
+const SUBTITLES = ['opensubtitles', 'subdl'];
+const GLYPHS = { iptv: 'screen', realdebrid: 'film', subtitles: 'layers', mainapi: 'server', tmdb: 'film' };
 
-function state(cred) {
-  if (!cred) return t('notSet');
-  if (cred.verdict === 'accepted') return t('verdictAccepted', { date: shortDate(cred.checkedAt) });
-  if (cred.verdict === 'refused') return t('verdictRefused');
-  return t('verdictUnreachable', { date: shortDate(cred.checkedAt) });
+function state(credential, guide) {
+  if (guide.id === 'mainapi') return t('managedServer');
+  if (!guide.editable) return t('noKeyRequired');
+  if (!credential) return t('notSet');
+  if (credential.verdict === 'accepted') return t('verdictAccepted', { date: shortDate(credential.checkedAt) });
+  if (credential.verdict === 'refused') return t('verdictRefused');
+  return t('verdictUnreachable', { date: shortDate(credential.checkedAt) });
 }
 
-export async function render({ root, signal }) {
-  setTitle(t('sources'));
-  const list = h('div.list-slot', skeletonLines(6, 'list-skeleton'));
-  root.append(h('div.page.page-narrow',
-    h('h1.page-title', t('sources')),
-    h('p.lead', t('sourcesIntro')),
-    list));
+function sourceCard(guide, credential) {
+  const name = guide.id === 'iptv' ? t('channelsTv') : guide.name;
+  return h('a.source-card', { href: '#/sources/' + guide.id },
+    icon(GLYPHS[guide.id] || 'settings'),
+    h('div.source-summary',
+      h('div.source-title', h('strong', name),
+        h('span.source-state', credential?.hint && credential.verdict === 'accepted' ? credential.hint : state(credential, guide))),
+      h('p', guide.adds)));
+}
 
-  const load = async () => {
-    let creds;
-    try {
-      creds = await api.credentials();
-    } catch (e) {
-      if (e.name === 'AbortError') return;
-      list.replaceChildren(problem(e, load));
-      return;
-    }
-    if (signal.aborted) return;
-    const byService = new Map((Array.isArray(creds) ? creds : []).map((c) => [c.service, c]));
-    const ids = [...SERVICE_ORDER, ...[...byService.keys()].filter((s) => !SERVICE_ORDER.includes(s))];
-    const words = ADDS[document.documentElement.lang === 'en' ? 'en' : 'fr'];
-    const rows = ids.map((id) => {
-      const c = byService.get(id);
-      return h('li.list-row', { class: c ? (c.verdict === 'accepted' ? 'is-set' : 'is-problem') : 'is-unset' },
-        h('div.list-main',
-          h('div.list-label', serviceName(id)),
-          words[id] ? h('div.list-detail', words[id]) : null),
-        h('div.list-value',
-          c?.hint ? h('div.list-hint', c.hint) : null,
-          h('div.list-state', state(c))));
-    });
-    list.replaceChildren(h('ul.list', rows));
+function field(label, input) {
+  return h('label.source-field', h('span.field-label', label), input);
+}
+
+function editForm(guide, credential, signal, onChange) {
+  const status = h('p.form-error.source-feedback', { role: 'status' });
+  const submit = h('button.btn.btn-primary', { type: 'submit' }, h('span', t('checkAndSave')));
+  const remove = h('button.btn.btn-secondary', { type: 'button', hidden: !credential }, h('span', t('removeKey')));
+  const fields = h('div.source-fields');
+  const input = (attrs) => h('input.field', { autocomplete: 'off', spellcheck: 'false', autocapitalize: 'none', required: true, ...attrs });
+  const key = input({ type: 'password', maxlength: 256 });
+  const address = input({ type: 'url', maxlength: 2048 });
+  const username = input({ type: 'text', maxlength: 256 });
+  const password = input({ type: 'password', maxlength: 256 });
+  const playlist = input({ type: 'password', inputmode: 'url', maxlength: 2048 });
+  const mode = h('select.field',
+    h('option', { value: 'xtream' }, t('xtreamLogin')),
+    h('option', { value: 'playlist' }, t('playlistUrl')));
+  const isIptv = guide.id === 'iptv';
+
+  const setFields = () => {
+    if (!isIptv) fields.replaceChildren(field(t('apiKey'), key));
+    else if (mode.value === 'playlist') fields.replaceChildren(field(t('playlistUrl'), playlist));
+    else fields.replaceChildren(field(t('serverAddress'), address), field(t('username'), username), field(t('password'), password));
   };
+  mode.addEventListener('change', setFields);
+  setFields();
+  const form = h('form.source-form', isIptv ? field(t('iptvFormat'), mode) : null, fields,
+    h('div.form-actions', submit, remove), status);
+
+  async function update(action, message) {
+    submit.disabled = true;
+    remove.disabled = true;
+    mode.disabled = true;
+    for (const control of [key, address, username, password, playlist]) control.disabled = true;
+    status.textContent = t('checking');
+    try {
+      const result = await action();
+      if (signal.aborted) return;
+      form.reset();
+      for (const control of [key, address, username, password, playlist]) control.value = '';
+      setFields();
+      remove.hidden = !result;
+      onChange(result);
+      status.textContent = t(message);
+    } catch (error) {
+      if (signal.aborted) return;
+      const messageKey = {
+        refused: 'credentialRefused', bad_format: 'credentialFormat', unreachable: 'credentialUnavailable',
+        too_many_requests: 'credentialRateLimit',
+      }[error.code];
+      status.textContent = t(messageKey || (error.offline ? 'noAnswer' : 'loadFailed'));
+    } finally {
+      submit.disabled = false;
+      remove.disabled = false;
+      mode.disabled = false;
+      for (const control of [key, address, username, password, playlist]) control.disabled = false;
+    }
+  }
+
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    let value = key.value.trim();
+    if (isIptv) {
+      value = mode.value === 'playlist' ? playlist.value.trim() :
+        JSON.stringify({ server: address.value.trim(), username: username.value.trim(), password: password.value });
+    }
+    update(() => api.saveCredential(guide.id, value, { signal }), 'credentialSaved');
+  });
+  remove.addEventListener('click', () => {
+    if (window.confirm(t('confirmRemoveKey', { service: guide.name }))) {
+      update(() => api.removeCredential(guide.id, { signal }), 'credentialRemoved');
+    }
+  });
+  return form;
+}
+
+function details(guide, credential, signal) {
+  const status = h('p.lead');
+  const showState = (value) => status.textContent = [state(value, guide), value?.hint].filter(Boolean).join(' · ');
+  showState(credential);
+  return [
+    h('h1.page-title', guide.name), h('p.lead', guide.adds), status,
+    guide.editable ? editForm(guide, credential, signal, showState) : null,
+    h('div.source-guide',
+      h('h2.section-title', t('getCredential')),
+      h('ol', guide.steps.map((step) => h('li', step))),
+      guide.link ? h('a.btn.btn-secondary', { href: guide.link, target: '_blank', rel: 'noopener noreferrer' }, guide.linkLabel || guide.name) : null,
+      h('p.lead', guide.cost), h('p.lead', guide.privacy)),
+  ];
+}
+
+export async function render({ root, params, signal }) {
+  const service = params.service;
+  setTitle(t('sources'));
+  const page = h('div.page' + (service ? '.page-narrow' : ''));
+  root.append(page);
+
+  async function load() {
+    page.replaceChildren(h('h1.page-title', t('sources')), skeletonLines(6));
+    try {
+      const [guides, credentials] = await Promise.all([api.guides({ signal }), api.credentials({ signal })]);
+      if (signal.aborted) return;
+      const byService = new Map(credentials.map((credential) => [credential.service, credential]));
+      const byId = new Map(guides.map((guide) => [guide.id, guide]));
+      if (service === 'subtitles') {
+        setTitle(t('subtitles'));
+        page.replaceChildren(h('h1.page-title', t('subtitles')), h('div.sources-grid',
+          SUBTITLES.map((id) => byId.get(id)).filter(Boolean).map((guide) => sourceCard(guide, byService.get(guide.id)))));
+        return;
+      }
+      if (service) {
+        const guide = guides.find((guide) => guide.id === service);
+        if (guide) {
+          setTitle(guide.name);
+          page.replaceChildren(...details(guide, byService.get(service), signal));
+        } else page.replaceChildren(h('h1.page-title', t('sources')), h('a.btn.btn-secondary', { href: '#/sources' }, t('back')));
+        return;
+      }
+      const group = (label, entries) => h('section.sources-group', h('h2.section-title', t(label)),
+        h('div.sources-grid', entries.map((guide) => sourceCard(guide, byService.get(guide.id)))));
+      byId.set('subtitles', { id: 'subtitles', name: t('subtitles'), adds: t('subtitleSources'), editable: true });
+      const subtitleCredential = SUBTITLES.map((id) => byService.get(id)).find(Boolean);
+      if (subtitleCredential) byService.set('subtitles', { ...subtitleCredential, hint: null });
+      page.replaceChildren(h('h1.page-title', t('sources')), h('p.lead', t('sourcesIntro')),
+        group('contentSources', CONTENT.map((id) => byId.get(id)).filter(Boolean)),
+        group('expertKeys', guides.filter((guide) => !CONTENT.includes(guide.id) && !SUBTITLES.includes(guide.id))));
+    } catch (error) {
+      if (!signal.aborted) page.replaceChildren(h('h1.page-title', t('sources')), problem(error, load));
+    }
+  }
+
   await load();
 }

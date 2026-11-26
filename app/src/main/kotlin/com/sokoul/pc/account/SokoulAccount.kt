@@ -242,27 +242,29 @@ class SokoulAccount(
     }
 
     /** `GET` [path] with this device's session (account sync): the body, or the plain-language problem. */
-    suspend fun getWithSession(path: String): AccountResult<String> = authed(Request.Builder().get(), path) { it }
+    suspend fun getWithSession(path: String, expectedSession: String? = null): AccountResult<String> =
+        authed(Request.Builder().get(), path, expectedSession) { it }
 
     /** `POST` [body] as JSON to [path] with this device's session (account sync). */
     suspend fun postWithSession(path: String, body: String): AccountResult<String> =
         authed(Request.Builder().post(body.toRequestBody(JSON_TYPE)), path) { it }
 
     /** `PUT` [body] as JSON to [path] with this device's session (the account's credentials vault). */
-    suspend fun putWithSession(path: String, body: String): AccountResult<String> =
-        authed(Request.Builder().put(body.toRequestBody(JSON_TYPE)), path) { it }
+    suspend fun putWithSession(path: String, body: String, expectedSession: String? = null): AccountResult<String> =
+        authed(Request.Builder().put(body.toRequestBody(JSON_TYPE)), path, expectedSession) { it }
 
     /** A call with this device's session. A `401` means the session is gone: the device forgets it. */
-    private suspend fun <T> authed(builder: Request.Builder, path: String, read: (String) -> T): AccountResult<T> {
-        val base = store.serverUrl ?: return AccountResult.Failed(Problems.noServer)
-        val s = store.session ?: return AccountResult.Failed(Problems.forCode("unauthorized"))
-        val request = builder.url("$base$path").header("Authorization", "Bearer " + s.token.reveal()).build()
+    private suspend fun <T> authed(builder: Request.Builder, path: String, expectedSession: String? = null, read: (String) -> T): AccountResult<T> {
+        if (server == null) return AccountResult.Failed(Problems.noServer)
+        val s = session()?.takeIf { expectedSession == null || it.sessionId == expectedSession }
+            ?: return AccountResult.Failed(Problems.forCode("unauthorized"))
+        val request = builder.url(s.server + path).header("Authorization", "Bearer " + s.token.reveal()).build()
         return when (val r = call(request)) {
             is Call.Failed -> AccountResult.Failed(r.problem)
             is Call.Answer -> when {
                 r.status in 200..299 -> runCatching { AccountResult.Ok(read(r.body)) }.getOrElse { AccountResult.Failed(Problems.notSokoul) }
                 r.status == 401 -> {
-                    store.session = null
+                    if (session()?.sessionId == s.sessionId) store.session = null
                     AccountResult.Failed(Problems.forCode("unauthorized"))
                 }
                 else -> AccountResult.Failed(r.problem())

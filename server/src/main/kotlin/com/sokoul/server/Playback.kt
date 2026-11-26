@@ -41,7 +41,7 @@ import java.util.concurrent.ConcurrentHashMap
     val quality: String? = null,
     /** `VF`, `MULTI`, `VOSTFR`, `VO`, or null when the source does not say. */
     val language: String? = null,
-    /** `web` (a streaming site). Real-Debrid versions will come as `realdebrid`. */
+    /** `web` for streaming sites, `realdebrid` for files in the account. */
     val origin: String,
     val source: String,
 )
@@ -111,7 +111,6 @@ class AnimeSamaSource(
 /**
  * Versions and starts for the web client (sokoul-server task 8.1): the sites of [sources] with the caller's TMDB key,
  * ranked French audio first, then quality. A version id is opaque and belongs to the session that listed it.
- * Real-Debrid is not asked yet: its search lives in the PC app (`DesktopDebrid`), not in a shared module.
  */
 class Playback(
     private val catalog: Catalog,
@@ -124,6 +123,7 @@ class Playback(
     private val hostTimeoutMillis: Long = 25_000,
     private val versionTtlMillis: Long = 2 * 60 * 60 * 1000L,
     maxResolutionsPerUser: Int = 2,
+    private val debrid: WebDebrid? = null,
 ) {
     private class Stored(val sessionId: String, val link: SourceLink, val expiresAt: Long)
 
@@ -138,7 +138,7 @@ class Playback(
                 if (kind == query.kind && id == query.tmdbId && language == "fr-FR") work.names
                 else runCatching { names(apiKey, kind, id, language).names }.getOrNull()
             }
-            val list = sources.create(lookup, work.anime)
+            val list = sources.create(lookup, work.anime) + listOfNotNull(debrid?.source(principal.userId, work))
             val results = coroutineScope {
                 list.map { source ->
                     async {
@@ -161,7 +161,8 @@ class Playback(
             val ranked = rank(links).map { link ->
                 val id = Secrets.b64url(Secrets.bytes(18))
                 versions[id] = Stored(principal.sessionId, link, expires)
-                VersionBody(id, label(link), qualityOf(link), link.language?.name, "web", link.source)
+                val origin = if (link.source == WebDebrid.NAME) "realdebrid" else "web"
+                VersionBody(id, label(link), qualityOf(link), link.language?.name, origin, link.source)
             }
             VersionsBody(ranked, results.map { (name, r) ->
                 when (r) {
@@ -178,6 +179,11 @@ class Playback(
             ?: throw ApiError(404, "unknown_version")
         val link = stored.link
         return resolutions.run(principal.userId) {
+            if (link.source == WebDebrid.NAME && debrid != null) {
+                val media = withTimeoutOrNull(hostTimeoutMillis) { debrid.resolve(principal.userId, link.url) }
+                    ?: throw ApiError(504, "host_timeout")
+                return@run relay.register(principal.sessionId, media)
+            }
             val media = when (link.format) {
                 LinkFormat.Hls -> ResolvedMedia(link.url, true, link.headers)
                 LinkFormat.File -> ResolvedMedia(link.url, false, link.headers)

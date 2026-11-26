@@ -132,7 +132,6 @@ fun StudioScreen(
                         onActive = { on -> if (on) scope.launch { list.animateScrollToItem(index + 1) } },
                         focusFor = { null },
                         onOpen = onOpenTitle,
-                        tagline = section.tagline.text(),
                         onSeeAll = { origin ->
                             onOpenRequest(CollectionRequest(section.title.text() + " · " + studio.label, null, null) { page -> deps.catalog.studioSection(studio, section, page) }, origin)
                         },

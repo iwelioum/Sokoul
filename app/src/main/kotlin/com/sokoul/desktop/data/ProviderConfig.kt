@@ -45,7 +45,9 @@ object ProviderConfig {
     }
 
     fun key(db: DesktopDb, id: String): String? =
-        db.setting(settingKey(id))?.takeIf { it.isNotBlank() } ?: builtIn()[id]?.takeIf { it.isNotBlank() }
+        enteredKey(db, id) ?: builtIn()[id]?.takeIf { it.isNotBlank() }
+
+    fun enteredKey(db: DesktopDb, id: String): String? = db.setting(settingKey(id))?.takeIf { it.isNotBlank() }
 
     /** Clé saisie dans Réglages ; vide = revenir à la clé intégrée. */
     fun setKey(db: DesktopDb, id: String, value: String?) = db.putSetting(settingKey(id), value?.trim()?.takeIf { it.isNotEmpty() })

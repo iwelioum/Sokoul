@@ -1,6 +1,10 @@
 package com.sokoul.server
 
 import com.sokoul.credentials.ServiceCheck
+import com.sokoul.iptv.data.net.SportsClient
+import com.sokoul.iptv.data.net.SportScores
+import com.sokoul.iptv.data.net.SportsFailure
+import com.sokoul.iptv.data.net.SportsResult
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.kotlinx.json.json
@@ -97,6 +101,8 @@ class Services(
     remuxer: Remuxer = Remuxer(null),
     /** Tests only: lets the relay reach a MockWebServer on loopback. */
     relayAllowPrivate: Boolean = false,
+    sportsBase: String = "http://127.0.0.1:25565",
+    sportsKey: String? = null,
 ) {
     val accounts = Accounts(db, hasher, nowMillis)
     val sessions = SessionStore(db, nowMillis)
@@ -114,6 +120,9 @@ class Services(
 
     val tmdb = TmdbGateway(upstreamHttp, tmdbBaseUrl, nowMillis)
     val catalog = Catalog(tmdb, { userId -> vault.reveal(userId, "tmdb") }, db)
+    val sagas = WebSagas(catalog, tmdb)
+    val animation = WebAnimation(upstreamHttp, catalog, tmdb)
+    val editorial = Editorial(catalog, tmdb, sagas, animation, db)
     val relay = StreamRelay(
         upstreamHttp, remuxer,
         sessionLive = sessions::isLive,
@@ -121,7 +130,12 @@ class Services(
         nowMillis = nowMillis,
         allowPrivate = relayAllowPrivate,
     )
-    val playback = Playback(catalog, tmdb, sourceFactory, hostFor, relay, nowMillis)
+    private val debrid = WebDebrid(upstreamHttp, { userId -> vault.reveal(userId, "realdebrid") })
+    val playback = Playback(catalog, tmdb, sourceFactory, hostFor, relay, nowMillis, debrid = debrid)
+    val subtitles = WebSubtitles(upstreamHttp, { userId, service -> vault.reveal(userId, service) }, nowMillis)
+    val live = LiveTv(upstreamHttp, { userId -> vault.reveal(userId, "iptv") }, relay, nowMillis, relayAllowPrivate)
+    val sports = SportsClient(upstreamHttp, { sportsBase }, { sportsKey })
+    val sportScores = SportScores(upstreamHttp.newBuilder().callTimeout(8, TimeUnit.SECONDS).build())
 }
 
 private val log = LoggerFactory.getLogger("com.sokoul.server.Server")
@@ -216,6 +230,7 @@ fun Application.module(
                 sessionRoutes(services)
                 catalogRoutes(services)
                 playRoutes(services)
+                liveRoutes(services)
             }
             // The player cannot send a token: the stream id is the capability, bound to its session (StreamRelay).
             get("/stream/{id}/{rest...}") {
@@ -240,9 +255,7 @@ private fun Route.catalogRoutes(services: Services) {
     fun ApplicationCall.language() = TmdbGateway.languageOf(request.headers[HttpHeaders.AcceptLanguage])
 
     get("/catalog/home") {
-        val profile = call.request.queryParameters["profile"]?.takeIf { it.isNotEmpty() }
-        if (profile != null && !PROFILE_ID.matches(profile)) throw ApiError(400, "invalid_profile")
-        call.respond(catalog.home(call.session.userId, call.language(), profile))
+        call.respond(catalog.home(call.session.userId, call.language(), call.profileId()))
     }
 
     get("/catalog/title/{kind}/{id}") {
@@ -258,22 +271,175 @@ private fun Route.catalogRoutes(services: Services) {
     get("/catalog/search") {
         val q = call.request.queryParameters["q"].orEmpty()
         if (q.length > 100) throw ApiError(400, "query_too_long")
-        call.respond(catalog.search(call.session.userId, call.language(), q))
+        val filter = call.request.queryParameters["type"]?.also {
+            if (it !in setOf("movie", "tv", "person")) throw ApiError(400, "invalid_kind")
+        }
+        call.respond(catalog.search(call.session.userId, call.language(), q, call.page(), filter))
+    }
+    get("/catalog/person/{id}") {
+        call.respond(catalog.person(call.session.userId, call.language(), idParam(call.parameters["id"])))
+    }
+    get("/catalog/followed/news") {
+        val profile = call.profileId() ?: throw ApiError(400, "invalid_profile")
+        call.respond(catalog.followedNews(call.session.userId, call.language(), profile))
+    }
+
+    get("/catalog/browse/{section}") {
+        call.respond(catalog.browse(call.session.userId, call.language(), call.parameters["section"].orEmpty(), call.page()))
+    }
+    get("/catalog/collections") {
+        call.respond(services.sagas.list(call.language(), call.page()))
+    }
+    get("/catalog/collections/{id}") {
+        call.respond(services.sagas.detail(call.session.userId, call.language(), call.parameters["id"].orEmpty()))
+    }
+    get("/catalog/sections/{section}") {
+        call.respond(services.editorial.plan(call.parameters["section"].orEmpty(), call.language()))
+    }
+    get("/catalog/sections/{section}/rows/{row}") {
+        call.respond(services.editorial.row(call.session.userId, call.language(), call.parameters["section"].orEmpty(),
+            call.parameters["row"].orEmpty(), call.page(), call.profileId()))
+    }
+    get("/catalog/shelf/{family}/{id}") {
+        call.respond(services.editorial.filter(call.session.userId, call.language(), call.parameters["family"].orEmpty(),
+            call.parameters["id"].orEmpty(), call.page()))
+    }
+    get("/catalog/upcoming") {
+        call.respond(services.editorial.upcoming(call.session.userId, call.language(), call.page()))
+    }
+    get("/catalog/animation/calendar") {
+        call.respond(services.animation.schedule(java.time.LocalDate.now()))
+    }
+    get("/catalog/animation/search") {
+        val query = call.request.queryParameters["q"]?.trim()
+        if ((query?.length ?: 0) > 100) throw ApiError(400, "query_too_long")
+        val kind = if (call.request.queryParameters["kind"] == "manga") com.sokoul.pc.data.anime.MediaKind.MANGA
+            else com.sokoul.pc.data.anime.MediaKind.ANIME
+        call.respond(services.animation.shelf(com.sokoul.pc.data.anime.AniQuery(kind, search = query,
+            page = call.page(), sort = if (query.isNullOrBlank()) "POPULARITY_DESC" else "SEARCH_MATCH")))
+    }
+    get("/catalog/animation/{id}") {
+        call.respond(services.animation.work(call.session.userId, call.language(), idParam(call.parameters["id"])))
+    }
+    get("/catalog/animation/{id}/chapters") {
+        call.respond(services.animation.chapters(idParam(call.parameters["id"]), call.language()))
+    }
+    get("/catalog/animation/{id}/chapters/{chapter}/pages") {
+        val chapter = call.parameters["chapter"].orEmpty()
+        val allowed = services.animation.chapters(idParam(call.parameters["id"]), call.language()).any { it.id == chapter }
+        if (!allowed) throw ApiError(404, "not_found")
+        call.respond(services.animation.pages(chapter))
+    }
+    get("/service-guides") { call.respond(webServiceGuides(call.language())) }
+}
+
+private fun ApplicationCall.profileId(): String? = request.queryParameters["profile"]?.takeIf(String::isNotEmpty)?.also {
+    if (!PROFILE_ID.matches(it)) throw ApiError(400, "invalid_profile")
+}
+
+private fun ApplicationCall.page(): Int = request.queryParameters["page"]?.let {
+    it.toIntOrNull()?.takeIf { number -> number in 1..500 } ?: throw ApiError(400, "invalid_page")
+} ?: 1
+
+@Serializable private data class SportsStartRequest(val serverKey: String)
+@Serializable private data class GuideRequest(val ids: List<String>)
+private val CHANNEL_ID = Regex("[A-Za-z0-9_-]{1,64}")
+
+private fun <T : Any> SportsResult<T>.available(): T = value ?: throw when (failure) {
+    SportsFailure.VipRequired -> ApiError(403, "sports_access_required")
+    SportsFailure.InvalidResponse -> ApiError(404, "not_found")
+    else -> ApiError(502, "sports_unavailable")
+}
+
+private fun Route.liveRoutes(services: Services) {
+    get("/live/channels") {
+        val params = call.request.queryParameters
+        val text = params["q"]?.trim()
+        val group = params["group"]
+        if ((text?.length ?: 0) > 100 || (group?.length ?: 0) > 160) throw ApiError(400, "query_too_long")
+        val ids = params["ids"]?.split(',')?.filter(String::isNotEmpty)
+        if (ids != null && (ids.size > 100 || ids.any { !CHANNEL_ID.matches(it) })) throw ApiError(400, "invalid_channel")
+        call.respond(services.live.channels(call.session.userId, call.page(), params["sports"] == "true", group, text, ids?.toSet()))
+    }
+    post("/live/guide") {
+        val body = call.receive<GuideRequest>()
+        if (body.ids.size !in 1..8 || body.ids.any { !CHANNEL_ID.matches(it) }) throw ApiError(400, "invalid_channel")
+        call.respond(services.live.guides(call.session.userId, body.ids))
+    }
+    get("/live/guide/{id}") {
+        call.respond(services.live.guide(call.session.userId, call.parameters["id"].orEmpty()))
+    }
+    get("/live/replay/{id}") {
+        call.respond(services.live.archives(call.session.userId, call.parameters["id"].orEmpty()))
+    }
+    post("/live/replay/start") {
+        services.startLimiter.check("user:" + call.session.userId)
+        call.respond(services.live.startReplay(call.session, call.receive<ReplayRequest>()))
+    }
+    get("/live/vod/{kind}") {
+        val params = call.request.queryParameters
+        val text = params["q"]?.trim()
+        val group = params["group"]
+        if ((text?.length ?: 0) > 100 || (group?.length ?: 0) > 160) throw ApiError(400, "query_too_long")
+        call.respond(services.live.vod.browse(call.session.userId, call.parameters["kind"].orEmpty(), call.page(), group, text))
+    }
+    get("/live/vod/{kind}/{id}") {
+        val id = call.parameters["id"]?.toLongOrNull()?.takeIf { it > 0 } ?: throw ApiError(400, "invalid_id")
+        call.respond(services.live.vod.details(call.session.userId, call.parameters["kind"].orEmpty(), id))
+    }
+    post("/live/vod/{kind}/start") {
+        services.startLimiter.check("user:" + call.session.userId)
+        call.respond(services.live.vod.start(call.session, call.parameters["kind"].orEmpty(), call.receive<ProviderPlayRequest>()))
+    }
+    post("/live/start") {
+        services.startLimiter.check("user:" + call.session.userId)
+        val body = call.receive<ChannelRequest>()
+        call.respond(services.live.start(call.session, body.channelId))
+    }
+    delete("/live/stream/{id}") {
+        val session = call.session
+        val id = call.parameters["id"].orEmpty()
+        if (!io { services.relay.stopLive(session.sessionId, id) }) throw ApiError(404, "not_found")
+        call.respond(HttpStatusCode.NoContent)
+    }
+    get("/sports/events") {
+        call.respond(services.sports.events().available())
+    }
+    get("/sports/scores") {
+        call.respond(services.sportScores.matches().sortedBy { it.start }.map { it.webScore() })
+    }
+    get("/sports/events/{id}/servers") {
+        call.respond(services.sports.servers(call.parameters["id"].orEmpty()).available())
+    }
+    post("/sports/events/{id}/start") {
+        services.startLimiter.check("user:" + call.session.userId)
+        val body = call.receive<SportsStartRequest>()
+        val url = services.sports.resolve(call.parameters["id"].orEmpty(), body.serverKey).available()
+        call.respond(services.relay.register(call.session.sessionId, ResolvedMedia(
+            url, hls = true, headers = emptyMap(), live = true, sportsProxy = true,
+        )))
     }
 }
 
 /** Versions, start (sokoul-server 8.1). */
 private fun Route.playRoutes(services: Services) {
     get("/play/versions") {
-        val p = call.request.queryParameters
-        val kind = kindParam(p["kind"])
-        val id = idParam(p["id"])
-        val season = p["season"]?.let { it.toIntOrNull()?.takeIf { n -> n in 0..999 } ?: throw ApiError(400, "invalid_season") }
-        val episode = p["episode"]?.let { it.toIntOrNull()?.takeIf { n -> n in 1..9999 } ?: throw ApiError(400, "invalid_episode") }
-        if (kind == "tv" && (season == null || episode == null)) throw ApiError(400, "episode_required")
+        val query = call.workQuery()
         services.versionsLimiter.check("user:" + call.session.userId)
-        val query = SourceQuery(kind, id, season.takeIf { kind == "tv" }, episode.takeIf { kind == "tv" })
         call.respond(services.playback.versions(call.session, query))
+    }
+    get("/play/subtitles") {
+        services.versionsLimiter.check("subtitles:" + call.session.userId)
+        val languages = call.request.queryParameters["languages"]?.split(',')?.distinct()
+            ?: listOf("fr", "en")
+        if (languages.size !in 1..4 || languages.any { it.length != 2 || it.any { c -> c !in 'a'..'z' } }) {
+            throw ApiError(400, "invalid_language")
+        }
+        call.respond(services.subtitles.search(call.session, call.workQuery(), languages))
+    }
+    get("/play/subtitles/{id}") {
+        services.startLimiter.check("subtitles:" + call.session.userId)
+        call.respond(services.subtitles.cues(call.session, call.parameters["id"].orEmpty()))
     }
 
     post("/play/start") {
@@ -282,6 +448,16 @@ private fun Route.playRoutes(services: Services) {
         services.startLimiter.check("user:" + call.session.userId)
         call.respond(services.playback.start(call.session, body.versionId))
     }
+}
+
+private fun ApplicationCall.workQuery(): SourceQuery {
+    val params = request.queryParameters
+    val kind = kindParam(params["kind"])
+    val id = idParam(params["id"])
+    val season = params["season"]?.let { it.toIntOrNull()?.takeIf { n -> n in 0..999 } ?: throw ApiError(400, "invalid_season") }
+    val episode = params["episode"]?.let { it.toIntOrNull()?.takeIf { n -> n in 1..9999 } ?: throw ApiError(400, "invalid_episode") }
+    if (kind == "tv" && (season == null || episode == null)) throw ApiError(400, "episode_required")
+    return SourceQuery(kind, id, season.takeIf { kind == "tv" }, episode.takeIf { kind == "tv" })
 }
 
 private val PROFILE_ID = Regex("^[A-Za-z0-9_-]{1,64}$")
@@ -429,10 +605,15 @@ private fun Route.sessionRoutes(services: Services) {
         val length = call.request.headers[HttpHeaders.ContentLength]?.toLongOrNull() ?: throw ApiError(411, "length_required")
         if (length > Vault.MAX_BODY_BYTES) throw ApiError(413, "too_large")
         val body = call.receive<CredentialPutRequest>()
-        when (val r = withContext(Dispatchers.IO) { services.vault.put(call.session.userId, service, body.value) }) {
+        when (val r = withContext(Dispatchers.IO) { services.vault.put(call.session.userId, service, body.value, body.onlyIfAbsent) }) {
             is Vault.PutResult.Stored -> call.respond(r.info)
             is Vault.PutResult.Rejected -> {
-                val status = when (r.code) { "bad_format" -> 400; "refused" -> 422; else -> 502 }
+                val status = when (r.code) {
+                    "bad_format" -> 400
+                    "already_configured" -> 409
+                    "refused" -> 422
+                    else -> 502
+                }
                 call.respond(HttpStatusCode.fromValue(status), CredentialRefusedBody(r.code, r.reason))
             }
         }
@@ -453,6 +634,7 @@ private fun Route.sessionRoutes(services: Services) {
 
 /** The vault's checks: short timeouts, as a person waits for the answer. */
 fun defaultCheckHttp(): OkHttpClient = OkHttpClient.Builder()
+    .onlyPublicInternet()
     .connectTimeout(10, TimeUnit.SECONDS)
     .readTimeout(15, TimeUnit.SECONDS)
     .callTimeout(30, TimeUnit.SECONDS)

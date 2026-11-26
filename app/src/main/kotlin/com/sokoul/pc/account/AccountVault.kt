@@ -15,12 +15,13 @@ data class VaultEntry(val service: String, val hint: String, val verdict: String
  * the person enters them again. Signed out, every call is a quiet failure.
  */
 class AccountVault(private val account: SokoulAccount) {
-    val signedIn: Boolean get() = account.session() != null
+    val sessionId: String? get() = account.session()?.sessionId
+    val signedIn: Boolean get() = sessionId != null
 
     /** The account's stored keys, by service. */
-    suspend fun list(): AccountResult<Map<String, VaultEntry>> {
+    suspend fun list(expectedSession: String? = null): AccountResult<Map<String, VaultEntry>> {
         if (!signedIn) return AccountResult.Failed(Problems.forCode("unauthorized"))
-        return when (val r = account.getWithSession(PATH)) {
+        return when (val r = account.getWithSession(PATH, expectedSession)) {
             is AccountResult.Failed -> r
             is AccountResult.Ok -> runCatching { AccountResult.Ok(json.decodeFromString(ListSerializer(VaultEntry.serializer()), r.value).associateBy { it.service }) }
                 .getOrElse { AccountResult.Failed(Problems.notSokoul) }
@@ -28,17 +29,17 @@ class AccountVault(private val account: SokoulAccount) {
     }
 
     /** Saves [value] for [service] once this device's own check accepted it. */
-    suspend fun save(service: String, value: String): AccountResult<VaultEntry> {
+    suspend fun save(service: String, value: String, expectedSession: String? = null, onlyIfAbsent: Boolean = false): AccountResult<VaultEntry> {
         if (!signedIn) return AccountResult.Failed(Problems.forCode("unauthorized"))
-        val body = json.encodeToString(PutBody.serializer(), PutBody(value))
-        return when (val r = account.putWithSession("$PATH/$service", body)) {
+        val body = json.encodeToString(PutBody.serializer(), PutBody(value, onlyIfAbsent))
+        return when (val r = account.putWithSession("$PATH/$service", body, expectedSession)) {
             is AccountResult.Failed -> r
             is AccountResult.Ok -> runCatching { AccountResult.Ok(json.decodeFromString(VaultEntry.serializer(), r.value)) }
                 .getOrElse { AccountResult.Failed(Problems.notSokoul) }
         }
     }
 
-    @Serializable private data class PutBody(val value: String) {
+    @Serializable private data class PutBody(val value: String, val onlyIfAbsent: Boolean = false) {
         override fun toString(): String = "PutBody(value=***)"
     }
 

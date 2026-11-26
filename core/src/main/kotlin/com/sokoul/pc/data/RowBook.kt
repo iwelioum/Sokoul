@@ -306,11 +306,10 @@ enum class PageKind(val kind: String) { Home("movie"), Movies("movie"), Series("
 sealed interface PageRow {
     val id: String
 
+    /** A row of titles under ONE heading: a word or a short phrase, never a kicker above it or a line under it. */
     data class Titles(
         override val id: String,
         val title: L,
-        val tagline: L?,
-        val kicker: Kicker?,
         val style: RowStyle,
         val source: RowSource,
         val minItems: Int = MIN_ITEMS,
@@ -342,39 +341,35 @@ sealed interface PageRow {
 
 /** The order of each page, following the existing Sokoul app: trends first, then a mix that keeps changing. */
 object PagePlans {
-    private fun spec(s: RowSpec, style: RowStyle = RowStyle.Poster) = PageRow.Titles("spec-${s.id}", s.title, s.tagline, s.kicker, style, RowSource.Spec(s))
+    private fun spec(s: RowSpec, style: RowStyle = RowStyle.Poster) = PageRow.Titles("spec-${s.id}", s.title, style, RowSource.Spec(s))
 
     private fun plat(kind: String, p: Platform) =
-        PageRow.Titles("plat-$kind-${p.name}", L("${p.label} Originals", "Originaux ${p.label}"), null, Kicker.Platforms, RowStyle.Poster, RowSource.OnPlatform(kind, p))
+        PageRow.Titles("plat-$kind-${p.name}", L("${p.label} Originals", "Originaux ${p.label}"), RowStyle.Poster, RowSource.OnPlatform(kind, p))
 
     private val SagaRowKind = PageRow.Sagas
 
     private fun top10(kind: String) = PageRow.Titles(
         "top-$kind",
-        if (kind == "tv") L("Top 10 Series This Week", "Top 10 des séries cette semaine") else L("Top 10 Films This Week", "Top 10 des films cette semaine"),
-        if (kind == "tv") L("The series everyone is talking about.", "Les séries dont tout le monde parle.") else L("The films everyone is watching.", "Les films que tout le monde regarde."),
-        Kicker.Trending, RowStyle.Top10, RowSource.Trending(kind),
+        if (kind == "tv") L("Top 10 Series", "Top 10 séries") else L("Top 10 Films", "Top 10 films"),
+        RowStyle.Top10, RowSource.Trending(kind),
     )
 
     private fun popular(kind: String) = PageRow.Titles(
         "popular-$kind",
         if (kind == "tv") L("Popular Series", "Séries populaires") else L("Popular Films", "Films populaires"),
-        if (kind == "tv") L("Your next binge starts here.", "Le prochain marathon commence ici.") else L("Must-sees this week.", "À voir absolument cette semaine."),
-        Kicker.Trending, RowStyle.Landscape, RowSource.TmdbList(kind, "popular"),
+        RowStyle.Landscape, RowSource.TmdbList(kind, "popular"),
     )
 
     private fun newest(kind: String) = PageRow.Titles(
         "new-$kind",
         if (kind == "tv") L("New Episodes", "Nouveaux épisodes") else L("Just Released", "Tout juste sortis"),
-        if (kind == "tv") L("On the air right now.", "En ce moment à l'antenne.") else L("New in cinemas, just arrived.", "Les nouveautés du cinéma, à peine arrivées."),
-        Kicker.New, RowStyle.Poster, RowSource.TmdbList(kind, if (kind == "tv") "on_the_air" else "now_playing"),
+        RowStyle.Poster, RowSource.TmdbList(kind, if (kind == "tv") "on_the_air" else "now_playing"),
     )
 
     private fun topRated(kind: String) = PageRow.Titles(
         "toprated-$kind",
-        if (kind == "tv") L("Must-See Series", "Les incontournables") else L("All-Time Essentials", "Les incontournables"),
-        L("The highest rated of all time.", "Les mieux notés de tous les temps."),
-        Kicker.Essentials, RowStyle.Poster, RowSource.TmdbList(kind, "top_rated"),
+        L("Essentials", "Incontournables"),
+        RowStyle.Poster, RowSource.TmdbList(kind, "top_rated"),
     )
 
     /** Editorial rows, with a platform row slipped in every few rows. */
@@ -408,8 +403,8 @@ object PagePlans {
     }
 
     private val forYou = PageRow.Titles(
-        "for-you", L("For You", "Pour vous"), L("Picked from what you watch.", "Choisis d'après ce que vous regardez."),
-        Kicker.Trending, RowStyle.Square, RowSource.ForYou,
+        "for-you", L("For You", "Pour vous"),
+        RowStyle.Square, RowSource.ForYou,
     )
 
     val home: List<PageRow> by lazy {
@@ -423,7 +418,7 @@ object PagePlans {
     }
 
     private fun animeRow(id: String, en: String, fr: String, query: com.sokoul.pc.data.anime.AniQuery, style: RowStyle = RowStyle.Poster) =
-        PageRow.Titles("anime-$id", L(en, fr), null, Kicker.Trending, style, RowSource.Anime(query), minItems = 4)
+        PageRow.Titles("anime-$id", L(en, fr), style, RowSource.Anime(query), minItems = 4)
 
     private val anime: List<PageRow> by lazy {
         val k = com.sokoul.pc.data.anime.MediaKind.ANIME
@@ -439,7 +434,7 @@ object PagePlans {
             animeRow("top", "Top 10 Anime", "Top 10 des animés", q("TRENDING_DESC").copy(perPage = 10), RowStyle.Top10),
             PageRow.Reading,
             PageRow.AnimeTools,
-            PageRow.Titles("anime-today", L("Airing today", "Diffusés aujourd'hui"), null, Kicker.New, RowStyle.Poster, RowSource.AnimeToday, minItems = 4),
+            PageRow.Titles("anime-today", L("Airing today", "Diffusés aujourd'hui"), RowStyle.Poster, RowSource.AnimeToday, minItems = 4),
             PageRow.Books("books-trending", L("Manga of the moment", "Les mangas du moment"), book("TRENDING_DESC")),
             animeRow("season", "This season", "Cette saison", q("POPULARITY_DESC").copy(season = season, year = year)),
             PageRow.AnimeGenres,
@@ -448,7 +443,7 @@ object PagePlans {
             PageRow.Books("books-rated", L("Highest rated manga", "Les mangas les mieux notés"), book("SCORE_DESC")),
             theme("isekai", "Isekai", "Another world", "Un autre monde"),
             animeRow("movies", "Anime films", "Films d'animation", q("POPULARITY_DESC").copy(format = "MOVIE")),
-            PageRow.Titles("anime-ghibli", L("The worlds of Studio Ghibli", "Les mondes du Studio Ghibli"), null, Kicker.Theme, RowStyle.Landscape, RowSource.Ghibli),
+            PageRow.Titles("anime-ghibli", L("The worlds of Studio Ghibli", "Les mondes du Studio Ghibli"), RowStyle.Landscape, RowSource.Ghibli),
             theme("iyashi", "Iyashikei", "Soft and soothing", "Doux et apaisant"),
             animeRow("next", "Next season", "La saison prochaine", q("POPULARITY_DESC").copy(season = nextSeason, year = nextYear)),
             theme("family", "Found Family", "Found family", "Une famille choisie"),

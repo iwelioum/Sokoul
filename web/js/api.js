@@ -40,7 +40,7 @@ export const session = {
 };
 
 async function request(method, path, body, { auth = true, signal, keepalive = false } = {}) {
-  const headers = { Accept: 'application/json' };
+  const headers = { Accept: 'application/json', 'Accept-Language': document.documentElement.lang || 'fr' };
   if (body !== undefined) headers['Content-Type'] = 'application/json';
   if (auth && token) headers.Authorization = `Bearer ${token}`;
   let res;
@@ -90,6 +90,8 @@ const enc = encodeURIComponent;
 
 export const api = {
   login: (name, passphrase, deviceName) => request('POST', '/api/auth/login', { name, passphrase, deviceName }, { auth: false }),
+  setupStatus: (opts) => request('GET', '/api/setup', undefined, { ...opts, auth: false }),
+  setupOwner: (name, passphrase, deviceName) => request('POST', '/api/setup', { name, passphrase, deviceName }, { auth: false }),
   logout: () => request('POST', '/api/auth/logout'),
   me: () => request('GET', '/api/me'),
   sessions: () => request('GET', '/api/sessions'),
@@ -99,8 +101,45 @@ export const api = {
   home: (profile, opts) => request('GET', `/api/catalog/home${q({ profile })}`, undefined, opts),
   title: (kind, id, opts) => request('GET', `/api/catalog/title/${enc(kind)}/${enc(id)}`, undefined, opts),
   season: (id, season, opts) => request('GET', `/api/catalog/season/${enc(id)}/${enc(season)}`, undefined, opts),
-  search: (text, opts) => request('GET', `/api/catalog/search${q({ q: text })}`, undefined, opts),
+  search: (text, opts = {}) => request('GET', `/api/catalog/search${q({ q: text, page: opts.page, type: opts.type })}`, undefined, opts),
+  person: (id, opts) => request('GET', `/api/catalog/person/${enc(id)}`, undefined, opts),
+  section: (section, opts) => request('GET', `/api/catalog/sections/${enc(section)}`, undefined, opts),
+  sectionRow: (section, row, args, opts) =>
+    request('GET', `/api/catalog/sections/${enc(section)}/rows/${enc(row)}${q(args)}`, undefined, opts),
+  shelf: (family, id, page, opts) => request('GET', `/api/catalog/shelf/${enc(family)}/${enc(id)}${q({ page })}`, undefined, opts),
+  upcoming: (page, opts) => request('GET', `/api/catalog/upcoming${q({ page })}`, undefined, opts),
+  followedNews: (profile, opts) => request('GET', `/api/catalog/followed/news${q({ profile })}`, undefined, opts),
+  animation: (id, opts) => request('GET', `/api/catalog/animation/${enc(id)}`, undefined, opts),
+  animationSearch: (args, opts) => request('GET', `/api/catalog/animation/search${q(args)}`, undefined, opts),
+  airingCalendar: (opts) => request('GET', '/api/catalog/animation/calendar', undefined, opts),
+  chapters: (id, opts) => request('GET', `/api/catalog/animation/${enc(id)}/chapters`, undefined, opts),
+  chapterPages: (id, chapter, opts) =>
+    request('GET', `/api/catalog/animation/${enc(id)}/chapters/${enc(chapter)}/pages`, undefined, opts),
+  browse: (section, page, opts) => request('GET', `/api/catalog/browse/${enc(section)}${q({ page })}`, undefined, opts),
+  collections: (page, opts) => request('GET', `/api/catalog/collections${q({ page })}`, undefined, opts),
+  collection: (id, opts) => request('GET', `/api/catalog/collections/${enc(id)}`, undefined, opts),
   versions: (params, opts) => request('GET', `/api/play/versions${q(params)}`, undefined, opts),
-  start: (versionId) => request('POST', '/api/play/start', { versionId }),
-  credentials: () => request('GET', '/api/credentials'),
+  subtitleSearch: (params, opts) => request('GET', `/api/play/subtitles${q(params)}`, undefined, opts),
+  subtitleCues: (id, opts) => request('GET', `/api/play/subtitles/${enc(id)}`, undefined, opts),
+  start: (versionId, opts) => request('POST', '/api/play/start', { versionId }, opts),
+  guides: (opts) => request('GET', '/api/service-guides', undefined, opts),
+  credentials: (opts) => request('GET', '/api/credentials', undefined, opts),
+  saveCredential: (service, value, opts) => request('PUT', `/api/credentials/${enc(service)}`, { value }, opts),
+  removeCredential: (service, opts) => request('DELETE', `/api/credentials/${enc(service)}`, undefined, opts),
+  channels: (params, opts) => request('GET', `/api/live/channels${q(params)}`, undefined, opts),
+  guide: (id, opts) => request('GET', `/api/live/guide/${enc(id)}`, undefined, opts),
+  guideRows: (ids, opts) => request('POST', '/api/live/guide', { ids }, opts),
+  replay: (id, opts) => request('GET', `/api/live/replay/${enc(id)}`, undefined, opts),
+  startReplay: (channelId, start, opts) => request('POST', '/api/live/replay/start', { channelId, start }, opts),
+  iptvVod: (kind, params, opts) => request('GET', `/api/live/vod/${enc(kind)}${q(params)}`, undefined, opts),
+  iptvTitle: (kind, id, opts) => request('GET', `/api/live/vod/${enc(kind)}/${enc(id)}`, undefined, opts),
+  startIptvTitle: (kind, id, episode, opts) => request('POST', `/api/live/vod/${enc(kind)}/start`, { id: Number(id), episode }, opts),
+  startChannel: (id, opts) => request('POST', '/api/live/start', { channelId: id }, opts),
+  stopLive: (id) => request('DELETE', `/api/live/stream/${enc(id)}`, undefined, { keepalive: true }),
+  invite: () => request('POST', '/api/invites', {}),
+  join: (code, name, passphrase, deviceName) => request('POST', '/api/auth/join', { code, name, passphrase, deviceName }, { auth: false }),
+  sportsEvents: (opts) => request('GET', '/api/sports/events', undefined, opts),
+  sportsScores: (opts) => request('GET', '/api/sports/scores', undefined, opts),
+  sportsServers: (id, opts) => request('GET', `/api/sports/events/${enc(id)}/servers`, undefined, opts),
+  startSport: (id, serverKey, opts) => request('POST', `/api/sports/events/${enc(id)}/start`, { serverKey }, opts),
 };

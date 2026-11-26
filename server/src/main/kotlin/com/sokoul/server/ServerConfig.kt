@@ -36,6 +36,8 @@ class ServerConfig(
     val webDir: File? = null,
     /** The ffmpeg program when set (`ffmpeg.path`); otherwise `ffmpeg` is looked for on PATH. */
     val ffmpegPath: String? = null,
+    val sportsBase: String = "http://127.0.0.1:25565",
+    val sportsAccessKey: String? = null,
 ) {
     /** Cloudflare Access settings; present only when both the team domain and the audience are set. */
     class AccessConfig(val teamDomain: String, val audience: String) {
@@ -63,6 +65,8 @@ class ServerConfig(
             "vault.keyFile" to "SOKOUL_SERVER_VAULT_KEY_FILE",
             "web.dir" to "SOKOUL_SERVER_WEB_DIR",
             "ffmpeg.path" to "SOKOUL_SERVER_FFMPEG",
+            "sports.base" to "SOKOUL_SERVER_SPORTS_BASE",
+            "sports.accessKey" to "SOKOUL_SERVER_SPORTS_ACCESS_KEY",
         )
 
         private val HOST = Regex("^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$")
@@ -128,7 +132,10 @@ class ServerConfig(
             val vaultKeyFile = value("vault.keyFile")?.let(::File)
                 ?: File(configFile?.absoluteFile?.parentFile ?: dataDir, VAULT_KEY_FILE_NAME)
             val webDir = value("web.dir")?.let { File(it).absoluteFile }
-            return ServerConfig(port, bind, lan, dataDir, access, configFile, vaultKeyFile.absoluteFile, webDir, value("ffmpeg.path"))
+            return ServerConfig(
+                port, bind, lan, dataDir, access, configFile, vaultKeyFile.absoluteFile, webDir, value("ffmpeg.path"),
+                value("sports.base") ?: "http://127.0.0.1:25565", value("sports.accessKey"),
+            )
         }
     }
 }

@@ -6,6 +6,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import org.slf4j.LoggerFactory
 import java.io.File
+import java.io.OutputStream
 import java.util.concurrent.TimeUnit
 
 /** What ffprobe says about a media file: its container and the codecs of its first video and audio tracks. */
@@ -55,33 +56,55 @@ class Remuxer(
     }
 
     /** Starts ffmpeg for [id]: the playlist appears as `index.m3u8` in [RemuxJob.dir]. */
-    fun start(id: String, url: String, headers: Map<String, String>, probe: MediaProbe?): RemuxJob? {
+    fun start(
+        id: String, url: String, headers: Map<String, String>, probe: MediaProbe?,
+        pipeInput: ((OutputStream) -> Unit)? = null, live: Boolean = false, cancelInput: () -> Unit = {},
+    ): RemuxJob? {
         val program = ffmpeg ?: return null
         val dir = File(workDir, Secrets.sha256(id).take(12).joinToString("") { "%02x".format(it) })
         dir.deleteRecursively()
         dir.mkdirs()
         val copyAudio = probe?.audio in SAFARI_AUDIO
-        val cmd = mutableListOf(program, "-nostdin", "-loglevel", "error") + inputOptions(headers) +
-            listOf("-reconnect", "1", "-reconnect_streamed", "1", "-reconnect_delay_max", "5", "-i", url) +
-            listOf("-map", "0:v:0", "-map", "0:a:0?", "-sn", "-dn", "-c:v", "copy") +
+        val input = if (pipeInput != null) listOf("-protocol_whitelist", "pipe", "-i", "pipe:0")
+            else inputOptions(headers) + listOf("-reconnect", "1", "-reconnect_streamed", "1", "-reconnect_delay_max", "5", "-i", url)
+        val video = if (live) listOf("-c:v", "libx264", "-preset", "veryfast", "-tune", "zerolatency",
+            "-pix_fmt", "yuv420p", "-force_key_frames", "expr:gte(t,n_forced*4)") else listOf("-c:v", "copy")
+        val playlist = if (live) listOf("-hls_time", "4", "-hls_list_size", "6", "-hls_delete_threshold", "3",
+            "-hls_flags", "temp_file+independent_segments+delete_segments") else listOf(
+            "-hls_time", "6", "-hls_list_size", "0", "-hls_playlist_type", "event", "-hls_flags", "temp_file+independent_segments",
+        )
+        val cmd = listOf(program, "-nostdin", "-loglevel", "error") + input +
+            listOf("-map", "0:v:0", "-map", "0:a:0?", "-sn", "-dn") + video +
             (if (probe?.video == "hevc") listOf("-tag:v", "hvc1") else emptyList()) +
             (if (copyAudio) listOf("-c:a", "copy") else listOf("-c:a", "aac", "-b:a", "192k", "-ac", "2")) +
-            listOf(
-                "-f", "hls", "-hls_time", "6", "-hls_list_size", "0", "-hls_playlist_type", "event",
+            listOf("-f", "hls") + playlist + listOf(
                 "-hls_segment_type", "fmp4", "-hls_fmp4_init_filename", "init.mp4",
-                "-hls_flags", "temp_file+independent_segments",
                 // Relative names in its own folder: ffmpeg writes the init segment beside its working folder.
                 "-hls_segment_filename", "seg_%05d.m4s",
                 "index.m3u8",
             )
         val process = runCatching {
-            ProcessBuilder(cmd).directory(dir).redirectErrorStream(true).redirectOutput(File(dir, "ffmpeg.log")).start()
+            ProcessBuilder(cmd).directory(dir).redirectErrorStream(true).apply {
+                redirectOutput(if (pipeInput != null) ProcessBuilder.Redirect.DISCARD else ProcessBuilder.Redirect.to(File(dir, "ffmpeg.log")))
+            }.start()
         }.getOrElse {
             log.warn("ffmpeg could not start ({})", it::class.simpleName)
             dir.deleteRecursively()
             return null
         }
-        return RemuxJob(dir, process)
+        if (pipeInput != null) Thread({
+            try {
+                process.outputStream.use(pipeInput)
+            } catch (_: java.io.IOException) {
+                // A channel change closes ffmpeg's input; the relay reports failures if the playlist never appears.
+            } finally {
+                cancelInput()
+            }
+        }, "sokoul-live-hls").apply {
+            isDaemon = true
+            start()
+        }
+        return RemuxJob(dir, process, cancelInput)
     }
 
     companion object {
@@ -143,10 +166,11 @@ class Remuxer(
 }
 
 /** One running remux: ffmpeg writing fMP4 HLS into [dir]. */
-class RemuxJob(val dir: File, private val process: Process) {
+class RemuxJob(val dir: File, private val process: Process, private val cancelInput: () -> Unit = {}) {
     val alive: Boolean get() = process.isAlive
 
     fun stop() {
+        cancelInput()
         process.destroy()
         if (!process.waitFor(3, TimeUnit.SECONDS)) process.destroyForcibly()
         dir.deleteRecursively()

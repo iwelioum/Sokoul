@@ -1,7 +1,7 @@
 // Account: who is signed in, the devices of the account (GET /api/sessions), and sign out.
 
 import { api } from '../api.js';
-import { t, ago } from '../i18n.js';
+import { t, ago, shortDate } from '../i18n.js';
 import * as store from '../store.js';
 import { h, icon, avatar, problem, skeletonLines, setTitle } from '../ui.js';
 
@@ -16,6 +16,23 @@ export async function render({ root, signal, signOut }) {
   const me = store.user();
   const profile = store.currentProfile();
   const devices = h('div.list-slot', skeletonLines(3, 'list-skeleton'));
+  const inviteStatus = h('div.invite-output', { 'aria-live': 'polite' });
+  const invite = h('button.btn.btn-secondary', { type: 'button', onClick: async () => {
+    invite.disabled = true;
+    inviteStatus.textContent = t('creatingInvite');
+    try {
+      const data = await api.invite();
+      if (signal.aborted) return;
+      const link = `${location.origin}/#/join?code=${encodeURIComponent(data.code)}`;
+      inviteStatus.replaceChildren(h('p.lead', t('inviteCreated', { date: shortDate(data.expiresAt) })),
+        h('label.source-field', t('inviteCode'), h('input.field', { readonly: true, value: data.code, onFocus: (event) => event.target.select() })),
+        h('label.source-field', t('invitationLink'), h('input.field', { readonly: true, value: link, onFocus: (event) => event.target.select() })));
+    } catch (error) {
+      if (!signal.aborted) inviteStatus.replaceChildren(problem(error, () => invite.click()));
+    } finally {
+      invite.disabled = false;
+    }
+  } }, t('inviteMember'));
 
   root.append(h('div.page.page-narrow',
     h('h1.page-title', t('account')),
@@ -28,6 +45,7 @@ export async function render({ root, signal, signOut }) {
       linkRow(t('switchProfile'), '#/profiles'),
       linkRow(t('sources'), '#/sources'),
       linkRow(t('linkTv'), '/link')),
+    me?.role === 'owner' ? h('section.account-invite', invite, inviteStatus) : null,
     h('h2.section-title', t('devices')),
     devices,
     h('div.page-actions',

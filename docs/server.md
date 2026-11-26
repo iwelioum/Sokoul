@@ -35,6 +35,8 @@ file means every setting takes its default. Environment variables override the f
 | `vault.keyFile` | `SOKOUL_SERVER_VAULT_KEY_FILE` | `vault.key` next to the config file | The credentials vault's master key (see Credentials vault) |
 | `web.dir` | `SOKOUL_SERVER_WEB_DIR` | `web/` of the checkout or beside the install | The web client's files (see Web client API) |
 | `ffmpeg.path` | `SOKOUL_SERVER_FFMPEG` | `ffmpeg` on the `PATH` | Remux for Safari; without it MKV/AC3 files are relayed as they are |
+| `sports.base` | `SOKOUL_SERVER_SPORTS_BASE` | `http://127.0.0.1:25565` | Mainapi for the Sport page |
+| `sports.accessKey` | `SOKOUL_SERVER_SPORTS_ACCESS_KEY` | unset | Mainapi access key for native sports streams |
 
 The two `access.*` keys must be set together. Set both, or leave both unset.
 
@@ -212,6 +214,8 @@ another (openspec task 6, design D5). The routes need a session and only see the
   service), `422 refused` (the service said no), `502 unreachable` (it did not answer, or asked to wait). `404
   unknown_service`, `411 length_required`, `413 too_large` (8 KiB per body).
 - `DELETE /api/credentials/{service}`: `204`, or `404 not_found`.
+- `PUT` can include `"onlyIfAbsent":true` for imports. If the account has the credential by the time the check finishes,
+  it returns `409 already_configured` and preserves the existing credential.
 
 Services: `tmdb`, `realdebrid`, `omdb`, `fanart`, `tvdb`, `watchmode`, `tastedive`, `motn`, `opensubtitles`, `subdl`
 (a key of 1–256 visible ASCII characters), and `iptv`: an Xtream login as JSON
@@ -231,9 +235,11 @@ key and the key file is missing or is another one; it never makes new keys over 
 > `vault.keyFile` so the two live apart, and the server warns at start while they do not. To start the vault over
 > after losing the file, stop the server and run `DELETE FROM credentials; DELETE FROM vault_keys;` on the database.
 
-The apps: signed in to an account, Settings › Sources and keys also saves each key it accepted to the vault, and a card
-this device has not set up shows "In your account · •••• 1234" when the account has that key, so a new device knows
-which keys to enter. Keys never come back from the server.
+The apps: signed in to an account, Settings › Sources and keys also saves each key it accepts to the vault. Use
+**Import local credentials to my account** to bring over previously entered keys and the active IPTV subscription.
+Sokoul validates each credential and preserves the ones already in the account. A card shows the account's masked
+hint when the device has no local credential. On the web, open Menu › Settings › Sources and keys to check, save,
+replace or remove a credential. The same French and English setup guides appear on both clients.
 
 ## Web client API
 
@@ -256,11 +262,12 @@ the vault. Errors are `{"error":"<code>"}` as everywhere else, with `Retry-After
 
   ```
   Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; connect-src 'self';
-    img-src 'self' data: blob: https://image.tmdb.org; media-src 'self' blob:; worker-src 'self' blob:;
+    img-src 'self' data: blob: https://image.tmdb.org https://assets.fanart.tv; media-src 'self' blob:; worker-src 'self' blob:;
     manifest-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; object-src 'none'
   ```
 
-  No inline script or style, no third-party script. Images may come from TMDB's CDN (the addresses carry no key).
+  Public catalogue and reader artwork uses the TMDB, fanart.tv, AniList and MangaDex image hosts. The trailer player opens
+  the YouTube privacy-enhanced embed after a click. The document loads its scripts and styles from the Sokoul server.
 
 ### Catalogue
 
@@ -308,6 +315,19 @@ Without a TMDB key in the caller's vault, or when TMDB refuses the stored one, e
   `{"id":1399,"season":1,"name":"Saison 1","episodes":[{"number":1,"name":"…","overview":"…","still":"…/w300/….jpg","runtime":62,"airDate":"2011-04-17"}]}`.
 - `GET /api/catalog/search?q=<text>` → `{"items":[Item]}` (films and series only; an empty `q` gives `[]`;
   `400 query_too_long` over 100 characters).
+- `GET /api/catalog/browse/{movies|series|anime}?page=N` → `{"items":[Item],"more":true}`. Anime filters TMDB's
+  series to Japanese animation. Lists and title pages use the signed-in account's TMDB key.
+- `GET /api/catalog/collections?page=N` → the same saga index as the PC app. `GET /api/catalog/collections/{id}`
+  returns the saga's films and related series.
+- `GET /api/service-guides` returns localized content for the settings cards and their forms.
+- **My List** reads and writes profile-scoped `my_list` changes through the sync API.
+- `GET /api/catalog/sections/{home|movies|series|anime}` returns the shared PC row plan. A row is materialized by
+  `GET /api/catalog/sections/{section}/rows/{row}`. Browse links resolve through `/api/catalog/shelf/{family}/{id}`.
+- `GET /api/catalog/person/{id}` returns a filmography. Title details include trailers, recommendations,
+  classification, watch providers and the title's collection. `GET /api/catalog/followed/news?profile=…` uses the PC's
+  rules for the next release or episode. Profiles, follow markers and history changes use the existing sync API.
+- `GET /api/catalog/animation/search`, `/calendar` and `/{id}` use AniList models and parsers shared with the PC.
+  `/{id}/chapters` and `/{id}/chapters/{chapter}/pages` use MangaDex when chapters are available for that work.
 
 ### Play
 
@@ -323,8 +343,8 @@ Without a TMDB key in the caller's vault, or when TMDB refuses the stored one, e
   parallel, 25 s at most each. `quality` is `2160p`, `1080p`, `720p`, `480p` or missing; `language` is `VF`, `MULTI`,
   `VOSTFR`, `VO` or missing. Order: French audio first (VF, MULTI, VOSTFR, VO, unknown), then quality, then direct links
   before player pages. A player page no Sokoul host extractor reads is left out. `reason` is `blocked`, `timeout`,
-  `network` or `host_changed`. A version id is valid 2 hours, for the session that listed it only. Real-Debrid is not
-  asked yet (`origin` will then be `realdebrid`). `400 invalid_kind|invalid_id|episode_required`.
+  `network` or `host_changed`. A version id is valid 2 hours, for the session that listed it only. Real-Debrid adds
+  ready matching files from the caller's account with `origin: "realdebrid"`. `400 invalid_kind|invalid_id|episode_required`.
 - `POST /api/play/start` with `{"versionId":"…"}` →
 
   ```json
@@ -339,6 +359,31 @@ Without a TMDB key in the caller's vault, or when TMDB refuses the stored one, e
   - Subtitles come as WebVTT (SRT is converted).
   - Errors: `404 unknown_version`; `422 unsupported_host`; `502 host_removed|host_not_found|host_changed|host_blocked|
     host_timeout|host_network|host_unsupported`; `504 host_timeout`; `502 bad_media`.
+- `GET /api/play/subtitles` searches OpenSubtitles and Subdl with the signed-in account's keys. Fetching one entry
+  at `/api/play/subtitles/{id}` requires the same session. The browser receives decoded cues and applies its offset
+  locally while the current video continues playing.
+
+### Live TV and sports
+
+- `GET /api/live/channels?page=N&group=…&q=…` lists channels from the caller's vaulted IPTV account.
+  The web client keeps channel favourites, personal collections and recently watched channels in the browser per profile.
+  `sports=true` selects sports groups and channels. `GET /api/live/guide/{id}` gives upcoming programmes when an Xtream
+  provider offers them. `POST /api/live/start` with `{"channelId":"…"}` starts a session-bound stream. Starting a new
+  IPTV channel revokes the previous stream issued to the same account.
+- `POST /api/live/guide` accepts up to eight channel ids and returns a guide row for each channel in the account.
+  `GET /api/live/replay/{id}` lists Xtream programmes eligible for catch-up. `POST /api/live/replay/start` accepts
+  a channel id and the start of one of those programmes.
+- `GET /api/live/vod/{movies|series}` lists the account's Xtream VOD. Open a title by id for its details and episodes,
+  then `POST /api/live/vod/{kind}/start` with the title id and, for a series, an episode id. The server validates both
+  against the subscription catalogue and keeps provider addresses in the relay.
+- Raw MPEG-TS from IPTV is converted to H.264/AAC HLS when ffmpeg is installed. The server reads the provider
+  with its own HTTP client and feeds ffmpeg through a pipe. Closing the player revokes the stream with
+  `DELETE /api/live/stream/{id}`, and an idle converter is retired automatically.
+- `GET /api/sports/events` and `GET /api/sports/events/{id}/servers` use the same Mainapi as the PC app.
+  `POST /api/sports/events/{id}/start` with `{"serverKey":"…"}` needs the configured Mainapi access key. The relay
+  follows the signed media on Mainapi's configured host and port. Sports IPTV channels are listed separately.
+- `GET /api/sports/scores` lists the schedule and scores of the leagues followed by the PC app, using its shared
+  scoreboard client independently of the video providers.
 
 ### Stream relay
 
@@ -348,8 +393,9 @@ random 256-bit capability bound to the session that started it.
 - An unknown id, a stream older than 6 hours, a session revoked or expired since (sign-out ends its streams), or a
   request that carries another session's token: `404 not_found`. A session keeps its 6 newest streams.
 - Only addresses the server resolved itself are fetched. Playlists (recognised by `#EXTM3U` or their type) are
-  rewritten so every segment, variant, key and map address becomes `/api/stream/<id>/u/<payload>/<signature>` (HMAC-SHA256
-  with the stream's own key); anything else answers 404. Private, loopback and link-local addresses are never reached.
+  rewritten so every segment, variant, key and map address becomes `/api/stream/<id>/u/<ciphertext>/<nonce>` (AES-256-GCM
+  with the stream's own key). IPTV URLs and provider credentials stay on the server. Ordinary relays reach public
+  addresses only. The sports bridge is restricted to the trusted Mainapi relay endpoint and refuses redirects.
 - Upstream requests carry the extractor's headers (Referer, User-Agent…) and the player's `Range`, nothing of the caller.
 - Segments disguised as images (a PNG/JPEG/GIF before the TS) are unwrapped.
 - Remux: with ffmpeg (`ffmpeg.path` / `SOKOUL_SERVER_FFMPEG`, else `ffmpeg` on PATH; `ffprobe` beside it), a file
@@ -405,6 +451,5 @@ To change the schema, append a migration. Never edit a shipped one.
 
 - **Lot 4, still open**: passkeys, a real TV → phone link check, and the app side (task 5.4).
 - **Lot 5, still open**: the "API et sources" settings page (6.4) and the OpenSubtitles user login (6.3b).
-- **Lot 7, still open**: Real-Debrid versions on the web (its search lives in the PC app, not in a shared module),
-  HLS sources with AC3 audio (relayed, not remuxed), the iPhone check of an MKV with AC3 (8.2), the IPTV lease (8.3)
-  and the watch party (8.4).
+- **Lot 7, still open**: Real-Debrid discovery beyond the account's ready files, HLS sources with AC3 audio (relayed,
+  not remuxed), the iPhone check of an MKV with AC3 (8.2), and the watch party (8.4).

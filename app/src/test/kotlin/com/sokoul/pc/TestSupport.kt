@@ -47,7 +47,7 @@ class FakeCatalog(
     private val on: Boolean = true,
     private val rows: List<PageRow> = listOf(
         // With artwork: the title page shows its neighbours' pictures beside it only when they have one.
-        PageRow.Titles("top-series", L("Top", "Top"), null, null, RowStyle.Top10, RowSource.Fixed((1..6).map { sampleItem(it).copy(backdrop = "/backdrop-$it.jpg") })),
+        PageRow.Titles("top-series", L("Top", "Top"), RowStyle.Top10, RowSource.Fixed((1..6).map { sampleItem(it).copy(backdrop = "/backdrop-$it.jpg") })),
     ),
     private val hero: List<HeroItem> = emptyList(),
     private val resumes: List<Resume> = emptyList(),

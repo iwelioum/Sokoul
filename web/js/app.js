@@ -13,20 +13,47 @@ import * as search from './screens/search.js';
 import * as player from './screens/player.js';
 import * as sources from './screens/sources.js';
 import * as account from './screens/account.js';
+import * as library from './screens/library.js';
+import * as live from './screens/live.js';
+import * as discover from './screens/discover.js';
+import * as work from './screens/work.js';
+import * as settings from './screens/settings.js';
+import { preferences } from './preferences.js';
 
 document.documentElement.lang = lang;
 
 /** [pattern, screen module, options]. `nav`: the bar shows; `back`: it starts with a back button. */
 const ROUTES = [
   [/^signin$/, signin, { open: true }],
+  [/^join$/, signin, { open: true }],
+  [/^setup$/, signin, { open: true }],
   [/^link$/, signin, { open: true }],
   [/^profiles$/, profiles, { noProfile: true }],
-  [/^home$/, home, { nav: 'home' }],
+  [/^(home|movies|series|anime)$/, home, { nav: 'section', keys: ['section'] }],
+  [/^(myList|manga)$/, library, { nav: 'section', keys: ['section'] }],
+  [/^row\/(home|movies|series|anime)\/([\w-]+)$/, library, { nav: 'section', back: true, keys: ['section', 'row'] }],
+  [/^shelf\/(genre|mood|studio|platform|anime)\/([\w-]+)$/, library, { nav: 'title', back: true, keys: ['family', 'id'] }],
+  [/^discover\/(releases)$/, library, { nav: 'title', back: true, keys: ['section'] }],
+  [/^(history|anime-calendar)$/, discover, { nav: 'title', back: true, keys: ['section'] }],
+  [/^discover\/(pick)$/, discover, { nav: 'title', back: true, keys: ['section'] }],
+  [/^person\/(\d+)$/, discover, { nav: 'title', back: true, keys: ['id'] }],
+  [/^work\/(\d+)$/, work, { nav: 'anime', back: true, keys: ['id'] }],
+  [/^read\/(\d+)\/([a-f0-9-]+)$/i, { render: work.read }, { nav: 'anime', back: true, keys: ['id', 'chapter'] }],
+  [/^(collections)(?:\/([a-z0-9-]+))?$/, library, { nav: 'section', keys: ['section', 'collection'] }],
+  [/^(tv|sports)$/, live, { nav: 'section', keys: ['section'] }],
+  [/^(tv)\/vod\/(movies|series)(?:\/(\d+))?$/, live, { nav: 'section', back: true, keys: ['section', 'iptvKind', 'iptvId'] }],
+  [/^(tv)\/replay\/([\w-]+)$/, live, { nav: 'section', back: true, keys: ['section', 'archiveChannel'] }],
   [/^title\/(movie|tv)\/([\w-]+)$/, title, { nav: 'title', back: true, keys: ['kind', 'id'] }],
   [/^search$/, search, { nav: 'search' }],
   [/^play\/(movie|tv)\/([\w-]+)(?:\/(\d+)\/(\d+))?$/, player, { keys: ['kind', 'id', 'season', 'episode'] }],
-  [/^sources$/, sources, { nav: 'sources', back: true }],
-  [/^account$/, account, { nav: 'account' }],
+  [/^sources(?:\/([a-z]+))?$/, sources, { nav: 'settings', back: true, keys: ['service'] }],
+  [/^settings(?:\/(home|playback|language|menu))?$/, settings, { nav: 'settings', keys: ['pane'] }],
+  [/^account$/, account, { nav: 'settings', back: true }],
+];
+
+const SECTIONS = [
+  ['home', 'home'], ['myList', 'bookmark'], ['movies', 'film'], ['series', 'screen'],
+  ['anime', 'sparkles'], ['collections', 'layers'], ['tv', 'screen'], ['sports', 'trophy'],
 ];
 
 const app = document.getElementById('app');
@@ -64,6 +91,7 @@ session.onUnauthorized(() => {
 });
 
 function renderNav(active, withBack) {
+  nav.querySelector('dialog[open]')?.close();
   if (!active) {
     nav.hidden = true;
     nav.replaceChildren();
@@ -71,18 +99,34 @@ function renderNav(active, withBack) {
     return;
   }
   const profile = store.currentProfile();
-  const tab = (id, label, href) => h('a.nav-tab', { href, 'aria-current': active === id ? 'page' : null }, label);
-  const bar = h('div.nav-row',
-    withBack ? h('button.nav-back.glass', { type: 'button', 'aria-label': t('back'), title: t('back'), onClick: () => back() }, icon('back')) : null,
-    h('nav.nav-pill.glass', { 'aria-label': 'Sokoul' },
-      profile ? h('a.nav-avatar', { href: '#/profiles', 'aria-label': t('switchProfile'), title: t('switchProfile') }, avatar(profile, 'avatar-nav')) : null,
-      tab('home', t('home'), '#/home'),
-      tab('search', t('search'), '#/search'),
-      h('span.nav-wide', tab('sources', t('sources'), '#/sources')),
-      tab('account', t('account'), '#/account'),
-    ),
-  );
-  nav.replaceChildren(bar);
+  const menuPrefs = preferences().menu;
+  const ordered = new Set(['home', ...(menuPrefs?.order || []), ...SECTIONS.map(([id]) => id)]);
+  const glyphs = new Map(SECTIONS);
+  const visible = [...ordered].filter((id) => glyphs.has(id) &&
+    !menuPrefs?.hidden?.includes(id) && (!profile?.kids || id !== 'sports'));
+  const entry = (id, glyph) => h('a.nav-entry', { href: `#/${id}`, 'aria-current': active === id ? 'page' : null },
+    icon(glyph), h('span', t(id === 'series' ? 'seriesNav' : id)), active === id ? icon('check', 'nav-current') : null);
+  const panel = h('dialog.nav-panel.glass', { id: 'section-menu', 'aria-label': t('menu') },
+    h('nav', { 'aria-label': t('menu') },
+      profile ? h('a.nav-entry.nav-profile', { href: '#/profiles' }, avatar(profile, 'avatar-medium'),
+        h('span', profile.name, h('small', t('switchProfile')))) : null,
+      h('hr'), visible.map((id) => entry(id, glyphs.get(id))), h('hr'), entry('settings', 'settings')));
+  const menu = h('button.nav-button', { type: 'button', 'aria-label': t('menu'), title: t('menu'),
+    'aria-haspopup': 'dialog', 'aria-controls': panel.id, 'aria-expanded': 'false',
+    onClick: () => {
+      panel.showModal();
+      menu.setAttribute('aria-expanded', 'true');
+      (panel.querySelector('[aria-current="page"]') || panel.querySelector('a'))?.focus();
+    } }, icon('menu'));
+  panel.addEventListener('click', (event) => {
+    if (event.target === panel || event.target.closest('a')) panel.close();
+  });
+  panel.addEventListener('close', () => menu.setAttribute('aria-expanded', 'false'));
+  nav.replaceChildren(h('div.nav-row',
+    menu,
+    withBack ? h('button.nav-button', { type: 'button', 'aria-label': t('back'), title: t('back'), onClick: () => back() }, icon('back')) : null,
+    h('a.nav-button.nav-search', { href: '#/search', 'aria-label': t('search'), title: t('search'),
+      'aria-current': active === 'search' ? 'page' : null }, icon('search'))), panel);
   nav.hidden = false;
   document.body.classList.add('has-nav');
 }
@@ -121,6 +165,9 @@ async function route() {
     if (!opts.noProfile && !store.currentProfile()) {
       return go(`#/profiles?next=${encodeURIComponent(hash)}`, true);
     }
+    if (store.currentProfile()?.kids && ['sports', 'sources', 'account'].includes(path.split('/')[0])) {
+      return go('#/home', true);
+    }
   }
 
   const params = {};
@@ -128,13 +175,16 @@ async function route() {
   const controller = new AbortController();
   const root = h('div.screen', { 'data-screen': path.split('/')[0] });
   document.body.dataset.screen = path.split('/')[0];
-  renderNav(opts.nav || null, Boolean(opts.back));
+  renderNav(opts.nav === 'section' ? params.section : opts.nav, Boolean(opts.back || params.collection));
   app.replaceChildren(root);
   const restoreTo = scrollMemory.get(hash);
   window.scrollTo(0, 0);
-  current = { hash, controller, cleanup: null };
+  const screen = { hash, controller, cleanup: null };
+  current = screen;
   try {
-    current.cleanup = await mod.render({ root, params, query, signal: controller.signal, path, go, back, signOut }) || null;
+    const cleanup = await mod.render({ root, params, query, signal: controller.signal, path, go, back, signOut });
+    if (current === screen) screen.cleanup = cleanup || null;
+    else cleanup?.();
   } catch (e) {
     if (e && e.name === 'AbortError') return;
     console.error(e);
@@ -161,6 +211,11 @@ const linkCode = new URLSearchParams(location.search).get('code');
 if (location.pathname.replace(/\/$/, '').endsWith('/link') && linkCode) {
   location.replace(`/link?code=${encodeURIComponent(linkCode)}`);
 } else {
+  const path = location.pathname.replace(/^\/|\/$/g, '');
+  if (path) {
+    const hash = location.hash || (ROUTES.some(([pattern]) => pattern.test(path)) ? `#/${path}${location.search}` : '#/home');
+    history.replaceState(history.state, '', `/${hash}`);
+  }
   route();
 }
 

@@ -354,7 +354,6 @@ fun HomeScreen(
                     is PageRow.Titles -> TitleRow(
                         deps, row.id, row.title.text(), row.style, loaded[row.id].orEmpty(),
                         up, { if (it) align(listIndex) }, ::focusFor, onOpen, large = row.id == largeRow,
-                        kicker = row.kicker?.label?.text(), tagline = row.tagline?.text(),
                         onSeeAll = { origin -> onOpenRequest(CollectionRequest(row.title.text(), null, null) { page -> deps.catalog.rowItems(row.source, page) }, origin) },
                     )
                     is PageRow.Because -> TitleRow(
@@ -466,14 +465,12 @@ internal fun TitleRow(
     onOpen: (List<TmdbItem>, Int, CardOrigin?) -> Unit,
     onSeeAll: ((CardOrigin?) -> Unit)? = null,
     large: Boolean = false,
-    kicker: String? = null,
-    tagline: String? = null,
 ) {
     // A row shows a few titles to choose from, not a catalogue: the rest is one press away, behind "See All".
     val shown = items.take(if (style == RowStyle.Top10) TOP_COUNT else ROW_CAP)
     val more = style != RowStyle.Top10 && onSeeAll != null && items.size > shown.size
     val cells: List<TmdbItem?> = if (more) shown + null else shown
-    CardRow(title, cells, key = { it?.id ?: SEE_ALL }, testTag = "row-$id", onActive = onActive, upTarget = up, kicker = kicker, tagline = tagline) { index, cell ->
+    CardRow(title, cells, key = { it?.id ?: SEE_ALL }, testTag = "row-$id", onActive = onActive, upTarget = up) { index, cell ->
         val requester = focusFor(index) ?: remember { FocusRequester() }
         val item = cell ?: run {
             SeeAllCard(style, large, "card-$id-see-all", requester) { onSeeAll?.invoke(it) }

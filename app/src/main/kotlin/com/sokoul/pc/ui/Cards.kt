@@ -289,8 +289,6 @@ fun <T> CardRow(
     onUp: () -> Unit = {},
     verticalPadding: Dp = CardMetrics.RowVerticalPadding,
     /** The row's kind in small capitals above its title ("TRENDING"), and one line saying what it holds under it. */
-    kicker: String? = null,
-    tagline: String? = null,
     card: @Composable (index: Int, item: T) -> Unit,
 ) {
     var active by remember { mutableStateOf(false) }
@@ -319,7 +317,7 @@ fun <T> CardRow(
             }
             .let { if (testTag != null) it.testTag(testTag) else it },
     ) {
-        RowHeading(title, active, kicker, tagline)
+        RowHeading(title, active)
         LazyRow(
             state = rowState,
             // Left and right stay in the row: at its ends nothing moves, and at the left edge the menu can open.
@@ -358,19 +356,10 @@ fun <T> CardRow(
 }
 
 @Composable
-fun RowHeading(title: String, active: Boolean, kicker: String? = null, tagline: String? = null) {
+fun RowHeading(title: String, active: Boolean) {
+    // One title per row, a word or a short phrase: no kicker above, no line under (the owner's rule, 2026-11-26).
     val color by animateColorAsState(if (active) Palette.OnBackground else Palette.Secondary)
-    if (kicker == null && tagline == null) {
-        Label(title, Type.RowTitle, color, Modifier.padding(start = Metrics.PageMargin), maxLines = 1)
-        return
-    }
-    // A section says what it is before what it holds, as the editorial rows of Disney+ and Apple TV: the kind in small
-    // capitals, the title, then one quiet line. Only the title lights with focus.
-    androidx.compose.foundation.layout.Column(Modifier.padding(start = Metrics.PageMargin), verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(4.dp)) {
-        kicker?.let { Label(it, Type.Body.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, letterSpacing = 2.sp), Palette.Secondary, maxLines = 1) }
-        Label(title, Type.RowTitle, color, maxLines = 1)
-        tagline?.let { Label(it, Type.Body, Palette.Secondary, maxLines = 1) }
-    }
+    Label(title, Type.RowTitle, color, Modifier.padding(start = Metrics.PageMargin), maxLines = 1)
 }
 
 /** Round action button: dark circle at rest, white and slightly larger with focus. */

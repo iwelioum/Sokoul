@@ -191,6 +191,20 @@ async function readJson(req) {
 
 const delay = (ms) => new Promise((r) => setTimeout(r, ms));
 
+const mockGuides = [
+  ['iptv', 'IPTV'], ['realdebrid', 'Real-Debrid'], ['opensubtitles', 'OpenSubtitles'],
+  ['subdl', 'Subdl'], ['mainapi', 'Serveur Sokoul'], ['tmdb', 'TMDB'], ['omdb', 'OMDb'],
+  ['fanart', 'fanart.tv'], ['tvdb', 'TheTVDB'], ['tvmaze', 'TVmaze'], ['watchmode', 'Watchmode'],
+  ['tastedive', 'TasteDive'], ['motn', 'Movie of the Night'],
+].map(([id, name]) => ({
+  id, name, editable: !['tvmaze', 'mainapi'].includes(id),
+  adds: `Configurer ${name} dans Sokoul.`, steps: ['Saisissez un identifiant de démonstration.'],
+  privacy: 'Ce serveur de développement conserve uniquement le masque.',
+}));
+const mockCredentials = new Map();
+const mockChannel = { id: 'arena', name: 'Arena', group: 'Sports' };
+const mockEvent = { id: 'streamed_arena', name: 'Match de démonstration', sport: 'Football', live: true };
+
 async function api(req, res, url) {
   const p = url.pathname;
   await delay(Number(process.env.MOCK_DELAY_MS || 250));
@@ -265,6 +279,19 @@ async function api(req, res, url) {
       ],
     });
   }
+  const section = p.match(/^\/api\/catalog\/sections\/(home|movies|series|anime)(?:\/rows\/(top-movie|top-tv))?$/);
+  if (section) {
+    if (section[2]) {
+      const kind = section[2] === 'top-movie' ? 'movie' : 'tv';
+      return send(res, 200, { items: items.filter((item) => item.kind === kind).map(toItem), more: false });
+    }
+    const mode = ['series', 'anime'].includes(section[1]) ? 'tv' : 'movie';
+    return send(res, 200, [
+      { id: 'top-' + mode, title: 'À la une', style: 'Top10' },
+      { id: 'platforms', title: 'Explorer', style: 'Poster', links: [{ title: 'Collections', route: 'collections' }] },
+    ]);
+  }
+  if (p === '/api/catalog/followed/news' || p === '/api/catalog/animation/calendar') return send(res, 200, []);
   const t = p.match(/^\/api\/catalog\/title\/(movie|tv)\/([\w-]+)$/);
   if (t) {
     const it = byKey.get(`${t[1]}/${t[2]}`);
@@ -276,6 +303,27 @@ async function api(req, res, url) {
     const q = (url.searchParams.get('q') || '').trim().toLowerCase();
     const norm = (s) => s.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
     return send(res, 200, { items: q ? items.filter((i) => norm(i.title).includes(norm(q))).map(toItem) : [] });
+  }
+  const browse = p.match(/^\/api\/catalog\/browse\/(movies|series|anime)$/);
+  if (browse) {
+    return send(res, 200, { items: items.filter((item) => item.kind === (browse[1] === 'movies' ? 'movie' : 'tv')).map(toItem), more: false });
+  }
+  if (p === '/api/catalog/collections') return send(res, 200, {
+    items: [{ id: 'demo', title: 'Films de démonstration' }], more: false,
+  });
+  if (p === '/api/catalog/collections/demo') return send(res, 200, {
+    title: 'Films de démonstration', items: items.filter((item) => item.kind === 'movie').map(toItem),
+  });
+  if (p === '/api/live/channels') return send(res, 200, { items: [mockChannel], groups: [mockChannel.group], more: false });
+  if (p === '/api/live/guide/arena') return send(res, 200, []);
+  if (p === '/api/live/guide' && req.method === 'POST') return send(res, 200, [{ channel: mockChannel, programs: [] }]);
+  if (p === '/api/sports/events') return send(res, 200, [mockEvent]);
+  if (p === '/api/sports/scores') return send(res, 200, [{
+    title: mockEvent.name, league: 'Football', start: Date.now(), state: 'Live', homeScore: '1', awayScore: '0',
+  }]);
+  if (p === '/api/sports/events/streamed_arena/servers') return send(res, 200, [{ key: 'demo', title: 'Démo HLS' }]);
+  if (p === '/api/live/start' || p === '/api/sports/events/streamed_arena/start') {
+    return send(res, 200, { url: '/dev/media/pattern.m3u8', type: 'hls', subtitles: [] });
   }
 
   if (p === '/api/play/versions') {
@@ -300,14 +348,29 @@ async function api(req, res, url) {
       remux: versionId !== 'v1',
     });
   }
-  if (p === '/api/credentials') {
+  if (p === '/api/service-guides') return send(res, 200, mockGuides);
+  if (!mockCredentials.has(user.id)) {
     const day = 86_400_000;
-    return send(res, 200, [
+    mockCredentials.set(user.id, new Map([
       { service: 'tmdb', hint: '•••• 4f2a', verdict: 'accepted', checkedAt: Date.now() - 2 * day },
       { service: 'realdebrid', hint: '•••• 9KQ7', verdict: 'accepted', checkedAt: Date.now() - day },
       { service: 'iptv', hint: '•••• ab12', verdict: 'unreachable', checkedAt: Date.now() - 5 * day },
       { service: 'opensubtitles', hint: '•••• 77', verdict: 'refused', checkedAt: Date.now() - 9 * day },
-    ]);
+    ].map((entry) => [entry.service, entry])));
+  }
+  const credentials = mockCredentials.get(user.id);
+  if (p === '/api/credentials') return send(res, 200, [...credentials.values()]);
+  const credential = p.match(/^\/api\/credentials\/([a-z]+)$/);
+  if (credential && mockGuides.some((guide) => guide.id === credential[1] && guide.editable)) {
+    const service = credential[1];
+    if (req.method === 'DELETE') return credentials.delete(service) ? send(res, 204) : send(res, 404, { error: 'not_found' });
+    if (req.method === 'PUT') {
+      const { value } = await readJson(req);
+      if (typeof value !== 'string' || !value.trim()) return send(res, 400, { error: 'bad_format' });
+      const entry = { service, hint: '•••• DEMO', verdict: 'accepted', checkedAt: Date.now() };
+      credentials.set(service, entry);
+      return send(res, 200, entry);
+    }
   }
   return send(res, 404, { error: 'not_found' });
 }

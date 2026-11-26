@@ -57,7 +57,7 @@ class SubtitlesClient(
         return (http.get(SERVICE_OS, url, cache, DAY_MS, osHeaders(key)) as? JsonObject)?.let(::parseOpenSubtitles).orEmpty()
     }
 
-    internal suspend fun subdl(kind: String, tmdbId: Int, season: Int?, episode: Int?, languages: List<String>): List<SubtitleResult> {
+    suspend fun subdl(kind: String, tmdbId: Int, season: Int?, episode: Int?, languages: List<String>): List<SubtitleResult> {
         val key = subdlKey() ?: return emptyList()
         val url = "$SUBDL_BASE/subtitles".toHttpUrl().newBuilder().apply {
             addQueryParameter("api_key", key)

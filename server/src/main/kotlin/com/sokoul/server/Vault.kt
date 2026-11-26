@@ -28,7 +28,7 @@ fun interface CredentialChecker {
 @Serializable
 data class CredentialInfo(val service: String, val hint: String, val verdict: String, val checkedAt: Long)
 
-@Serializable data class CredentialPutRequest(val value: String) {
+@Serializable data class CredentialPutRequest(val value: String, val onlyIfAbsent: Boolean = false) {
     override fun toString(): String = "CredentialPutRequest(value=***)"
 }
 @Serializable data class CredentialRefusedBody(val error: String, val reason: String)
@@ -138,7 +138,7 @@ class Vault private constructor(
     ) { CredentialInfo(it.getString(1), it.getString(2), it.getString(3), it.getLong(4)) }
 
     /** Checks [value] with [service], then stores it (replacing the previous one) only when the service accepted it. */
-    suspend fun put(userId: String, service: String, value: String): PutResult {
+    suspend fun put(userId: String, service: String, value: String, onlyIfAbsent: Boolean = false): PutResult {
         val clean = normalize(service, value) ?: return PutResult.Rejected("bad_format", "This does not look like a $service value.")
         val result = checker.check(service, clean)
         when (result.verdict) {
@@ -149,12 +149,15 @@ class Vault private constructor(
         val now = nowMillis()
         val info = CredentialInfo(service, hint(service, clean), "accepted", now)
         val blob = Aead.seal(dataKey, clean.toByteArray(Charsets.UTF_8), aad(userId, service))
-        db.update(
+        val onConflict = if (onlyIfAbsent) "DO NOTHING" else
+            "DO UPDATE SET blob = excluded.blob, hint = excluded.hint, verdict = excluded.verdict, " +
+                "checked_at = excluded.checked_at, updated_at = excluded.updated_at"
+        val affected = db.update(
             "INSERT INTO credentials (user_id, service, blob, hint, verdict, checked_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?) " +
-                "ON CONFLICT (user_id, service) DO UPDATE SET blob = excluded.blob, hint = excluded.hint, verdict = excluded.verdict, " +
-                "checked_at = excluded.checked_at, updated_at = excluded.updated_at",
+                "ON CONFLICT (user_id, service) $onConflict",
             userId, service, blob, info.hint, info.verdict, now, now,
         )
+        if (affected == 0) return PutResult.Rejected("already_configured", "This service is already configured.")
         return PutResult.Stored(info)
     }
 

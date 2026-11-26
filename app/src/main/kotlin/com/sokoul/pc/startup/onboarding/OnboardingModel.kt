@@ -17,13 +17,16 @@ import com.sokoul.iptv.data.debrid.RealDebridOAuth
 import com.sokoul.pc.account.AccountResult
 import com.sokoul.pc.account.AccountVault
 import com.sokoul.pc.data.CredentialValidator
+import com.sokoul.pc.data.L
 import com.sokoul.pc.data.Verdict
 import com.sokoul.pc.startup.SetupState
 import com.sokoul.pc.startup.StartupRoute
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /** The steps of the first launch, in order. Stored so that leaving the app in the middle resumes at the same place. */
 enum class OnboardingStep { Welcome, Sources, Preferences, Ready }
@@ -97,6 +100,48 @@ class OnboardingModel(
         scope.launch {
             (v.save(service, value) as? AccountResult.Ok)?.value?.let { vaultHints[service] = it.hint }
         }
+    }
+
+    val canImportKeys: Boolean get() = vault?.signedIn == true
+
+    suspend fun importSavedKeys(): String {
+        val destination = vault ?: return Copy.serverUnreachable
+        val sessionId = destination.sessionId ?: return Copy.serverUnreachable
+        val existing = when (val result = destination.list(sessionId)) {
+            is AccountResult.Ok -> result.value.keys
+            is AccountResult.Failed -> return result.problem.text()
+        }
+        val values = withContext(Dispatchers.IO) {
+            buildMap {
+                (ServiceCheck.SERVICES - "tvmaze").forEach { id ->
+                    val value = ProviderConfig.enteredKey(db, id)
+                        ?: if (id == "tmdb") db.setting(Settings.TMDB_KEY) else null
+                    if (!value.isNullOrBlank()) put(id, value)
+                }
+                activePlaylist()?.let { playlist ->
+                    val value = when (playlist.type) {
+                        PlaylistType.M3U -> playlist.url
+                        PlaylistType.XTREAM -> ServiceCheck.xtreamValue(playlist.url, playlist.username.orEmpty(), playlist.password.orEmpty())
+                    }
+                    put(ServiceCheck.IPTV, value)
+                }
+            }
+        }.filterKeys { it !in existing }
+        if (values.isEmpty()) return L("Your account has all the local credentials available to import.",
+            "Votre compte contient déjà tous les identifiants locaux disponibles à l’import.").text()
+        var saved = 0
+        for ((service, value) in values) {
+            val result = destination.save(service, value, sessionId, onlyIfAbsent = true)
+            if (destination.sessionId != sessionId) return L("The account changed. Import stopped.",
+                "Le compte a changé. L’import a été interrompu.").text()
+            if (result is AccountResult.Ok) {
+                vaultHints[service] = result.value.hint
+                saved++
+            }
+        }
+        val failed = values.size - saved
+        return L("Credentials imported: $saved. Unavailable or refused: $failed.",
+            "Identifiants importés : $saved. Indisponibles ou refusés : $failed.").text()
     }
 
     fun goTo(next: OnboardingStep) {

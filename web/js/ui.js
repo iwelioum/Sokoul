@@ -34,6 +34,20 @@ function append(el, children) {
 
 const SVG = 'http://www.w3.org/2000/svg';
 const PATHS = {
+  plus: 'M12 5v14M5 12h14',
+  star: 'M12 3l2.8 5.7 6.2.9-4.5 4.5 1 6.3-5.5-3-5.5 3 1-6.3L3 9.6l6.2-.9z',
+  edit: 'M4 17v3h3L19 8l-3-3L4 17zm10-10 3 3',
+  bell: 'M5 17h14l-2-3V9a5 5 0 0 0-10 0v5zm4 2a3 3 0 0 0 6 0',
+  fullscreen: 'M4 10V4h6m4 0h6v6m0 4v6h-6m-4 0H4v-6',
+  menu: 'M4 6h16M4 12h16M4 18h16',
+  home: 'M3 10l9-7 9 7v10H3zm7 10v-7h4v7',
+  bookmark: 'M6 4h12v16l-6-4-6 4z',
+  film: 'M3 5h18v14H3zm4 0v14m10-14v14M3 10h4m10 0h4M3 14h4m10 0h4',
+  screen: 'M3 5h18v12H3zm5 15h8m-5-12 4 3-4 3z',
+  sparkles: 'M9 3l1.8 5.2L16 10l-5.2 1.8L9 17l-1.8-5.2L2 10l5.2-1.8zM18 12l1 3 3 1-3 1-1 3-1-3-3-1 3-1z',
+  trophy: 'M8 4h8v6a4 4 0 0 1-8 0zm0 2H4v2a4 4 0 0 0 4 4m8-6h4v2a4 4 0 0 1-4 4m-4 2v5m-4 1h8',
+  settings: 'M4 6h16M4 12h16M4 18h16M8 4v4m8 2v4m-6 2v4',
+  server: 'M4 4h16v6H4zm0 10h16v6H4zm3-7h1m-1 10h1',
   play: 'M8 5.6v12.8c0 .9 1 1.4 1.7.9l9.6-6.4a1.1 1.1 0 0 0 0-1.8L9.7 4.7C9 4.2 8 4.7 8 5.6z',
   back: 'M15 5l-7 7 7 7',
   next: 'M9 5l7 7-7 7',
@@ -47,7 +61,8 @@ const PATHS = {
   chevron: 'M9 5l7 7-7 7',
   restart: 'M4.5 12a7.5 7.5 0 1 0 2.2-5.3M4.5 4v4.5H9',
 };
-const STROKED = new Set(['back', 'next', 'prev', 'search', 'close', 'layers', 'check', 'chevron', 'restart']);
+const STROKED = new Set(['menu', 'home', 'bookmark', 'film', 'screen', 'trophy', 'settings', 'server', 'plus', 'edit', 'bell', 'fullscreen', 'star',
+  'back', 'next', 'prev', 'search', 'close', 'layers', 'check', 'chevron', 'restart']);
 
 /** A monochrome icon from the Sokoul set (filled, soft corners, round strokes). */
 export function icon(name, cls = '') {
@@ -94,7 +109,8 @@ export function roundButton(glyph, label, onClick, cls = '') {
   return h(`button.btn-round${cls ? '.' + cls : ''}`, { type: 'button', 'aria-label': label, title: label, onClick }, icon(glyph));
 }
 
-export const titleHref = (item) => `#/title/${item.kind}/${item.id}`;
+export const titleHref = (item) => item.kind === 'anime' || item.kind === 'manga'
+  ? `#/work/${item.id}` : `#/title/${item.kind}/${item.id}`;
 
 /** Poster card 2:3. [withTitle] puts the title under it (grids only). */
 export function posterCard(item, withTitle = false) {
@@ -102,6 +118,14 @@ export function posterCard(item, withTitle = false) {
     h('div.art.art-poster', img(item.poster, '')),
     withTitle ? h('div.card-text', h('div.card-title', item.title), item.year ? h('div.card-sub', String(item.year)) : null) : null,
   );
+}
+
+export function personCard(person) {
+  const initials = (person.name || '?').split(/\s+/).slice(0, 2).map((word) => word[0]).join('').toUpperCase();
+  return h(person.id ? 'a.card.card-person' : 'div.card.card-person',
+    person.id ? { href: `#/person/${person.id}` } : null,
+    h('div.art.art-person', h('span.art-initials', { 'aria-hidden': 'true' }, initials), img(person.photo, '')),
+    h('div.card-text', h('div.card-title', person.name), person.character ? h('div.card-sub', person.character) : null));
 }
 
 /** Thumbnail card 16:9 with an optional progress bar and two lines below. */
@@ -158,9 +182,13 @@ export function problem(error, retry) {
     const service = serviceName(error.body?.service);
     return h('div.message', { role: 'status' },
       h('p.message-text', t('needsKey', { service })),
-      h('a.btn.btn-secondary', { href: '#/sources' }, h('span', t('needsKeyLink'))));
+      h('a.btn.btn-secondary', { href: error.body?.service ? `#/sources/${encodeURIComponent(error.body.service)}` : '#/sources' }, h('span', t('needsKeyLink'))));
   }
-  const text = error && error.offline ? t('noAnswer') : t('loadFailed');
+  const message = { iptv_unavailable: 'iptvUnavailable', sports_unavailable: 'sportUnavailable',
+    sports_access_required: 'sportsAccessRequired', channel_not_found: 'channelUnavailable',
+    anime_unavailable: 'animeUnavailable', manga_unavailable: 'mangaUnavailable',
+    iptv_vod_unavailable: 'vodUnavailable', replay_unavailable: 'replayUnavailable' }[error?.code];
+  const text = t(message || (error?.offline ? 'noAnswer' : 'loadFailed'));
   return h('div.message', { role: 'status' },
     h('p.message-text', text),
     retry ? secondaryButton(t('retry'), retry) : null);
@@ -174,7 +202,6 @@ const SERVICES = {
   tmdb: 'TMDB', realdebrid: 'Real-Debrid', omdb: 'OMDb', fanart: 'fanart.tv', tvdb: 'TheTVDB', watchmode: 'Watchmode',
   tastedive: 'TasteDive', motn: 'Movie of the Night', opensubtitles: 'OpenSubtitles', subdl: 'Subdl', iptv: 'IPTV',
 };
-export const SERVICE_ORDER = Object.keys(SERVICES);
 export function serviceName(id) {
   return SERVICES[id] || id || '';
 }

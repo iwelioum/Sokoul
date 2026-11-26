@@ -66,3 +66,9 @@ dependencies {
     testImplementation(libs.okhttp.mockwebserver)
     testRuntimeOnly(libs.slf4j.simple)
 }
+
+tasks.processResources {
+    from(rootProject.file("app/src/main/resources")) {
+        include("curated_sagas.json", "all_sagas.json", "anime_categories_fr.txt")
+    }
+}

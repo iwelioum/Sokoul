@@ -45,7 +45,8 @@ class ProviderHttp(
             runCatching {
                 http.newCall(request).execute().use { r ->
                     if (!r.isSuccessful) return@use null
-                    r.body?.bytes()?.takeIf { it.size <= MAX_FILE_BYTES }
+                    if (r.body.contentLength() > MAX_FILE_BYTES) return@use null
+                    r.body.byteStream().readNBytes(MAX_FILE_BYTES + 1).takeIf { it.size <= MAX_FILE_BYTES }
                 }
             }.getOrNull()
         }

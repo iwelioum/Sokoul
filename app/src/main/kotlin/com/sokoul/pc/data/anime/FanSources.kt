@@ -20,16 +20,6 @@ data class AnimeTheme(val slug: String, val song: String, val artist: String?, v
 
 enum class EpisodeKind { Canon, Mixed, Filler, AnimeCanon }
 
-data class MangaChapter(
-    val id: String,
-    val number: String?,
-    val volume: String?,
-    val title: String?,
-    val language: String,
-    val pages: Int,
-    val group: String?,
-)
-
 /** What fans keep in their own databases: the music, the filler episodes, the chapter each episode adapts. */
 class FanSources(private val http: ProviderHttp) {
     private val headers = mapOf("User-Agent" to "SokoulPC/1.0")
@@ -239,40 +229,12 @@ object FanParse {
 
     fun slug(name: String): String = AnimeCategories.plain(name).replace(Regex("[^a-z0-9]+"), "-").trim('-')
 
-    fun mangadexId(root: JsonElement?, anilistId: Int, names: List<String>): String? {
-        val data = (root as? JsonObject)?.list("data").orEmpty().filterIsInstance<JsonObject>()
-        val wanted = names.map(AnimeCategories::plain)
-        fun titles(o: JsonObject): List<String> {
-            val a = o.obj("attributes") ?: return emptyList()
-            val all = listOfNotNull(a.obj("title")) + a.list("altTitles").filterIsInstance<JsonObject>()
-            return all.flatMap { t -> t.values.mapNotNull { (it as? JsonPrimitive)?.contentOrNull } }.map(AnimeCategories::plain)
-        }
-        return (data.firstOrNull { it.obj("attributes")?.obj("links")?.str("al") == anilistId.toString() } ?: data.firstOrNull { o -> titles(o).any { it in wanted } })?.str("id")
-    }
+    fun mangadexId(root: JsonElement?, anilistId: Int, names: List<String>) = MangaCatalogParse.mangadexId(root, anilistId, names)
 
-    fun chapters(root: JsonElement?, languages: List<String>): List<MangaChapter> =
-        (root as? JsonObject)?.list("data").orEmpty().filterIsInstance<JsonObject>().mapNotNull { c ->
-            val a = c.obj("attributes") ?: return@mapNotNull null
-            if (a.str("externalUrl") != null) return@mapNotNull null
-            val pages = (a["pages"] as? JsonPrimitive)?.intOrNull ?: 0
-            if (pages <= 0) return@mapNotNull null
-            val language = a.str("translatedLanguage").orEmpty()
-            if (language !in languages) return@mapNotNull null
-            val group = c.list("relationships").filterIsInstance<JsonObject>().firstOrNull { it.str("type") == "scanlation_group" }?.obj("attributes")?.str("name")
-            MangaChapter(c.str("id") ?: return@mapNotNull null, a.str("chapter"), a.str("volume"), a.str("title"), language, pages, group)
-        }
+    fun chapters(root: JsonElement?, languages: List<String>) = MangaCatalogParse.chapters(root, languages)
 
-    /** One entry per chapter, in the language wanted most, in reading order. */
-    fun bestPerChapter(all: List<MangaChapter>, languages: List<String>): List<MangaChapter> =
-        all.groupBy { it.number ?: it.id }.values
-            .map { same -> same.minBy { languages.indexOf(it.language).let { i -> if (i < 0) languages.size else i } } }
-            .sortedBy { it.number?.toDoubleOrNull() ?: Double.MAX_VALUE }
+    fun bestPerChapter(all: List<MangaChapter>, languages: List<String>) = MangaCatalogParse.bestPerChapter(all, languages)
 
-    fun pages(root: JsonElement?): List<String> {
-        val o = root as? JsonObject ?: return emptyList()
-        val base = o.str("baseUrl")?.takeIf { it.startsWith("https://") } ?: return emptyList()
-        val chapter = o.obj("chapter") ?: return emptyList()
-        val hash = chapter.str("hash") ?: return emptyList()
-        return chapter.list("data").mapNotNull { (it as? JsonPrimitive)?.contentOrNull }.map { "$base/data/$hash/$it" }
-    }
+    fun pages(root: JsonElement?) = MangaCatalogParse.pages(root)
+
 }

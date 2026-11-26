@@ -72,7 +72,9 @@ class WebFiles(root: File) {
         const val INDEX = "index.html"
 
         const val CSP = "default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; connect-src 'self'; " +
-            "img-src 'self' data: blob: https://image.tmdb.org; media-src 'self' blob:; worker-src 'self' blob:; " +
+            "img-src 'self' data: blob: https://image.tmdb.org https://assets.fanart.tv https://*.anilist.co " +
+            "https://*.mangadex.org https://*.mangadex.network; media-src 'self' blob:; worker-src 'self' blob:; " +
+            "frame-src https://www.youtube-nocookie.com; " +
             "manifest-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; object-src 'none'"
 
         private val HASHED = Regex("\\.[0-9a-f]{8,}\\.[a-z0-9]+$", RegexOption.IGNORE_CASE)

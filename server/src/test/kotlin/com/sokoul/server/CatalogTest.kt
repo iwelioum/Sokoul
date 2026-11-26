@@ -46,13 +46,18 @@ class CatalogTest {
                 val path = request.requestUrl!!.encodedPath
                 val body = when (path) {
                     "/3/trending/all/week" -> """{"results":[{"media_type":"movie","id":603,"title":"Matrix","release_date":"1999-03-31","poster_path":"/m.jpg"},{"media_type":"person","id":1,"name":"Keanu"},{"media_type":"tv","id":1399,"name":"Game of Thrones","first_air_date":"2011-04-17"}]}"""
+                    "/3/trending/movie/week" -> list("movie", 603, "Matrix")
                     "/3/movie/popular" -> list("movie", 27205, "Inception")
                     "/3/tv/popular" -> list("tv", 1396, "Breaking Bad")
                     "/3/movie/top_rated" -> list("movie", 238, "Le Parrain")
+                    "/3/discover/tv" -> """{"total_pages":3,"results":[{"id":37854,"name":"One Piece"}]}"""
                     "/3/movie/603" -> """{"id":603,"title":"Matrix","original_title":"The Matrix","overview":"Neo.","release_date":"1999-03-31","runtime":136,
                         "vote_average":8.2,"genres":[{"id":28,"name":"Action"}],"poster_path":"/p.jpg","backdrop_path":"/b.jpg",
                         "images":{"logos":[{"iso_639_1":"en","file_path":"/logo-en.png"},{"iso_639_1":"fr","file_path":"/logo-fr.png"}]},
-                        "credits":{"cast":[${(1..12).joinToString(",") { """{"name":"Actor $it","character":"Role $it","profile_path":"/a$it.jpg"}""" }}]}}"""
+                        "credits":{"cast":[${(1..12).joinToString(",") { """{"id":$it,"name":"Actor $it","character":"Role $it","profile_path":"/a$it.jpg"}""" }}]},
+                        "videos":{"results":[{"site":"YouTube","key":"m8e-FF8MsqU","name":"Trailer","type":"Trailer"},{"site":"Vimeo","key":"m8e-FF8MsqU","name":"Other","type":"Trailer"}]},
+                        "recommendations":{"results":[{"id":604,"title":"Reloaded"}]},
+                        "watch/providers":{"results":{"FR":{"link":"https://www.themoviedb.org/movie/603/watch","rent":[{"provider_name":"Example","logo_path":"/p.jpg"}]}}}}"""
                     "/3/tv/1399" -> """{"id":1399,"name":"Game of Thrones","first_air_date":"2011-04-17","episode_run_time":[60],
                         "seasons":[{"season_number":0,"name":"Specials","episode_count":3},{"season_number":2,"name":"Saison 2","episode_count":10},{"season_number":1,"name":"Saison 1","episode_count":10,"poster_path":"/s1.jpg"}]}"""
                     "/3/tv/1399/season/1" -> """{"name":"Saison 1","episodes":[{"episode_number":1,"name":"L'hiver vient","still_path":"/e1.jpg","runtime":62,"air_date":"2011-04-17"},{"episode_number":2,"name":"La route royale"}]}"""
@@ -68,6 +73,34 @@ class CatalogTest {
     @After fun stop() = tmdb.shutdown()
 
     private fun server() = TestServer(tmp, tmdbBaseUrl = tmdb.url("/").toString())
+
+    @Test fun `home uses the native shelf order and a shelf fetches only its own list`() = testApplication {
+        val s = server().also { it.install(this) }
+        val (token, _) = client.owner(s)
+        val plan = client.getWith("/api/catalog/sections/home", token)
+        val shelves = Json.parseToJsonElement(plan.bodyAsText()).jsonArray.map { it.jsonObject }
+        assertEquals("top-movie", shelves[0].str("id"))
+        assertEquals("Top10", shelves[0].str("style"))
+        assertEquals("because", shelves[1].str("id"))
+        assertEquals("platforms", shelves.first { it.str("id") == "platforms" }.str("id"))
+        assertTrue(seen.isEmpty())
+        val row = client.getWith("/api/catalog/sections/home/rows/top-movie", token).json()
+        assertEquals("Matrix", row.getValue("items").jsonArray.single().jsonObject.str("title"))
+        assertEquals("/3/trending/movie/week", seen.single().requestUrl!!.encodedPath)
+        assertEquals(HttpStatusCode.NotFound, client.getWith("/api/catalog/sections/home/rows/unknown", token).status)
+    }
+
+    @Test fun `anime browse uses the Japanese animation filter and paginates`() = testApplication {
+        val server = server().also { it.install(this) }
+        val (token, _) = client.owner(server)
+        val result = client.getWith("/api/catalog/browse/anime?page=2", token).json()
+        assertEquals("true", result.str("more"))
+        assertEquals("One Piece", result.getValue("items").jsonArray.single().jsonObject.str("title"))
+        val url = seen.single().requestUrl!!
+        assertEquals("16", url.queryParameter("with_genres"))
+        assertEquals("JP", url.queryParameter("with_origin_country"))
+        assertEquals("2", url.queryParameter("page"))
+    }
 
     private suspend fun io.ktor.client.HttpClient.owner(s: TestServer, withKey: Boolean = true): Pair<String, String> {
         val token = setupOwner()
@@ -162,8 +195,14 @@ class CatalogTest {
         assertEquals("https://image.tmdb.org/t/p/w500/logo-fr.png", movie.str("logo"))
         assertEquals(10, movie["cast"]!!.jsonArray.size)
         assertEquals("Role 1", movie["cast"]!!.jsonArray[0].jsonObject.str("character"))
+        assertEquals("1", movie["cast"]!!.jsonArray[0].jsonObject.str("id"))
         assertNull(movie["seasons"])
-        assertEquals("credits,images", seen.last().requestUrl!!.queryParameter("append_to_response"))
+        val appended = seen.last().requestUrl!!.queryParameter("append_to_response")!!.split(',')
+        assertTrue(appended.containsAll(listOf("credits", "images", "watch/providers", "videos", "recommendations")))
+        assertEquals("m8e-FF8MsqU", movie.getValue("trailers").jsonArray.single().jsonObject.str("key"))
+        assertEquals("Reloaded", movie.getValue("similar").jsonArray.single().jsonObject.str("title"))
+        assertEquals("rent", movie.getValue("watch").jsonArray.single().jsonObject.str("type"))
+        assertEquals("released", movie.str("alertMarker"))
 
         val tv = client.getWith("/api/catalog/title/tv/1399", token).json()
         assertEquals("60", tv.str("runtime"))

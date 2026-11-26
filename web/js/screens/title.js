@@ -2,21 +2,47 @@
 // the cast row.
 
 import { api } from '../api.js';
-import { t, runtime } from '../i18n.js';
+import { lang, t, runtime } from '../i18n.js';
 import * as store from '../store.js';
 import {
   h, img, rail, thumbCard, skeletonRail, skeletonLines, problem, empty, primaryButton, roundButton, metaLine,
-  setTitle,
+  icon, personCard, posterCard, setTitle,
 } from '../ui.js';
 import { playHref } from './home.js';
 
 const RESUME_FROM_MS = 30_000;
 
-function castCard(person) {
-  const initials = (person.name || '?').split(/\s+/).map((w) => w.charAt(0)).slice(0, 2).join('').toUpperCase();
-  return h('div.card.card-person',
-    h('div.art.art-person', h('span.art-initials', { 'aria-hidden': 'true' }, initials), img(person.photo, '')),
-    h('div.card-text', h('div.card-title', person.name), person.character ? h('div.card-sub', person.character) : null));
+function showPanel(root, title, contents, className = '') {
+  const dialog = h('dialog.title-panel.glass', { class: className, 'aria-label': title });
+  dialog.append(h('div.title-panel-head', h('h2.section-title', title), roundButton('close', t('close'), () => dialog.close())),
+    contents);
+  dialog.addEventListener('close', () => dialog.remove(), { once: true });
+  dialog.addEventListener('click', (event) => { if (event.target === dialog) dialog.close(); });
+  root.append(dialog);
+  dialog.showModal();
+}
+
+function about(root, data) {
+  const language = data.originalLanguage ? new Intl.DisplayNames([lang], { type: 'language', fallback: 'code' }).of(data.originalLanguage) : null;
+  const fields = [
+    [t('originalTitle'), data.originalTitle], [t('originalLanguage'), language],
+    [t('releaseDate'), data.releaseDate], [t('rating'), data.rating ? (data.rating.toFixed(1) + ' / 10') : null],
+    [t('classification'), data.certification],
+  ].filter(([, value]) => value);
+  showPanel(root, t('aboutTitle'), h('div.title-info', h('h3', data.title),
+    data.overview ? h('p.synopsis', data.overview) : null,
+    h('dl', fields.map(([label, value]) => h('div', h('dt', label), h('dd', value))))));
+}
+
+function previewTrailer(root, trailer) {
+  if (!/^[A-Za-z0-9_-]{11}$/.test(trailer.key)) return;
+  showPanel(root, trailer.name,
+    h('div.title-trailer', h('iframe', {
+      src: `https://www.youtube-nocookie.com/embed/${trailer.key}?autoplay=1`,
+      title: trailer.name, allow: 'autoplay; encrypted-media; picture-in-picture', allowfullscreen: true,
+      referrerpolicy: 'strict-origin-when-cross-origin',
+    }), h('a.btn.btn-secondary', { href: `https://www.youtube.com/watch?v=${trailer.key}`, target: '_blank', rel: 'noopener noreferrer' }, t('openYoutube'))),
+    'title-panel-wide');
 }
 
 function skeleton() {
@@ -43,6 +69,7 @@ export async function render({ root, params, signal, go }) {
   setTitle(data.title);
 
   const isTv = kind === 'tv';
+  const canPlay = store.canPlayCertification(data.certification);
   const latest = store.latestResumeFor(kind, id);
   const resumable = latest && !latest.finished && latest.positionMs > RESUME_FROM_MS;
 
@@ -57,7 +84,7 @@ export async function render({ root, params, signal, go }) {
   }
 
   const actions = h('div.actions');
-  if (target) {
+  if (target && canPlay) {
     const href = playHref(kind, id, target.season, target.episode);
     let label;
     if (isTv) label = t(resumable ? 'resumeEpisode' : 'playEpisode', { season: target.season, episode: target.episode });
@@ -65,6 +92,50 @@ export async function render({ root, params, signal, go }) {
     actions.append(primaryButton(label, () => go(href)));
     if (resumable) actions.append(roundButton('restart', t('fromStart'), () => go(`${href}?from=start`)));
   }
+  const listStatus = h('p.form-error', { role: 'status' });
+  const listButton = roundButton('bookmark', t('addToList'), async () => {
+    listButton.disabled = true;
+    listStatus.textContent = '';
+    try {
+      await store.toggleMyList(data);
+      updateListButton();
+    } catch {
+      listStatus.textContent = t('loadFailed');
+    } finally {
+      listButton.disabled = false;
+    }
+  }, 'list-toggle');
+  function updateListButton() {
+    const saved = store.inMyList(kind, id);
+    const label = t(saved ? 'removeFromList' : 'addToList');
+    listButton.setAttribute('aria-label', label);
+    listButton.setAttribute('aria-pressed', String(saved));
+    listButton.title = label;
+  }
+  updateListButton();
+  actions.append(listButton);
+  const follow = roundButton('bell', t('followTitle'), async () => {
+    follow.disabled = true;
+    listStatus.textContent = '';
+    try {
+      await store.toggleFollow(data);
+      updateFollow();
+    } catch {
+      listStatus.textContent = t('loadFailed');
+    } finally {
+      follow.disabled = false;
+    }
+  }, 'list-toggle');
+  function updateFollow() {
+    const followed = store.follows(kind, id);
+    follow.setAttribute('aria-pressed', String(followed));
+    const label = t(followed ? 'unfollowTitle' : 'followTitle');
+    follow.setAttribute('aria-label', label);
+    follow.title = label;
+  }
+  updateFollow();
+  actions.append(follow, roundButton('info', t('aboutTitle'), () => about(root, data)));
+  if (data.trailers?.length) actions.append(roundButton('film', t('trailers'), () => previewTrailer(root, data.trailers[0])));
 
   const heading = data.logo
     ? h('h1.title-logo-wrap', img(data.logo, data.title, 'title-logo', true))
@@ -84,10 +155,13 @@ export async function render({ root, params, signal, go }) {
     h('div.hero-scrim'),
     h('div.hero-body',
       heading,
-      metaLine([data.year, isTv ? t('series') : runtime(data.runtime), ...(data.genres || []).slice(0, 2)], 'meta hero-meta'),
+      metaLine([data.year, isTv ? t('series') : runtime(data.runtime), data.certification, ...(data.genres || []).slice(0, 2)], 'meta hero-meta'),
       actions,
+      !canPlay ? h('p.lead', t('kidsPlaybackBlocked')) : null,
+      listStatus,
       progress,
       data.overview ? h('p.synopsis', data.overview) : null,
+      data.collection ? h('a.btn.btn-secondary', { href: `#/collections/${data.collection.id}` }, data.collection.title) : null,
     ),
   );
 
@@ -122,7 +196,7 @@ export async function render({ root, params, signal, go }) {
           });
         }), 'thumb episodes'));
       } catch (e) {
-        if (e.name === 'AbortError') return;
+        if (e.name === 'AbortError' || active !== number) return;
         episodesSlot.replaceChildren(problem(e, () => loadSeason(number)));
       }
     };
@@ -137,5 +211,18 @@ export async function render({ root, params, signal, go }) {
     if (active != null) loadSeason(active);
   }
 
-  if ((data.cast || []).length) rails.append(rail(t('cast'), data.cast.slice(0, 20).map(castCard), 'person'));
+  if (data.trailers?.length) rails.append(rail(t('trailers'), data.trailers.map((video) =>
+    h('button.card.trailer-card', { type: 'button', onClick: () => previewTrailer(root, video) },
+      h('div.art.art-thumb', img(data.backdrop, ''), h('span.trailer-play', icon('play'))), h('span.card-title', video.name))), 'thumb'));
+  if (data.similar?.length) rails.append(rail(t('relatedTitles'), data.similar.map((item) => posterCard(item, true))));
+  if (data.cast?.length) rails.append(rail(t('cast'), data.cast.slice(0, 20).map(personCard), 'person'));
+  if (data.crew?.length) rails.append(rail(t('crew'), data.crew.map(personCard), 'person'));
+  if (data.watch?.length) {
+    rails.append(rail(t('howToWatch'), data.watch.map((offer) => {
+      const text = h('span', offer.name, h('small', t('watch' + offer.type)));
+      const logo = img(offer.logo, '', 'offer-logo');
+      return data.watchLink ? h('a.card.offer-card', { href: data.watchLink, target: '_blank', rel: 'noopener noreferrer' }, logo, text)
+        : h('div.card.offer-card', logo, text);
+    }), 'editorial-tiles'));
+  }
 }

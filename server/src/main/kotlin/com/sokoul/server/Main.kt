@@ -24,7 +24,10 @@ fun main() {
 
     val ffmpeg = Remuxer.find(config.ffmpegPath)
     log.info("ffmpeg: {}", ffmpeg ?: "not found (MKV and AC3/DTS audio will not be remuxed for Safari)")
-    val services = Services(db, vaultKeyFile = config.vaultKeyFile, remuxer = Remuxer(ffmpeg, java.io.File(config.dataDir, "remux")))
+    val services = Services(
+        db, vaultKeyFile = config.vaultKeyFile, remuxer = Remuxer(ffmpeg, java.io.File(config.dataDir, "remux")),
+        sportsBase = config.sportsBase, sportsKey = config.sportsAccessKey,
+    )
     val webDir = config.webDir ?: WebFiles.locate()
     log.info("Web client: {}", webDir ?: "not found (set web.dir)")
     // The vault opens now: its key file is created on the first start, and a missing or wrong one stops the server here.

@@ -15,7 +15,10 @@ const state = {
   profiles: new Map(),
   /** `${profile}|${key}` → resume change */
   resume: new Map(),
+  myList: new Map(),
+  alerts: new Map(),
 };
+let generation = 0;
 
 function remember(key, value) {
   try {
@@ -30,34 +33,39 @@ function recall(key) {
 
 function apply(change) {
   if (change.type === 'profile') {
-    if (change.deleted) state.profiles.delete(change.profile);
-    else state.profiles.set(change.profile, change);
-  } else if (change.type === 'resume') {
+    const old = state.profiles.get(change.profile);
+    if (!old || old.updatedAt <= change.updatedAt) state.profiles.set(change.profile, change);
+  } else if (change.type === 'resume' || change.type === 'my_list' || change.type === 'title_alert') {
+    const entries = { resume: state.resume, my_list: state.myList, title_alert: state.alerts }[change.type];
     const k = `${change.profile}|${change.key}`;
-    const old = state.resume.get(k);
+    const old = entries.get(k);
     if (old && old.updatedAt > change.updatedAt) return;
-    if (change.deleted) state.resume.delete(k);
-    else state.resume.set(k, change);
+    entries.set(k, change);
   }
 }
 
 /** Pulls every change after the stored cursor. A replaced server database (409) starts again from 0. */
 export async function pull() {
+  const current = generation;
   for (let page = 0; page < 500; page++) {
     let body;
     try {
       body = await api.syncPull(state.cursor);
     } catch (e) {
+      if (current !== generation) return;
       if (e instanceof ApiError && e.code === 'cursor_ahead') {
         state.cursor = 0;
         state.profiles.clear();
         state.resume.clear();
+        state.myList.clear();
+        state.alerts.clear();
         continue;
       }
       throw e;
     }
+    if (current !== generation) return;
     (body.changes || []).forEach(apply);
-    state.cursor = body.cursor ?? state.cursor;
+    state.cursor = Math.max(state.cursor, body.cursor ?? 0);
     if (!body.more) break;
   }
   state.loaded = true;
@@ -71,11 +79,15 @@ export async function load(force = false) {
 }
 
 export function reset() {
+  generation++;
   state.user = null;
   state.cursor = 0;
   state.loaded = false;
   state.profiles.clear();
   state.resume.clear();
+  state.myList.clear();
+  state.alerts.clear();
+  pending.clear();
   remember(PROFILE_KEY, null);
 }
 
@@ -87,7 +99,7 @@ export const mainProfileId = () => (state.user ? nameUuid(`sokoul-main-profile:$
 /** The synced profiles, the account profile first; one account profile when nothing is synced yet. */
 export function profiles() {
   const main = mainProfileId();
-  const list = [...state.profiles.values()].map((p) => ({
+  const list = [...state.profiles.values()].filter((p) => !p.deleted).map((p) => ({
     id: p.profile,
     name: p.name || 'Sokoul',
     avatar: p.avatar || 0,
@@ -95,7 +107,7 @@ export function profiles() {
     pinHash: p.pinHash || null,
     pinSalt: p.pinSalt || p.profile,
   }));
-  if (main && !list.some((p) => p.id === main)) {
+  if (main && !state.profiles.has(main)) {
     list.unshift({ id: main, name: state.user?.name || 'Sokoul', avatar: 0, kids: false, pinHash: null, pinSalt: main });
   }
   list.sort((a, b) => (a.id === main ? -1 : b.id === main ? 1 : 0));
@@ -111,8 +123,53 @@ export function currentProfile() {
   return profiles().find((p) => p.id === id) || null;
 }
 
+const ADULT_RATINGS = new Set(['16', '18', '-16', '-18', 'R', 'NC-17', 'TV-MA', 'X']);
+
+export function canPlayCertification(certification) {
+  return !currentProfile()?.kids || !ADULT_RATINGS.has(certification?.trim().toUpperCase());
+}
+
 export function chooseProfile(id) {
   remember(PROFILE_KEY, id);
+}
+
+function profileId() {
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  bytes[6] = (bytes[6] & 15) | 64;
+  bytes[8] = (bytes[8] & 63) | 128;
+  const value = [...bytes].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+  return value.replace(/^(.{8})(.{4})(.{4})(.{4})(.+)$/, '$1-$2-$3-$4-$5');
+}
+
+const laterThan = (entry) => Math.max(Date.now(), (entry?.updatedAt || 0) + 1);
+
+async function saveChanges(changes) {
+  const current = generation;
+  const result = await api.syncPush(changes);
+  if (current !== generation) return;
+  if (result.applied === changes.length) changes.forEach(apply);
+  else await pull();
+}
+
+export async function saveProfile(profile, { name, avatar, kids, pin }) {
+  const id = profile?.id || profileId();
+  const salt = profile?.pinSalt || id;
+  const pinHash = pin === undefined ? profile?.pinHash :
+    pin ? sha256Hex(`sokoul-profile:${salt}:${pin}`) : null;
+  await saveChanges([{
+    type: 'profile', profile: id, key: id, updatedAt: laterThan(state.profiles.get(id)),
+    name, avatar, kids, pinHash, pinSalt: pinHash ? salt : null,
+  }]);
+  return id;
+}
+
+export async function removeProfile(profile) {
+  if (profiles().length < 2) return;
+  await saveChanges([{
+    type: 'profile', profile: profile.id, key: profile.id,
+    updatedAt: laterThan(state.profiles.get(profile.id)), deleted: true,
+  }]);
+  if (recall(PROFILE_KEY) === profile.id) remember(PROFILE_KEY, null);
 }
 
 /** The app's resume key: "tv:<id>:<s>:<e>" for an episode, "<kind>:<id>" otherwise. */
@@ -122,7 +179,8 @@ export function resumeKey(kind, tmdbId, season, episode) {
 
 export function resumeOf(key) {
   const p = currentProfile();
-  return p ? state.resume.get(`${p.id}|${key}`) || null : null;
+  const entry = p && state.resume.get(`${p.id}|${key}`);
+  return entry && !entry.deleted ? entry : null;
 }
 
 /** The latest unfinished resume point of a series, or of a film. */
@@ -131,7 +189,7 @@ export function latestResumeFor(kind, tmdbId) {
   if (!p) return null;
   let best = null;
   for (const r of state.resume.values()) {
-    if (r.profile !== p.id || r.kind !== kind || Number(r.tmdbId) !== Number(tmdbId)) continue;
+    if (r.deleted || r.profile !== p.id || r.kind !== kind || Number(r.tmdbId) !== Number(tmdbId)) continue;
     if (!best || r.updatedAt > best.updatedAt) best = r;
   }
   return best;
@@ -142,9 +200,91 @@ export function continueWatching(limit = 20) {
   const p = currentProfile();
   if (!p) return [];
   return [...state.resume.values()]
-    .filter((r) => r.profile === p.id && !r.finished && (r.positionMs || 0) > 0)
+    .filter((r) => !r.deleted && r.profile === p.id && !r.finished && (r.positionMs || 0) > 0)
     .sort((a, b) => b.updatedAt - a.updatedAt)
     .slice(0, limit);
+}
+
+export function viewingHistory() {
+  const id = currentProfile()?.id;
+  return [...state.resume.values()].filter((r) => !r.deleted && r.profile === id)
+    .sort((a, b) => b.updatedAt - a.updatedAt);
+}
+
+export async function forgetHistory(entries) {
+  const active = currentProfile()?.id;
+  const owned = entries.filter((r) => r.profile === active);
+  const current = generation;
+  for (let i = 0; i < owned.length && current === generation; i += 250) {
+    const changes = owned.slice(i, i + 250).map((r) => {
+      pending.delete(`${active}|${r.key}`);
+      return { type: 'resume', profile: active, key: r.key, updatedAt: laterThan(r), deleted: true };
+    });
+    await saveChanges(changes);
+  }
+}
+
+export function follows(kind, id) {
+  const entry = state.alerts.get(`${currentProfile()?.id}|${kind}:${id}`);
+  return Boolean(entry && !entry.deleted);
+}
+
+export function followedTitles() {
+  const active = currentProfile()?.id;
+  return [...state.alerts.values()].filter((row) => row.profile === active && !row.deleted)
+    .sort((a, b) => b.updatedAt - a.updatedAt)
+    .map((row) => ({ ...row, id: row.tmdbId, poster: row.image }));
+}
+
+export async function toggleFollow(item) {
+  const profile = currentProfile()?.id;
+  if (!profile) return;
+  const key = `${item.kind}:${item.id}`;
+  const old = state.alerts.get(`${profile}|${key}`);
+  const change = {
+    type: 'title_alert', profile, key, updatedAt: laterThan(old),
+    deleted: Boolean(old && !old.deleted), kind: item.kind, tmdbId: Number(item.id),
+    title: item.title?.slice(0, 300), image: item.poster || item.backdrop,
+    told: item.alertMarker,
+  };
+  await saveChanges([change]);
+}
+
+export async function markFollowedNews(item) {
+  const profile = currentProfile()?.id;
+  const entry = state.alerts.get(`${profile}|${item.kind}:${item.id}`);
+  if (!entry || entry.deleted || entry.told === item.marker) return;
+  await saveChanges([{ ...entry, told: item.marker, updatedAt: laterThan(entry) }]);
+}
+
+export function myList() {
+  const profile = currentProfile()?.id;
+  return [...state.myList.values()].filter((item) => item.profile === profile && !item.deleted)
+    .sort((a, b) => b.updatedAt - a.updatedAt)
+    .map((item) => ({
+      ...item,
+      id: item.tmdbId,
+      poster: item.poster?.startsWith('/') ? 'https://image.tmdb.org/t/p/w342' + item.poster : item.poster,
+    }));
+}
+
+export function inMyList(kind, id) {
+  const entry = state.myList.get(`${currentProfile()?.id}|${kind}:${id}`);
+  return Boolean(entry && !entry.deleted);
+}
+
+export async function toggleMyList(item) {
+  const profile = currentProfile()?.id;
+  if (!profile) return;
+  const key = `${item.kind}:${item.id}`;
+  const old = state.myList.get(`${profile}|${key}`);
+  const change = {
+    type: 'my_list', profile, key, updatedAt: laterThan(old),
+    deleted: inMyList(item.kind, item.id), kind: item.kind, tmdbId: Number(item.id),
+    title: item.title?.slice(0, 300), poster: item.poster, backdrop: item.backdrop,
+    overview: item.overview?.slice(0, 4000), year: item.year,
+  };
+  await saveChanges([change]);
 }
 
 /** Resume points not yet accepted by the server, kept for the next push. */
@@ -184,9 +324,11 @@ export async function flush(leaving = false) {
   if (!pending.size) return;
   const changes = [...pending.values()];
   pending.clear();
+  const current = generation;
   try {
     await api.syncPush(changes, { keepalive: leaving });
   } catch {
+    if (current !== generation) return;
     changes.forEach((c) => {
       const k = `${c.profile}|${c.key}`;
       if (!pending.has(k)) pending.set(k, c);
