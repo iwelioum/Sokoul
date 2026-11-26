@@ -1508,7 +1508,7 @@ body.is-playing { overflow: hidden; }
   :root { --tile-k: 0.8; --continue-k: 0.95; }
   .hero-home .hero-info, .hero-home .hero-actions { width: 100%; }
   .hero-home .hero-scrim {
-    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.35) 0%, rgba(0, 0, 0, 0) 18%, rgba(0, 0, 0, 0) 34%, rgba(0, 0, 0, 0.78) 62%, #000 92%);
+    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.35) 0%, rgba(0, 0, 0, 0) 14%, rgba(0, 0, 0, 0.3) 26%, rgba(0, 0, 0, 0.82) 56%, #000 90%);
   }
   .hero-home .hero-body { padding-bottom: calc(96 * var(--u) + var(--safe-b)); }
   .hero-actions { gap: calc(18 * var(--u)); }
@@ -1937,6 +1937,15 @@ body[data-screen='settings'] { background: radial-gradient(120% 90% at 100% 0%, 
   .page-title { font-size: 34px; }
   .setting-select { font-size: 16px; }
   .field { font-size: 16px; }
+}
+
+/* A phone held sideways: the hero keeps the app's text column so its buttons stay on the first screen. */
+@media (max-height: 520px) and (orientation: landscape) and (pointer: coarse) {
+  .hero-home .hero-info, .hero-home .hero-actions { width: 62%; }
+  .hero-home .hero-scrim { background: linear-gradient(to bottom, rgba(0, 0, 0, 0) 45%, #000 98%), linear-gradient(to right, rgba(0, 0, 0, 0.88) 0%, rgba(0, 0, 0, 0) 70%); }
+  .hero-logo-wrap { height: calc(100 * var(--u)); }
+  .summary { -webkit-line-clamp: 2; }
+  .tagline, .signature { display: none; }
 }
 
 /* ---------------------------------------------------------------- Reduced motion */
