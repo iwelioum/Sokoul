@@ -64,7 +64,6 @@ All sports	Todos os esportes
 All the Feels	À flor da pele
 All titles	Todos os títulos
 All Versions	Todas as versões
-All-Time Essentials	Clássicos de todos os tempos
 Already seen	Já assistido
 Also by {1}	Também de {1}
 Also directed by {1}	Também dirigido por {1}
@@ -433,8 +432,6 @@ Movie and series source priorities	Prioridades das fontes de filmes e séries
 Movies	Filmes
 Movies, shows, cast and more	Filmes, séries, elenco e mais
 Music	Música
-Must-See Series	Séries imperdíveis
-Must-sees this week.	Os imperdíveis da semana.
 My List	Minha lista
 My reminders	Meus lembretes
 My series	Minhas séries
@@ -447,7 +444,6 @@ New collection	Nova coleção
 New collection…	Nova coleção…
 New episode	Novo episódio
 New Episodes	Novos episódios
-New in cinemas, just arrived.	Recém-chegados dos cinemas.
 Newest	Mais recentes
 Next	Próximo
 Next channel	Próximo canal
@@ -512,7 +508,6 @@ OK to change · Back to guide	OK para alterar · Voltar ao guia
 OK to choose · Back to guide	OK para escolher · Voltar ao guia
 On	Ativado
 On now	No ar
-On the air right now.	No ar agora mesmo.
 One page	Uma página
 One page, right to left	Uma página, da direita para a esquerda
 One shots	One-shots
@@ -547,7 +542,6 @@ Pages	Páginas
 Part of the Collection	Faz parte da coleção
 Partly filler	Parcialmente filler
 Password	Senha
-Picked from what you watch.	Escolhidos pelo que você assiste.
 Picture	Imagem
 Picture and sound	Imagem e som
 Picture format	Formato da imagem
@@ -783,8 +777,6 @@ The complete programme is scheduled, with a 2 minute lead-in and a 5 minute safe
 The connection was interrupted.	A conexão foi interrompida.
 The Faces	Os rostos
 The Films	Os filmes
-The films everyone is watching.	Os filmes que todo mundo está assistindo.
-The highest rated of all time.	Os mais bem avaliados de todos os tempos.
 The Honors	As honrarias
 The IPTV provider just refused a connection. Try again in %d s.	O provedor IPTV acabou de recusar uma conexão. Tente de novo em %d s.
 The IPTV server refused these credentials or did not respond.	O servidor IPTV recusou estas credenciais ou não respondeu.
@@ -797,7 +789,6 @@ The playback engine was not found.	O mecanismo de reprodução não foi encontra
 The provider stream could not be opened. Try again.	Não foi possível abrir a transmissão do provedor. Tente de novo.
 The recording could not be started.	Não foi possível iniciar a gravação.
 The recording is still growing	A gravação ainda está em andamento
-The series everyone is talking about.	As séries de que todo mundo está falando.
 The server refused this version (error %d).	O servidor recusou esta versão (erro %d).
 The server requires an active VIP key.	O servidor exige uma chave VIP ativa.
 The server took too long to answer.	O servidor demorou demais para responder.
@@ -852,8 +843,6 @@ Tomorrow	Amanhã
 Tonight	Hoje à noite
 Tonight: like {1}	Hoje à noite: como {1}
 Too many attempts. Try again in one minute.	Tentativas demais. Tente de novo em um minuto.
-Top 10 Films This Week	Top 10 filmes da semana
-Top 10 Series This Week	Top 10 séries da semana
 Top Results	Principais resultados
 Total budget	Orçamento total
 Trailer	Trailer
@@ -936,7 +925,6 @@ Your IPTV catalogue, with its own categories	Seu catálogo IPTV, com as própria
 Your live service, recordings and personal channel layout	Seu serviço de TV, suas gravações e a organização dos seus canais
 Your most watched	Os que você mais assistiu
 Your name	Seu nome
-Your next binge starts here.	Sua próxima maratona começa aqui.
 Your year in review	Seu ano em resumo
 Zapping, guide order, preview and your provider	Zapping, ordem do guia, prévia e seu provedor
 Zoom in {1} %	Ampliar {1} %
@@ -1050,19 +1038,6 @@ To fix	A corrigir
 Sign in with Real-Debrid	Iniciar sessão com Real-Debrid
 Sokoul already works without these. Each key adds something precise.	O Sokoul já funciona sem elas. Cada chave acrescenta algo concreto.
 French and English subtitles for everything you watch	Legendas em francês e inglês para tudo o que vê
-Your provider's live channels, TV guide, films and series, in Sokoul.	Os canais em direto, o guia de TV, os filmes e as séries do seu fornecedor, no Sokoul.
-Films and series in high quality, played through your Real-Debrid account.	Filmes e séries em alta qualidade, reproduzidos através da sua conta Real-Debrid.
-The Movie Database: the catalogue, posters, summaries, cast and trailers Sokoul shows everywhere.	The Movie Database: o catálogo, os cartazes, as sinopses, o elenco e os trailers que o Sokoul mostra em todo o lado.
-Subtitles in French, English and other languages for the film or episode you are watching.	Legendas em francês, inglês e outras línguas para o filme ou episódio que está a ver.
-More subtitles, looked up when OpenSubtitles doesn't have enough.	Mais legendas, procuradas quando o OpenSubtitles não tem suficientes.
-IMDb and Rotten Tomatoes ratings, and awards, on title pages.	As classificações do IMDb e do Rotten Tomatoes, e os prémios, nas fichas.
-Title logos and wide, high-quality artwork for posters and backgrounds.	Os logótipos dos títulos e imagens largas de qualidade para cartazes e fundos.
-Complete episode lists, with titles in French, when TMDB is missing some.	Listas de episódios completas, com os títulos em francês, quando faltam no TMDB.
-The date of a series' next episode.	A data do próximo episódio de uma série.
-Where else a title can be watched in your country, when Movie of the Night doesn't know.	Onde mais ver um título no seu país, quando o Movie of the Night não sabe.
-Recommendations of films similar to the ones you like.	Recomendações de filmes parecidos com os que gosta.
-Which streaming services offer a title in your country (Netflix, Prime Video…).	Que serviços de streaming oferecem um título no seu país (Netflix, Prime Video…).
-More web and anime sources, from the PC at home that runs the Sokoul server.	Mais fontes web e de anime, a partir do PC de casa que executa o servidor Sokoul.
 Asking the server for a code…	A pedir um código ao servidor…
 Change server	Mudar de servidor
 Choose a name of 1 to 40 characters.	Escolha um nome de 1 a 40 caracteres.

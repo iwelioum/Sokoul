@@ -64,7 +64,6 @@ All sports	Tutti gli sport
 All the Feels	A fior di pelle
 All titles	Tutti i titoli
 All Versions	Tutte le versioni
-All-Time Essentials	Imperdibili di sempre
 Already seen	Già visto
 Also by {1}	Anche di {1}
 Also directed by {1}	Diretto anche da {1}
@@ -433,8 +432,6 @@ Movie and series source priorities	Priorità delle fonti di film e serie
 Movies	Film
 Movies, shows, cast and more	Film, serie, cast e altro
 Music	Musica
-Must-See Series	Serie imperdibili
-Must-sees this week.	Gli imperdibili della settimana.
 My List	La mia lista
 My reminders	I miei promemoria
 My series	Le mie serie
@@ -447,7 +444,6 @@ New collection	Nuova collezione
 New collection…	Nuova collezione…
 New episode	Nuovo episodio
 New Episodes	Nuovi episodi
-New in cinemas, just arrived.	Appena arrivati dal cinema.
 Newest	Più recenti
 Next	Avanti
 Next channel	Canale successivo
@@ -512,7 +508,6 @@ OK to change · Back to guide	OK per modificare · Torna alla guida
 OK to choose · Back to guide	OK per scegliere · Torna alla guida
 On	Attivato
 On now	In onda
-On the air right now.	In onda in questo momento.
 One page	Una pagina
 One page, right to left	Una pagina, da destra a sinistra
 One shots	One shot
@@ -547,7 +542,6 @@ Pages	Pagine
 Part of the Collection	Fa parte della collezione
 Partly filler	In parte filler
 Password	Password
-Picked from what you watch.	Scelti in base a ciò che guardi.
 Picture	Immagine
 Picture and sound	Immagine e audio
 Picture format	Formato immagine
@@ -783,8 +777,6 @@ The complete programme is scheduled, with a 2 minute lead-in and a 5 minute safe
 The connection was interrupted.	La connessione si è interrotta.
 The Faces	I volti
 The Films	I film
-The films everyone is watching.	I film che tutti stanno guardando.
-The highest rated of all time.	I più votati di sempre.
 The Honors	I riconoscimenti
 The IPTV provider just refused a connection. Try again in %d s.	Il provider IPTV ha appena rifiutato una connessione. Riprova tra %d s.
 The IPTV server refused these credentials or did not respond.	Il server IPTV ha rifiutato queste credenziali o non ha risposto.
@@ -797,7 +789,6 @@ The playback engine was not found.	Il motore di riproduzione non è stato trovat
 The provider stream could not be opened. Try again.	Impossibile aprire il flusso del provider. Riprova.
 The recording could not be started.	Impossibile avviare la registrazione.
 The recording is still growing	La registrazione è ancora in corso
-The series everyone is talking about.	Le serie di cui tutti parlano.
 The server refused this version (error %d).	Il server ha rifiutato questa versione (errore %d).
 The server requires an active VIP key.	Il server richiede una chiave VIP attiva.
 The server took too long to answer.	Il server ha impiegato troppo a rispondere.
@@ -852,8 +843,6 @@ Tomorrow	Domani
 Tonight	Stasera
 Tonight: like {1}	Stasera: come {1}
 Too many attempts. Try again in one minute.	Troppi tentativi. Riprova tra un minuto.
-Top 10 Films This Week	Top 10 film della settimana
-Top 10 Series This Week	Top 10 serie della settimana
 Top Results	Risultati migliori
 Total budget	Budget totale
 Trailer	Trailer
@@ -936,7 +925,6 @@ Your IPTV catalogue, with its own categories	Il tuo catalogo IPTV, con le sue ca
 Your live service, recordings and personal channel layout	Il tuo servizio TV, le registrazioni e l'organizzazione dei canali
 Your most watched	I più guardati
 Your name	Il tuo nome
-Your next binge starts here.	La tua prossima maratona inizia qui.
 Your year in review	Il tuo anno in sintesi
 Zapping, guide order, preview and your provider	Zapping, ordine della guida, anteprima e provider
 Zoom in {1} %	Ingrandisci {1} %
@@ -1050,19 +1038,6 @@ To fix	Da correggere
 Sign in with Real-Debrid	Accedi con Real-Debrid
 Sokoul already works without these. Each key adds something precise.	Sokoul funziona già senza. Ogni chiave aggiunge qualcosa di preciso.
 French and English subtitles for everything you watch	Sottotitoli in francese e inglese per tutto ciò che guardi
-Your provider's live channels, TV guide, films and series, in Sokoul.	I canali in diretta, la guida TV, i film e le serie del tuo fornitore, in Sokoul.
-Films and series in high quality, played through your Real-Debrid account.	Film e serie in alta qualità, riprodotti tramite il tuo account Real-Debrid.
-The Movie Database: the catalogue, posters, summaries, cast and trailers Sokoul shows everywhere.	The Movie Database: il catalogo, le locandine, le trame, il cast e i trailer che Sokoul mostra ovunque.
-Subtitles in French, English and other languages for the film or episode you are watching.	Sottotitoli in francese, inglese e altre lingue per il film o l'episodio che stai guardando.
-More subtitles, looked up when OpenSubtitles doesn't have enough.	Altri sottotitoli, cercati quando OpenSubtitles non ne ha abbastanza.
-IMDb and Rotten Tomatoes ratings, and awards, on title pages.	I voti di IMDb e Rotten Tomatoes, e i premi, nelle schede.
-Title logos and wide, high-quality artwork for posters and backgrounds.	I loghi dei titoli e grandi immagini di qualità per locandine e sfondi.
-Complete episode lists, with titles in French, when TMDB is missing some.	Elenchi di episodi completi, con i titoli in francese, quando su TMDB ne mancano.
-The date of a series' next episode.	La data del prossimo episodio di una serie.
-Where else a title can be watched in your country, when Movie of the Night doesn't know.	Dove altro guardare un titolo nel tuo paese, quando Movie of the Night non lo sa.
-Recommendations of films similar to the ones you like.	Consigli di film simili a quelli che ti piacciono.
-Which streaming services offer a title in your country (Netflix, Prime Video…).	Quali servizi di streaming offrono un titolo nel tuo paese (Netflix, Prime Video…).
-More web and anime sources, from the PC at home that runs the Sokoul server.	Più fonti web e anime, dal PC di casa che esegue il server Sokoul.
 Asking the server for a code…	Richiesta di un codice al server…
 Change server	Cambia server
 Choose a name of 1 to 40 characters.	Scegli un nome da 1 a 40 caratteri.

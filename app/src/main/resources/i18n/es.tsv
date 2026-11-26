@@ -64,7 +64,6 @@ All sports	Todos los deportes
 All the Feels	A flor de piel
 All titles	Todos los títulos
 All Versions	Todas las versiones
-All-Time Essentials	Imprescindibles de siempre
 Already seen	Ya visto
 Also by {1}	También de {1}
 Also directed by {1}	También dirigida por {1}
@@ -433,8 +432,6 @@ Movie and series source priorities	Prioridades de las fuentes de películas y se
 Movies	Películas
 Movies, shows, cast and more	Películas, series, reparto y más
 Music	Música
-Must-See Series	Series imprescindibles
-Must-sees this week.	Lo imprescindible de la semana.
 My List	Mi lista
 My reminders	Mis recordatorios
 My series	Mis series
@@ -447,7 +444,6 @@ New collection	Nueva colección
 New collection…	Nueva colección…
 New episode	Nuevo episodio
 New Episodes	Nuevos episodios
-New in cinemas, just arrived.	Recién llegadas de los cines.
 Newest	Más recientes
 Next	Siguiente
 Next channel	Canal siguiente
@@ -512,7 +508,6 @@ OK to change · Back to guide	OK para cambiar · Volver a la guía
 OK to choose · Back to guide	OK para elegir · Volver a la guía
 On	Activado
 On now	En emisión
-On the air right now.	En antena ahora mismo.
 One page	Una página
 One page, right to left	Una página, de derecha a izquierda
 One shots	One shots
@@ -547,7 +542,6 @@ Pages	Páginas
 Part of the Collection	Forma parte de la colección
 Partly filler	Relleno en parte
 Password	Contraseña
-Picked from what you watch.	Elegidas según lo que ves.
 Picture	Imagen
 Picture and sound	Imagen y sonido
 Picture format	Formato de imagen
@@ -783,8 +777,6 @@ The complete programme is scheduled, with a 2 minute lead-in and a 5 minute safe
 The connection was interrupted.	La conexión se interrumpió.
 The Faces	Los rostros
 The Films	Las películas
-The films everyone is watching.	Las películas que todo el mundo está viendo.
-The highest rated of all time.	Las mejor valoradas de todos los tiempos.
 The Honors	El palmarés
 The IPTV provider just refused a connection. Try again in %d s.	El proveedor IPTV acaba de rechazar una conexión. Vuelve a intentarlo en %d s.
 The IPTV server refused these credentials or did not respond.	El servidor IPTV rechazó estas credenciales o no respondió.
@@ -797,7 +789,6 @@ The playback engine was not found.	No se encontró el motor de reproducción.
 The provider stream could not be opened. Try again.	No se pudo abrir la emisión del proveedor. Vuelve a intentarlo.
 The recording could not be started.	No se pudo iniciar la grabación.
 The recording is still growing	La grabación sigue en curso
-The series everyone is talking about.	Las series de las que todo el mundo habla.
 The server refused this version (error %d).	El servidor rechazó esta versión (error %d).
 The server requires an active VIP key.	El servidor requiere una clave VIP activa.
 The server took too long to answer.	El servidor tardó demasiado en responder.
@@ -852,8 +843,6 @@ Tomorrow	Mañana
 Tonight	Esta noche
 Tonight: like {1}	Esta noche: como {1}
 Too many attempts. Try again in one minute.	Demasiados intentos. Vuelve a intentarlo en un minuto.
-Top 10 Films This Week	Top 10 de películas esta semana
-Top 10 Series This Week	Top 10 de series esta semana
 Top Results	Mejores resultados
 Total budget	Presupuesto total
 Trailer	Tráiler
@@ -936,7 +925,6 @@ Your IPTV catalogue, with its own categories	Tu catálogo IPTV, con sus propias 
 Your live service, recordings and personal channel layout	Tu servicio de TV, tus grabaciones y la organización de tus canales
 Your most watched	Lo que más has visto
 Your name	Tu nombre
-Your next binge starts here.	Tu próximo maratón empieza aquí.
 Your year in review	Tu año en resumen
 Zapping, guide order, preview and your provider	Zapeo, orden de la guía, vista previa y proveedor
 Zoom in {1} %	Ampliar {1} %
@@ -1050,19 +1038,6 @@ To fix	Por corregir
 Sign in with Real-Debrid	Iniciar sesión con Real-Debrid
 Sokoul already works without these. Each key adds something precise.	Sokoul ya funciona sin ellas. Cada clave añade algo concreto.
 French and English subtitles for everything you watch	Subtítulos en francés e inglés para todo lo que ves
-Your provider's live channels, TV guide, films and series, in Sokoul.	Los canales en directo, la guía de TV, las películas y las series de tu proveedor, en Sokoul.
-Films and series in high quality, played through your Real-Debrid account.	Películas y series en alta calidad, reproducidas con tu cuenta de Real-Debrid.
-The Movie Database: the catalogue, posters, summaries, cast and trailers Sokoul shows everywhere.	The Movie Database: el catálogo, los carteles, las sinopsis, el reparto y los tráileres que Sokoul muestra en todas partes.
-Subtitles in French, English and other languages for the film or episode you are watching.	Subtítulos en francés, inglés y otros idiomas para la película o el episodio que estás viendo.
-More subtitles, looked up when OpenSubtitles doesn't have enough.	Más subtítulos, buscados cuando OpenSubtitles no tiene suficientes.
-IMDb and Rotten Tomatoes ratings, and awards, on title pages.	Las notas de IMDb y Rotten Tomatoes, y los premios, en las fichas.
-Title logos and wide, high-quality artwork for posters and backgrounds.	Los logotipos de los títulos e imágenes amplias de calidad para carteles y fondos.
-Complete episode lists, with titles in French, when TMDB is missing some.	Listas de episodios completas, con los títulos en francés, cuando faltan en TMDB.
-The date of a series' next episode.	La fecha del próximo episodio de una serie.
-Where else a title can be watched in your country, when Movie of the Night doesn't know.	Dónde más ver un título en tu país, cuando Movie of the Night no lo sabe.
-Recommendations of films similar to the ones you like.	Recomendaciones de películas parecidas a las que te gustan.
-Which streaming services offer a title in your country (Netflix, Prime Video…).	Qué servicios de streaming ofrecen un título en tu país (Netflix, Prime Video…).
-More web and anime sources, from the PC at home that runs the Sokoul server.	Más fuentes web y de anime, desde el PC de casa que ejecuta el servidor Sokoul.
 Asking the server for a code…	Pidiendo un código al servidor…
 Change server	Cambiar de servidor
 Choose a name of 1 to 40 characters.	Elige un nombre de 1 a 40 caracteres.

@@ -64,7 +64,6 @@ All sports	Tüm sporlar
 All the Feels	Duygu yüklü
 All titles	Tüm içerikler
 All Versions	Tüm sürümler
-All-Time Essentials	Tüm zamanların klasikleri
 Already seen	Zaten izlendi
 Also by {1}	{1} imzalı diğerleri
 Also directed by {1}	{1} yönetmenliğindeki diğerleri
@@ -433,8 +432,6 @@ Movie and series source priorities	Film ve dizi kaynaklarının öncelikleri
 Movies	Filmler
 Movies, shows, cast and more	Filmler, diziler, oyuncular ve dahası
 Music	Müzik
-Must-See Series	Mutlaka izlenmesi gereken diziler
-Must-sees this week.	Bu haftanın kaçırılmayacakları.
 My List	Listem
 My reminders	Hatırlatıcılarım
 My series	Dizilerim
@@ -447,7 +444,6 @@ New collection	Yeni koleksiyon
 New collection…	Yeni koleksiyon…
 New episode	Yeni bölüm
 New Episodes	Yeni bölümler
-New in cinemas, just arrived.	Sinemalardan yeni geldi.
 Newest	En yeniler
 Next	İleri
 Next channel	Sonraki kanal
@@ -512,7 +508,6 @@ OK to change · Back to guide	Değiştirmek için OK · Rehbere dön
 OK to choose · Back to guide	Seçmek için OK · Rehbere dön
 On	Açık
 On now	Şimdi yayında
-On the air right now.	Şu anda yayında.
 One page	Tek sayfa
 One page, right to left	Tek sayfa, sağdan sola
 One shots	Tek ciltlikler
@@ -547,7 +542,6 @@ Pages	Sayfalar
 Part of the Collection	Koleksiyonun parçası
 Partly filler	Kısmen dolgu
 Password	Parola
-Picked from what you watch.	İzlediklerine göre seçildi.
 Picture	Görüntü
 Picture and sound	Görüntü ve ses
 Picture format	Görüntü biçimi
@@ -783,8 +777,6 @@ The complete programme is scheduled, with a 2 minute lead-in and a 5 minute safe
 The connection was interrupted.	Bağlantı kesildi.
 The Faces	Yüzler
 The Films	Filmler
-The films everyone is watching.	Herkesin izlediği filmler.
-The highest rated of all time.	Tüm zamanların en yüksek puanlıları.
 The Honors	Onurlar
 The IPTV provider just refused a connection. Try again in %d s.	IPTV sağlayıcısı az önce bir bağlantıyı reddetti. %d sn sonra yeniden dene.
 The IPTV server refused these credentials or did not respond.	IPTV sunucusu bu bilgileri reddetti veya yanıt vermedi.
@@ -797,7 +789,6 @@ The playback engine was not found.	Oynatma motoru bulunamadı.
 The provider stream could not be opened. Try again.	Sağlayıcının yayını açılamadı. Yeniden dene.
 The recording could not be started.	Kayıt başlatılamadı.
 The recording is still growing	Kayıt hâlâ sürüyor
-The series everyone is talking about.	Herkesin konuştuğu diziler.
 The server refused this version (error %d).	Sunucu bu sürümü reddetti (hata %d).
 The server requires an active VIP key.	Sunucu etkin bir VIP anahtarı gerektiriyor.
 The server took too long to answer.	Sunucu yanıt vermekte çok gecikti.
@@ -852,8 +843,6 @@ Tomorrow	Yarın
 Tonight	Bu akşam
 Tonight: like {1}	Bu akşam: {1} gibi
 Too many attempts. Try again in one minute.	Çok fazla deneme. Bir dakika sonra yeniden dene.
-Top 10 Films This Week	Bu haftanın ilk 10 filmi
-Top 10 Series This Week	Bu haftanın ilk 10 dizisi
 Top Results	En iyi sonuçlar
 Total budget	Toplam bütçe
 Trailer	Fragman
@@ -936,7 +925,6 @@ Your IPTV catalogue, with its own categories	IPTV kataloğun, kendi kategorileri
 Your live service, recordings and personal channel layout	Canlı hizmetin, kayıtların ve kişisel kanal düzenin
 Your most watched	En çok izlediklerin
 Your name	Adın
-Your next binge starts here.	Bir sonraki maratonun burada başlıyor.
 Your year in review	Yılının özeti
 Zapping, guide order, preview and your provider	Zap, rehber sırası, önizleme ve sağlayıcın
 Zoom in {1} %	Yakınlaştır %{1}
@@ -1050,19 +1038,6 @@ To fix	Düzeltilmeli
 Sign in with Real-Debrid	Real-Debrid ile giriş yap
 Sokoul already works without these. Each key adds something precise.	Sokoul bunlar olmadan da çalışır. Her anahtar belirli bir şey ekler.
 French and English subtitles for everything you watch	İzlediğiniz her şey için Fransızca ve İngilizce altyazılar
-Your provider's live channels, TV guide, films and series, in Sokoul.	Sağlayıcınızın canlı kanalları, TV rehberi, filmleri ve dizileri Sokoul'da.
-Films and series in high quality, played through your Real-Debrid account.	Real-Debrid hesabınız üzerinden oynatılan yüksek kaliteli filmler ve diziler.
-The Movie Database: the catalogue, posters, summaries, cast and trailers Sokoul shows everywhere.	The Movie Database: Sokoul'un her yerde gösterdiği katalog, afişler, özetler, oyuncular ve fragmanlar.
-Subtitles in French, English and other languages for the film or episode you are watching.	İzlediğiniz film veya bölüm için Fransızca, İngilizce ve diğer dillerde altyazılar.
-More subtitles, looked up when OpenSubtitles doesn't have enough.	OpenSubtitles yeterli olmadığında aranan ek altyazılar.
-IMDb and Rotten Tomatoes ratings, and awards, on title pages.	Başlık sayfalarında IMDb ve Rotten Tomatoes puanları ile ödüller.
-Title logos and wide, high-quality artwork for posters and backgrounds.	Afişler ve arka planlar için başlık logoları ve geniş, yüksek kaliteli görseller.
-Complete episode lists, with titles in French, when TMDB is missing some.	TMDB'de eksik olduğunda Fransızca başlıklarıyla eksiksiz bölüm listeleri.
-The date of a series' next episode.	Bir dizinin sonraki bölümünün tarihi.
-Where else a title can be watched in your country, when Movie of the Night doesn't know.	Movie of the Night bilmediğinde, bir başlığın ülkenizde başka nerede izlenebileceği.
-Recommendations of films similar to the ones you like.	Sevdiğiniz filmlere benzer film önerileri.
-Which streaming services offer a title in your country (Netflix, Prime Video…).	Bir başlığı ülkenizde hangi yayın hizmetlerinin sunduğu (Netflix, Prime Video…).
-More web and anime sources, from the PC at home that runs the Sokoul server.	Sokoul sunucusunu çalıştıran evdeki PC'den daha fazla web ve anime kaynağı.
 Asking the server for a code…	Sunucudan kod isteniyor…
 Change server	Sunucuyu değiştir
 Choose a name of 1 to 40 characters.	1 ile 40 karakter arasında bir ad seçin.

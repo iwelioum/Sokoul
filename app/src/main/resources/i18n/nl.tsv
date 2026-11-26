@@ -64,7 +64,6 @@ All sports	Alle sporten
 All the Feels	Vol gevoel
 All titles	Alle titels
 All Versions	Alle versies
-All-Time Essentials	Tijdloze klassiekers
 Already seen	Al gezien
 Also by {1}	Ook van {1}
 Also directed by {1}	Ook geregisseerd door {1}
@@ -433,8 +432,6 @@ Movie and series source priorities	Prioriteiten van film- en seriebronnen
 Movies	Films
 Movies, shows, cast and more	Films, series, cast en meer
 Music	Muziek
-Must-See Series	Series die je moet zien
-Must-sees this week.	Deze week niet te missen.
 My List	Mijn lijst
 My reminders	Mijn herinneringen
 My series	Mijn series
@@ -447,7 +444,6 @@ New collection	Nieuwe collectie
 New collection…	Nieuwe collectie…
 New episode	Nieuwe aflevering
 New Episodes	Nieuwe afleveringen
-New in cinemas, just arrived.	Nieuw in de bioscoop, net binnen.
 Newest	Nieuwste
 Next	Volgende
 Next channel	Volgende zender
@@ -512,7 +508,6 @@ OK to change · Back to guide	OK om te wijzigen · Terug naar de gids
 OK to choose · Back to guide	OK om te kiezen · Terug naar de gids
 On	Aan
 On now	Nu bezig
-On the air right now.	Nu in de ether.
 One page	Eén pagina
 One page, right to left	Eén pagina, van rechts naar links
 One shots	One-shots
@@ -547,7 +542,6 @@ Pages	Pagina's
 Part of the Collection	Onderdeel van de collectie
 Partly filler	Deels filler
 Password	Wachtwoord
-Picked from what you watch.	Gekozen op basis van wat je kijkt.
 Picture	Beeld
 Picture and sound	Beeld en geluid
 Picture format	Beeldformaat
@@ -783,8 +777,6 @@ The complete programme is scheduled, with a 2 minute lead-in and a 5 minute safe
 The connection was interrupted.	De verbinding is onderbroken.
 The Faces	De gezichten
 The Films	De films
-The films everyone is watching.	De films waar iedereen naar kijkt.
-The highest rated of all time.	De best beoordeelde aller tijden.
 The Honors	De onderscheidingen
 The IPTV provider just refused a connection. Try again in %d s.	De IPTV-aanbieder weigerde net een verbinding. Probeer het over %d s opnieuw.
 The IPTV server refused these credentials or did not respond.	De IPTV-server weigerde deze inloggegevens of reageerde niet.
@@ -797,7 +789,6 @@ The playback engine was not found.	De afspeelengine is niet gevonden.
 The provider stream could not be opened. Try again.	De stream van de aanbieder kon niet worden geopend. Probeer het opnieuw.
 The recording could not be started.	De opname kon niet worden gestart.
 The recording is still growing	De opname loopt nog
-The series everyone is talking about.	De series waar iedereen het over heeft.
 The server refused this version (error %d).	De server weigerde deze versie (fout %d).
 The server requires an active VIP key.	De server vereist een actieve VIP-sleutel.
 The server took too long to answer.	De server reageerde te traag.
@@ -852,8 +843,6 @@ Tomorrow	Morgen
 Tonight	Vanavond
 Tonight: like {1}	Vanavond: zoals {1}
 Too many attempts. Try again in one minute.	Te veel pogingen. Probeer het over een minuut opnieuw.
-Top 10 Films This Week	Top 10 films van deze week
-Top 10 Series This Week	Top 10 series van deze week
 Top Results	Topresultaten
 Total budget	Totaal budget
 Trailer	Trailer
@@ -936,7 +925,6 @@ Your IPTV catalogue, with its own categories	Je IPTV-catalogus, met zijn eigen c
 Your live service, recordings and personal channel layout	Je livedienst, opnamen en je eigen zenderindeling
 Your most watched	Het meest gekeken
 Your name	Je naam
-Your next binge starts here.	Je volgende bingesessie begint hier.
 Your year in review	Jouw jaar in beeld
 Zapping, guide order, preview and your provider	Zappen, volgorde van de gids, voorbeeld en je aanbieder
 Zoom in {1} %	Inzoomen {1} %
@@ -1050,19 +1038,6 @@ To fix	Te herstellen
 Sign in with Real-Debrid	Inloggen met Real-Debrid
 Sokoul already works without these. Each key adds something precise.	Sokoul werkt al zonder. Elke sleutel voegt iets specifieks toe.
 French and English subtitles for everything you watch	Franse en Engelse ondertitels voor alles wat je kijkt
-Your provider's live channels, TV guide, films and series, in Sokoul.	De livezenders, tv-gids, films en series van je aanbieder, in Sokoul.
-Films and series in high quality, played through your Real-Debrid account.	Films en series in hoge kwaliteit, afgespeeld via je Real-Debrid-account.
-The Movie Database: the catalogue, posters, summaries, cast and trailers Sokoul shows everywhere.	The Movie Database: de catalogus, posters, samenvattingen, cast en trailers die Sokoul overal toont.
-Subtitles in French, English and other languages for the film or episode you are watching.	Ondertitels in het Frans, Engels en andere talen voor de film of aflevering die je kijkt.
-More subtitles, looked up when OpenSubtitles doesn't have enough.	Meer ondertitels, gezocht als OpenSubtitles er niet genoeg heeft.
-IMDb and Rotten Tomatoes ratings, and awards, on title pages.	IMDb- en Rotten Tomatoes-scores en prijzen op de titelpagina's.
-Title logos and wide, high-quality artwork for posters and backgrounds.	Titellogo's en brede afbeeldingen van hoge kwaliteit voor posters en achtergronden.
-Complete episode lists, with titles in French, when TMDB is missing some.	Volledige afleveringslijsten, met Franse titels, als TMDB er een paar mist.
-The date of a series' next episode.	De datum van de volgende aflevering van een serie.
-Where else a title can be watched in your country, when Movie of the Night doesn't know.	Waar je een titel in je land nog meer kunt kijken, als Movie of the Night het niet weet.
-Recommendations of films similar to the ones you like.	Aanbevelingen voor films die lijken op wat je leuk vindt.
-Which streaming services offer a title in your country (Netflix, Prime Video…).	Welke streamingdiensten een titel in je land aanbieden (Netflix, Prime Video…).
-More web and anime sources, from the PC at home that runs the Sokoul server.	Meer web- en animebronnen, van de pc thuis waarop de Sokoul-server draait.
 Asking the server for a code…	Code wordt bij de server opgevraagd…
 Change server	Andere server
 Choose a name of 1 to 40 characters.	Kies een naam van 1 tot 40 tekens.

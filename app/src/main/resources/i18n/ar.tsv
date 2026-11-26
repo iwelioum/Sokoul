@@ -64,7 +64,6 @@ All sports	كل الرياضات
 All the Feels	مشاعر جيّاشة
 All titles	كل الأعمال
 All Versions	كل النسخ
-All-Time Essentials	كلاسيكيات خالدة
 Already seen	شوهد سابقًا
 Also by {1}	أعمال أخرى لـ {1}
 Also directed by {1}	من إخراج {1} أيضًا
@@ -433,8 +432,6 @@ Movie and series source priorities	أولويات مصادر الأفلام وا
 Movies	الأفلام
 Movies, shows, cast and more	أفلام ومسلسلات وممثلون والمزيد
 Music	موسيقى
-Must-See Series	مسلسلات لا تُفوّت
-Must-sees this week.	ما لا يُفوّت هذا الأسبوع.
 My List	قائمتي
 My reminders	تذكيراتي
 My series	مسلسلاتي
@@ -447,7 +444,6 @@ New collection	مجموعة جديدة
 New collection…	مجموعة جديدة…
 New episode	حلقة جديدة
 New Episodes	حلقات جديدة
-New in cinemas, just arrived.	وصلت للتو من دور السينما.
 Newest	الأحدث
 Next	التالي
 Next channel	القناة التالية
@@ -512,7 +508,6 @@ OK to change · Back to guide	OK للتغيير · العودة إلى الدل�
 OK to choose · Back to guide	OK للاختيار · العودة إلى الدليل
 On	مفعّل
 On now	يُعرض الآن
-On the air right now.	على الهواء الآن.
 One page	صفحة واحدة
 One page, right to left	صفحة واحدة، من اليمين إلى اليسار
 One shots	قصص قصيرة
@@ -547,7 +542,6 @@ Pages	الصفحات
 Part of the Collection	جزء من المجموعة
 Partly filler	حشو جزئيًا
 Password	كلمة المرور
-Picked from what you watch.	مختارة حسب ما تشاهده.
 Picture	الصورة
 Picture and sound	الصورة والصوت
 Picture format	صيغة الصورة
@@ -783,8 +777,6 @@ The complete programme is scheduled, with a 2 minute lead-in and a 5 minute safe
 The connection was interrupted.	انقطع الاتصال.
 The Faces	الوجوه
 The Films	الأفلام
-The films everyone is watching.	الأفلام التي يشاهدها الجميع.
-The highest rated of all time.	الأعلى تقييمًا على الإطلاق.
 The Honors	التكريمات
 The IPTV provider just refused a connection. Try again in %d s.	رفض مزوّد IPTV اتصالًا للتو. حاول مجددًا بعد %d ث.
 The IPTV server refused these credentials or did not respond.	رفض خادم IPTV بيانات الاعتماد هذه أو لم يستجب.
@@ -797,7 +789,6 @@ The playback engine was not found.	لم يُعثر على محرك التشغي�
 The provider stream could not be opened. Try again.	تعذّر فتح بث المزوّد. حاول مجددًا.
 The recording could not be started.	تعذّر بدء التسجيل.
 The recording is still growing	التسجيل ما زال جاريًا
-The series everyone is talking about.	المسلسلات التي يتحدث عنها الجميع.
 The server refused this version (error %d).	رفض الخادم هذه النسخة (الخطأ %d).
 The server requires an active VIP key.	يتطلب الخادم مفتاح VIP نشطًا.
 The server took too long to answer.	استغرق الخادم وقتًا طويلًا للرد.
@@ -852,8 +843,6 @@ Tomorrow	غدًا
 Tonight	الليلة
 Tonight: like {1}	الليلة: مثل {1}
 Too many attempts. Try again in one minute.	محاولات كثيرة جدًا. حاول مجددًا بعد دقيقة.
-Top 10 Films This Week	أفضل 10 أفلام هذا الأسبوع
-Top 10 Series This Week	أفضل 10 مسلسلات هذا الأسبوع
 Top Results	أفضل النتائج
 Total budget	الميزانية الإجمالية
 Trailer	الإعلان
@@ -936,7 +925,6 @@ Your IPTV catalogue, with its own categories	كتالوج IPTV الخاص بك �
 Your live service, recordings and personal channel layout	خدمتك المباشرة وتسجيلاتك وترتيب قنواتك الشخصي
 Your most watched	الأكثر مشاهدة لديك
 Your name	اسمك
-Your next binge starts here.	ماراثونك القادم يبدأ هنا.
 Your year in review	عامك في لمحة
 Zapping, guide order, preview and your provider	التنقل وترتيب الدليل والمعاينة ومزوّدك
 Zoom in {1} %	تكبير {1}٪
@@ -1050,19 +1038,6 @@ To fix	يحتاج إلى إصلاح
 Sign in with Real-Debrid	تسجيل الدخول عبر Real-Debrid
 Sokoul already works without these. Each key adds something precise.	يعمل Sokoul دونها. كل مفتاح يضيف شيئًا محددًا.
 French and English subtitles for everything you watch	ترجمات بالفرنسية والإنجليزية لكل ما تشاهده
-Your provider's live channels, TV guide, films and series, in Sokoul.	القنوات المباشرة ودليل البرامج والأفلام والمسلسلات من مزوّدك، داخل Sokoul.
-Films and series in high quality, played through your Real-Debrid account.	أفلام ومسلسلات بجودة عالية، تُشغَّل عبر حسابك في Real-Debrid.
-The Movie Database: the catalogue, posters, summaries, cast and trailers Sokoul shows everywhere.	The Movie Database: الكتالوج والملصقات والملخصات وطاقم العمل والإعلانات التي يعرضها Sokoul في كل مكان.
-Subtitles in French, English and other languages for the film or episode you are watching.	ترجمات بالفرنسية والإنجليزية ولغات أخرى للفيلم أو الحلقة التي تشاهدها.
-More subtitles, looked up when OpenSubtitles doesn't have enough.	مزيد من الترجمات، يُبحث عنها عندما لا يكفي ما لدى OpenSubtitles.
-IMDb and Rotten Tomatoes ratings, and awards, on title pages.	تقييمات IMDb وRotten Tomatoes والجوائز في صفحات الأعمال.
-Title logos and wide, high-quality artwork for posters and backgrounds.	شعارات الأعمال وصور عريضة عالية الجودة للملصقات والخلفيات.
-Complete episode lists, with titles in French, when TMDB is missing some.	قوائم حلقات كاملة، مع العناوين بالفرنسية، عندما تنقص بعضها في TMDB.
-The date of a series' next episode.	تاريخ الحلقة القادمة من المسلسل.
-Where else a title can be watched in your country, when Movie of the Night doesn't know.	أين يمكن مشاهدة عمل ما في بلدك، عندما لا يعرف Movie of the Night.
-Recommendations of films similar to the ones you like.	توصيات بأفلام مشابهة لما تحبه.
-Which streaming services offer a title in your country (Netflix, Prime Video…).	خدمات البث التي تعرض عملًا ما في بلدك (Netflix وPrime Video…).
-More web and anime sources, from the PC at home that runs the Sokoul server.	مزيد من مصادر الويب والأنمي، من حاسوب المنزل الذي يشغّل خادم Sokoul.
 Asking the server for a code…	جارٍ طلب رمز من الخادم…
 Change server	تغيير الخادم
 Choose a name of 1 to 40 characters.	اختر اسمًا من 1 إلى 40 حرفًا.

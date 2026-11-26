@@ -1,7 +1,7 @@
 """Lists every interface text in English, with its French text beside it, into app/src/main/resources/i18n/source.tsv.
 
 Run from the repository root: python tools/i18n-extract.py
-- L("en", "fr") pairs from app/ and tv/ Kotlin sources, on one line or over several. Values written in the text ($name,
+- L("en", "fr") pairs from app/, tv/ and core/ Kotlin sources, on one line or over several. Values written in the text ($name,
   ${expr}) become {1}, {2}... in order, the template form the catalogues use.
 - Text entries of pc/i18n/Strings.kt, kept with their %s (they are formatted after translation).
 A catalogue (i18n/<code>.tsv) holds `english<TAB>translation` lines keyed by the first column of this file.
@@ -65,7 +65,7 @@ def escape(s: str) -> str:
 
 def main() -> int:
     pairs = {}
-    files = sorted(glob.glob(str(ROOT / 'app/src/main/kotlin/**/*.kt'), recursive=True) + glob.glob(str(ROOT / 'tv/src/main/kotlin/**/*.kt'), recursive=True))
+    files = sorted(sum((glob.glob(str(ROOT / f'{module}/src/main/kotlin/**/*.kt'), recursive=True) for module in ('app', 'tv', 'core')), []))
     for f in files:
         source = Path(f).read_text(encoding='utf8')
         for m in PAIR.finditer(source):
@@ -79,7 +79,7 @@ def main() -> int:
                     en, fr = unescape(groups[i]), unescape(groups[i + 1])
                     if en.strip():
                         pairs.setdefault(en, fr)
-    strings = (ROOT / 'app/src/main/kotlin/com/sokoul/pc/i18n/Strings.kt').read_text(encoding='utf8')
+    strings = (ROOT / 'core/src/main/kotlin/com/sokoul/pc/i18n/Strings.kt').read_text(encoding='utf8')
     english_block = strings[strings.index('val english'):strings.index('val french')]
     french_block = strings[strings.index('val french'):]
     french = {k: v for k, v in TEXT.findall(french_block)}
