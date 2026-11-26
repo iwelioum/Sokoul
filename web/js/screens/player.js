@@ -7,7 +7,8 @@ import { t } from '../i18n.js';
 import * as store from '../store.js';
 import { preferences } from '../preferences.js';
 import { playHref } from './home.js';
-import { h, icon, roundButton, secondaryButton, problem, setTitle } from '../ui.js';
+import { h, icon, secondaryButton, problem, setTitle } from '../ui.js';
+import { titleLogo } from '../hero.js';
 
 const SAVE_EVERY_MS = 15_000;
 const RESUME_FROM_MS = 30_000;
@@ -27,27 +28,103 @@ export async function render({ root, params, query, signal, back, go }) {
   root.classList.add('screen-player');
   document.body.classList.add('is-playing');
 
-  const video = h('video.player-video', { playsinline: true, 'webkit-playsinline': true, controls: true, preload: 'metadata' });
+  // The apps' player chrome (playback/ui/PlayerScreen.Overlay): the back arrow; at the foot over a shade, the title's
+  // logo and the episode, the version's badges, the timeline with the time gone and what is left, then the round
+  // controls (back 10, play, forward, next) and, on the right, versions, subtitles, audio and full screen.
+  const video = h('video.player-video', { playsinline: true, 'webkit-playsinline': true, preload: 'metadata' });
   video.hidden = true; // shown once a version is attached, so an error is not drawn over an empty player
-  const titleText = h('div.player-title', '');
-  const subText = h('div.player-sub', episodeLabel || '');
+  const titleSlot = h('div.player-name');
+  const episodeText = h('p.player-episode', episodeLabel || '');
+  const badges = h('div.player-badges');
   const status = h('div.player-status', { role: 'status', 'aria-live': 'polite' }, h('p.message-text', t('loadingVersions')));
-  const panel = h('div.panel.glass.player-panel', { hidden: true, role: 'dialog', 'aria-label': t('versions') });
-  const versionsButton = secondaryButton(t('versions'), () => togglePanel(), 'layers');
+  const panel = h('div.player-panel.glass', { hidden: true, role: 'dialog', 'aria-label': t('versions') });
+  const timeline = h('input.player-timeline', { type: 'range', min: 0, max: 1000, step: 1, value: 0, 'aria-label': t('position') });
+  const elapsed = h('span.player-time', '0:00');
+  const remaining = h('span.player-time.player-left', '');
+  const control = (glyph, label, onClick, cls = '') => h(`button.player-control${cls ? '.' + cls : ''}`, { type: 'button', 'aria-label': label, onClick },
+    icon(glyph), h('span.player-control-label', { 'aria-hidden': 'true' }, label));
+  const seekBy = (seconds) => {
+    if (!Number.isFinite(video.duration)) return;
+    video.currentTime = Math.min(video.duration, Math.max(0, video.currentTime + seconds));
+    showControls();
+  };
+  const back10 = control('replay10', t('back10'), () => seekBy(-10));
+  const playPause = control('play', t('playPause'), () => (video.paused ? video.play().catch(() => {}) : video.pause()), 'player-play');
+  const forward = control('forward10', t('forward10'), () => seekBy(10));
+  const nextButton = control('next', t('nextEpisode'), () => nextHref && go(nextHref));
+  nextButton.hidden = true;
+  const versionsButton = control('movies', t('versions'), () => togglePanel(undefined, 'versions'));
   versionsButton.hidden = true;
-  const fullscreen = roundButton('fullscreen', t('fullscreen'), () => {
+  const subtitlesButton = control('subtitles', t('subtitles'), () => togglePanel(undefined, 'subtitles'));
+  const audioButton = control('audio', t('audioTracks'), () => togglePanel(undefined, 'audio'));
+  audioButton.hidden = true;
+  const fullscreen = control('fullscreen', t('fullscreen'), () => {
     if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
     else if (stage.requestFullscreen) stage.requestFullscreen().catch(() => {});
     else video.webkitEnterFullscreen?.();
-  }, 'glass');
-  const nextButton = secondaryButton(t('nextEpisode'), () => nextHref && go(nextHref), 'next');
-  nextButton.hidden = true;
+  });
+  const transport = h('div.player-transport', back10, playPause, forward, nextButton);
+  transport.hidden = true;
+  const toolbar = h('div.player-toolbar', transport, h('span.player-spacer'), versionsButton, subtitlesButton, audioButton, fullscreen);
+  // The timeline and the picture's own buttons wait for a picture: with no version found there is nothing to scrub.
+  const progress = h('div.player-progress', { hidden: true }, timeline, h('div.player-times', elapsed, remaining));
+  subtitlesButton.hidden = true;
+  fullscreen.hidden = true;
+  const bottom = h('div.player-bottom', titleSlot, episodeText, badges, progress, toolbar);
   const top = h('div.player-top',
-    roundButton('close', t('close'), () => back(kind && id ? `#/title/${kind}/${id}` : '#/home'), 'glass'),
-    h('div.player-heading', titleText, subText),
-    h('div.player-actions', nextButton, fullscreen, versionsButton));
-  const stage = h('div.player', video, status, top, panel);
+    h('button.nav-button.player-back', { type: 'button', 'aria-label': t('back'), onClick: () => back(kind && id ? `#/title/${kind}/${id}` : '#/home') }, icon('back')));
+  const stage = h('div.player', video, h('div.player-shade', { 'aria-hidden': 'true' }), status, top, bottom, panel);
   root.append(stage);
+  let panelKind = 'versions';
+
+  const clock = (seconds) => {
+    if (!Number.isFinite(seconds) || seconds < 0) return '0:00';
+    const total = Math.floor(seconds);
+    const hours = Math.floor(total / 3600);
+    const m = Math.floor((total % 3600) / 60);
+    const sec = String(total % 60).padStart(2, '0');
+    return hours ? `${hours}:${String(m).padStart(2, '0')}:${sec}` : `${m}:${sec}`;
+  };
+  const endsAt = (ms) => new Intl.DateTimeFormat(document.documentElement.lang === 'en' ? 'en' : 'fr-FR', { hour: '2-digit', minute: '2-digit' }).format(new Date(ms));
+  let scrubbing = false;
+  const drawTime = () => {
+    const d = video.duration;
+    const known = Number.isFinite(d) && d > 0;
+    if (!scrubbing) {
+      timeline.value = known ? String(Math.round((video.currentTime / d) * 1000)) : '0';
+      timeline.style.setProperty('--p', known ? String(video.currentTime / d) : '0');
+      elapsed.textContent = clock(video.currentTime);
+    }
+    timeline.disabled = !known;
+    remaining.textContent = known
+      ? `-${clock(d - video.currentTime)} · ${t('endsAt', { time: endsAt(Date.now() + ((d - video.currentTime) * 1000) / (video.playbackRate || 1)) })}`
+      : '';
+  };
+  video.addEventListener('timeupdate', drawTime);
+  video.addEventListener('durationchange', drawTime);
+  timeline.addEventListener('input', () => {
+    scrubbing = true;
+    if (Number.isFinite(video.duration)) {
+      timeline.style.setProperty('--p', String(Number(timeline.value) / 1000));
+      elapsed.textContent = clock((Number(timeline.value) / 1000) * video.duration);
+    }
+    showControls();
+  });
+  timeline.addEventListener('change', () => {
+    scrubbing = false;
+    if (Number.isFinite(video.duration)) video.currentTime = (Number(timeline.value) / 1000) * video.duration;
+  });
+  const drawPlay = () => playPause.replaceChildren(icon(video.paused ? 'play' : 'pause'), h('span.player-control-label', { 'aria-hidden': 'true' }, t('playPause')));
+  video.addEventListener('play', drawPlay);
+  video.addEventListener('pause', drawPlay);
+  // The transport shows once the picture is known, so a blocked autoplay still has its Play button.
+  video.addEventListener('loadedmetadata', () => {
+    transport.hidden = false;
+    progress.hidden = false;
+    subtitlesButton.hidden = false;
+    fullscreen.hidden = false;
+    drawPlay();
+  });
 
   let meta = { title: '', image: null };
   let versions = [];
@@ -113,8 +190,13 @@ export async function render({ root, params, query, signal, back, go }) {
       if (!video.paused && panel.hidden) stage.classList.add('controls-hidden');
     }, HIDE_CONTROLS_MS);
   }
-  stage.addEventListener('pointermove', showControls, { passive: true });
-  stage.addEventListener('pointerdown', showControls, { passive: true });
+  stage.addEventListener('pointermove', (e) => { if (e.pointerType === 'mouse') showControls(); }, { passive: true });
+  // A tap on the picture shows the controls, or hides them when they are there (as on a phone's player).
+  video.addEventListener('click', () => {
+    if (stage.classList.contains('controls-hidden')) showControls();
+    else if (!video.paused && panel.hidden) { clearTimeout(hideTimer); stage.classList.add('controls-hidden'); }
+  });
+  stage.addEventListener('keydown', showControls);
   const onKey = (e) => {
     if (e.key === 'Escape') {
       if (!panel.hidden) togglePanel(false);
@@ -137,9 +219,13 @@ export async function render({ root, params, query, signal, back, go }) {
   document.addEventListener('keydown', onKey);
 
   // --- Versions and subtitles panel ---------------------------------------------------------------------------------
-  function togglePanel(open = panel.hidden) {
+  function togglePanel(open, kindOfPanel = panelKind) {
+    if (open === undefined) open = panel.hidden || kindOfPanel !== panelKind;
+    panelKind = kindOfPanel;
     panel.hidden = !open;
-    versionsButton.setAttribute('aria-expanded', String(open));
+    for (const [button, name] of [[versionsButton, 'versions'], [subtitlesButton, 'subtitles'], [audioButton, 'audio']]) {
+      button.setAttribute('aria-expanded', String(open && name === panelKind));
+    }
     if (open) {
       drawPanel();
       panel.querySelector('[aria-checked="true"]')?.focus({ preventScroll: true });
@@ -185,10 +271,17 @@ export async function render({ root, params, query, signal, back, go }) {
         audioChoice = language || label;
         drawPanel();
       }))) : null;
+    audioButton.hidden = !audioList;
+    if (panelKind === 'versions') {
+      panel.replaceChildren(h('h2.panel-title', t('versions')), versionList);
+      return;
+    }
+    if (panelKind === 'audio' && audioList) {
+      panel.replaceChildren(h('h2.panel-title', t('audioTracks')), audioList);
+      return;
+    }
     panel.replaceChildren(
-      h('h2.panel-title', t('versions')), versionList,
-      audioList ? h('h2.panel-title.panel-title-next', t('audioTracks')) : null, audioList,
-      h('h2.panel-title.panel-title-next', t('subtitles')), subtitleList,
+      h('h2.panel-title', t('subtitles')), subtitleList,
       h('div.player-subtitle-search', secondaryButton(t('onlineSubtitles'), findSubtitles),
         subtitleLoading ? h('p.list-detail', { role: 'status' }, t('checking')) : null,
         subtitleError ? problem(subtitleError) : null,
@@ -286,6 +379,7 @@ export async function render({ root, params, query, signal, back, go }) {
     status.hidden = false;
     status.replaceChildren(error ? problem(error) : h('div.message', h('p.message-text', t('playFailed'))));
     if (versions.length > 1) versionsButton.hidden = false;
+    transport.hidden = true;
     showControls();
   }
 
@@ -328,6 +422,17 @@ export async function render({ root, params, query, signal, back, go }) {
       if (stillCurrent()) return (fallback || fail)();
     }
     versionsButton.hidden = false;
+    drawBadges(version);
+  }
+
+  /** The version's badges (SourceLine): the language and the origin outlined, the sharpness filled. */
+  function drawBadges(version) {
+    const origin = { iptv: 'IPTV', debrid: 'REAL-DEBRID', web: 'WEB' }[String(version.origin || '').toLowerCase()] || version.origin;
+    badges.replaceChildren(...[
+      version.language ? h('span.format-badge', version.language) : null,
+      version.quality ? h('span.format-badge.is-filled', version.quality) : null,
+      origin ? h('span.format-badge', String(origin).toUpperCase()) : null,
+    ].filter(Boolean));
   }
 
   video.addEventListener('loadedmetadata', () => {
@@ -346,7 +451,7 @@ export async function render({ root, params, query, signal, back, go }) {
   const metadata = api.title(kind, id, { signal });
   metadata.then(async (d) => {
     meta = { title: d.title || '', image: d.backdrop || d.poster || null };
-    titleText.textContent = meta.title;
+    titleSlot.replaceChildren(titleLogo(d.logo, meta.title));
     setTitle(meta.title);
     if (kind !== 'tv' || season == null || episode == null) return;
     const seasonData = await api.season(id, season, { signal });

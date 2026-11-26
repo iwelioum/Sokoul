@@ -1709,6 +1709,109 @@ body.is-playing { overflow: hidden; }
   .people-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 
+/* ================================================================ Player chrome (playback/ui/PlayerScreen.kt) */
+
+.player { --chrome: 1; }
+.player-shade {
+  position: absolute; left: 0; right: 0; bottom: 0; height: calc(520 * var(--u)); pointer-events: none;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.8));
+  transition: opacity 220ms var(--ease);
+}
+.player-top { padding: calc(var(--safe-t) + var(--nav-top)) calc(var(--nav-side) + var(--safe-r)) 0 calc(var(--nav-side) + var(--safe-l)); background: none; }
+.player-back { pointer-events: auto; }
+
+.player-bottom {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  padding: 0 calc(var(--m) + var(--safe-r)) calc(72 * var(--u) + var(--safe-b)) calc(var(--m) + var(--safe-l));
+  transition: opacity 220ms var(--ease);
+}
+.player-name .hero-logo-wrap { height: calc(130 * var(--u)); width: min(100%, calc(430 * var(--u))); }
+.player-name .hero-title { font-family: var(--font-display); font-size: calc(52 * var(--u)); line-height: 1.15; font-weight: 700; margin: 0; }
+.player-episode:empty { display: none; }
+.player-episode { margin-top: calc(14 * var(--u)); font-size: var(--fs-row); line-height: var(--lh-row); font-weight: 700; }
+
+/* SourceLine: the language and the origin outlined, the sharpness filled. */
+.player-badges { display: flex; flex-wrap: wrap; gap: calc(14 * var(--u)); margin-top: calc(16 * var(--u)); }
+.player-badges:empty { display: none; }
+.format-badge {
+  display: inline-flex; align-items: center; height: calc(38 * var(--u)); min-height: 24px; padding: 0 calc(12 * var(--u));
+  border-radius: calc(7 * var(--u)); box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.7);
+  font-size: var(--fs-sec); font-weight: 700; letter-spacing: 0.03em;
+}
+.format-badge.is-filled { background: var(--texte); color: var(--focus-encre); box-shadow: none; }
+
+/* The timeline: 14 tall, corner 11, grey track, the part seen lighter; 22 tall while in use. */
+.player-progress { margin-top: calc(24 * var(--u)); }
+.player-timeline {
+  --p: 0;
+  -webkit-appearance: none; appearance: none; display: block; width: 100%; margin: 0;
+  height: calc(14 * var(--u)); min-height: 8px; border-radius: calc(11 * var(--u));
+  background: linear-gradient(to right, #636366 calc(var(--p) * 100%), #3A3A3C 0);
+  cursor: pointer; touch-action: none;
+  transition: height 180ms var(--ease);
+}
+.player-timeline:hover, .player-timeline:focus-visible, .player-timeline:active {
+  height: calc(22 * var(--u)); min-height: 12px; outline: none;
+  background: linear-gradient(to right, #fff calc(var(--p) * 100%), #3A3A3C 0);
+}
+.player-timeline::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 0; height: 0; }
+.player-timeline::-moz-range-thumb { width: 0; height: 0; border: 0; }
+.player-timeline:disabled { cursor: default; opacity: 0.5; }
+/* A larger area to touch than the line itself. */
+.player-progress { position: relative; }
+.player-times { display: flex; justify-content: space-between; gap: 12px; margin-top: calc(16 * var(--u)); font-size: var(--fs-sec); font-weight: 600; color: var(--texte-2); font-variant-numeric: tabular-nums; }
+
+/* The control row: 64 circles, transparent at rest, white with focus; the name shows under the one in use. */
+.player-toolbar { display: flex; align-items: center; gap: calc(18 * var(--u)); margin-top: calc(14 * var(--u)); padding: calc(12 * var(--u)) 0; }
+.player-transport { display: flex; align-items: center; gap: calc(18 * var(--u)); }
+.player-spacer { flex: 1; }
+.player-control {
+  position: relative; width: max(calc(64 * var(--u)), 44px); height: max(calc(64 * var(--u)), 44px); border-radius: 50%;
+  display: grid; place-items: center; flex: none; color: var(--texte);
+  transition: background-color 140ms var(--ease), color 140ms var(--ease), transform 220ms var(--spring);
+}
+.player-control .icon { width: calc(30 * var(--u)); height: calc(30 * var(--u)); min-width: 22px; min-height: 22px; }
+.player-play .icon { width: calc(40 * var(--u)); height: calc(40 * var(--u)); }
+.player-control[aria-expanded='true'] { background: rgba(255, 255, 255, 0.33); }
+.player-control-label {
+  position: absolute; top: calc(100% + 12 * var(--u)); left: 50%; translate: -50% 0; white-space: nowrap;
+  font-size: calc(18 * var(--u)); font-weight: 600; color: var(--texte); opacity: 0; pointer-events: none;
+  transition: opacity 140ms var(--ease);
+}
+.player-control:focus-visible { outline: none; background: var(--focus-fond); color: var(--focus-encre); transform: scale(var(--button-scale)); }
+.player-control:focus-visible .player-control-label { opacity: 1; }
+@media (hover: hover) and (pointer: fine) {
+  .player-control:hover { background: var(--focus-fond); color: var(--focus-encre); transform: scale(var(--button-scale)); }
+  .player-control:hover .player-control-label { opacity: 1; }
+}
+.player-control:active { filter: brightness(0.9); }
+
+/* Menus open bottom right, above the control row (PlayerPopover): glass, 520 wide. */
+.player-panel {
+  position: absolute; top: auto; right: calc(60 * var(--u) + var(--safe-r)); bottom: calc(250 * var(--u) + var(--safe-b));
+  width: min(calc(520 * var(--u)), calc(100vw - 2 * var(--m))); min-width: min(320px, calc(100vw - 2 * var(--m)));
+  max-height: min(calc(700 * var(--u)), calc(100dvh - 300 * var(--u) - var(--safe-t)));
+  overflow-y: auto; overscroll-behavior: contain;
+  padding: calc(26 * var(--u)) calc(14 * var(--u)) calc(14 * var(--u)); border-radius: var(--r-panel);
+  transform-origin: bottom right; animation: panel-in 220ms var(--ease) both;
+}
+.player-panel .panel-title { padding: 0 calc(26 * var(--u)); margin-bottom: calc(10 * var(--u)); font-size: var(--fs-title); line-height: var(--lh-title); }
+.player-panel .option-list { margin: 0; }
+.player-panel .option { min-height: max(calc(76 * var(--u)), 48px); padding: calc(14 * var(--u)) calc(26 * var(--u)); border-radius: var(--r-row); }
+.player-panel .option-label { font-size: var(--fs-option); line-height: var(--lh-option); }
+.player-panel .option-detail { font-size: calc(24 * var(--u)); }
+.player-panel .player-subtitle-search { padding: calc(14 * var(--u)) calc(26 * var(--u)) 0; display: grid; gap: 12px; }
+
+.player.controls-hidden .player-bottom, .player.controls-hidden .player-shade { opacity: 0; pointer-events: none; }
+
+@media (max-width: 599px), (max-height: 520px) and (orientation: landscape) and (pointer: coarse) {
+  .player-bottom { padding-bottom: calc(24px + var(--safe-b)); }
+  .player-toolbar { gap: 4px; }
+  .player-transport { gap: 4px; }
+  .player-times { font-size: 13px; }
+  .player-panel { right: var(--m); left: var(--m); width: auto; bottom: calc(150px + var(--safe-b)); }
+}
+
 /* ---------------------------------------------------------------- Reduced motion */
 
 @media (prefers-reduced-motion: reduce) {
