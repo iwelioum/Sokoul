@@ -46,12 +46,14 @@ class DiscoverData(private val db: DesktopDb, private val catalog: Catalog) {
                     cast = info.cast.mapNotNull { it.id })
             }
         }.awaitAll().filterNotNull()
-        val profile = Taste.profile(rows)
-            ?: return@coroutineScope usableTitles(tmdb.trending(k, "movie") + tmdb.trending(k, "tv"))
+        // Without enough history there is nothing personal to show: the row stays hidden rather than repeating the
+        // trending titles the Top 10 already shows (the owner's rule: every section different, 2026-11-26).
+        val profile = Taste.profile(rows) ?: return@coroutineScope emptyList()
         val sources = profile.top.take(5).map { w -> async { tmdb.recommendations(k, w.kind, w.id).map { it.copy(mediaType = it.mediaType ?: w.kind) } } } +
             profile.topGenres.flatMap { g ->
                 listOf("movie", "tv").map { kind -> async { tmdb.discover(k, kind, mapOf("with_genres" to "$g", "sort_by" to "popularity.desc")).map { it.copy(mediaType = kind) } } }
-            } + listOf(async { tmdb.trending(k, "movie") + tmdb.trending(k, "tv") })
+            }
+        // No trending pool: the Top 10 already shows it, and "For you" must stay different from it.
         val items = sources.awaitAll().flatten().filter { it.poster != null }
         val byKey = items.associateBy { it.kind() to it.id }
         val ranked = Taste.rank(
