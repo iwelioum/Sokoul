@@ -1812,6 +1812,123 @@ body.is-playing { overflow: hidden; }
   .player-panel { right: var(--m); left: var(--m); width: auto; bottom: calc(150px + var(--safe-b)); }
 }
 
+/* ================================================================ Settings (library/SettingsScreen.kt) */
+
+/* The graphite canvas with a soft light from the top right (Nacre.Canvas). */
+body[data-screen='settings'] { background: radial-gradient(120% 90% at 100% 0%, #2E2E31 0%, #121213 45%, #090909 70%) fixed, #090909; }
+.settings-page {
+  display: grid; grid-template-columns: calc(480 * var(--u)) minmax(0, 1fr); gap: calc(22 * var(--u));
+  padding: calc(var(--safe-t) + 140 * var(--u)) calc(var(--m) + var(--safe-r)) calc(50 * var(--u) + var(--safe-b)) calc(var(--m) + var(--safe-l));
+  min-height: 100dvh;
+}
+.settings-side { min-width: 0; }
+.settings-title { margin: calc(4 * var(--u)) 0 calc(18 * var(--u)) calc(6 * var(--u)); font-family: var(--font-display); font-size: calc(64 * var(--u)); line-height: 1.15; font-weight: 700; letter-spacing: -0.02em; }
+.settings-group { margin: calc(28 * var(--u)) 0 calc(8 * var(--u)) calc(26 * var(--u)); font-size: calc(25 * var(--u)); font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--texte-2); }
+.settings-categories section:first-child .settings-group { margin-top: 0; }
+.settings-entries { list-style: none; margin: 0 0 0 calc(-9 * var(--u)); padding: 0; display: flex; flex-direction: column; gap: 0; }
+.settings-entry {
+  display: flex; align-items: center; gap: calc(22 * var(--u)); min-height: max(calc(76 * var(--u)), 48px); padding: 0 calc(35 * var(--u));
+  border-radius: var(--r-row); font-size: calc(31 * var(--u)); font-weight: 500;
+  transition: background-color 140ms var(--ease), color 140ms var(--ease), transform 140ms var(--ease);
+}
+.settings-entry-icon { width: calc(34 * var(--u)); height: calc(34 * var(--u)); min-width: 20px; min-height: 20px; flex: none; }
+.settings-entry[aria-current='page'] { background: var(--focus-fond); color: var(--focus-encre); }
+.settings-entry:focus-visible { outline: none; background: var(--focus-fond); color: var(--focus-encre); transform: scale(1.02); }
+@media (hover: hover) and (pointer: fine) { .settings-entry:hover { background: var(--focus-fond); color: var(--focus-encre); } }
+
+/* The page of a category: a large dark plate, corner 40, a hairline, under its breadcrumb. */
+.settings-panel {
+  min-width: 0; align-self: start; min-height: calc(890 * var(--u));
+  padding: calc(40 * var(--u)) calc(44 * var(--u));
+  border-radius: var(--r-panel);
+  background: linear-gradient(to bottom, rgba(44, 44, 46, 0.9), rgba(28, 28, 30, 0.92));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1), 0 calc(30 * var(--u)) calc(80 * var(--u)) rgba(0, 0, 0, 0.45);
+}
+.settings-crumb { font-size: calc(24 * var(--u)); color: var(--texte-2); font-weight: 500; }
+.settings-crumb a { color: inherit; }
+.settings-crumb a:hover, .settings-crumb a:focus-visible { color: var(--texte); outline: none; }
+.settings-pane-title { margin: calc(8 * var(--u)) 0 calc(26 * var(--u)); font-family: var(--font-display); font-size: calc(46 * var(--u)); line-height: 1.2; font-weight: 700; }
+.settings-hint { font-size: var(--fs-body); color: var(--texte-2); }
+
+.setting-row {
+  display: flex; align-items: center; justify-content: space-between; gap: calc(24 * var(--u));
+  min-height: max(calc(86 * var(--u)), 52px); padding: 0 calc(16 * var(--u)); margin: 0 calc(-16 * var(--u));
+  border-radius: var(--r-row); transition: background-color 140ms var(--ease);
+}
+.setting-row:hover { background: rgba(255, 255, 255, 0.06); }
+.setting-label { font-size: var(--fs-option); line-height: var(--lh-option); font-weight: 600; min-width: 0; }
+.setting-value { position: relative; display: inline-flex; align-items: center; gap: calc(10 * var(--u)); color: var(--texte-2); flex: none; max-width: 55%; }
+.setting-select {
+  -webkit-appearance: none; appearance: none; border: 0; background: transparent; color: inherit; font: inherit;
+  font-size: calc(24 * var(--u)); font-weight: 500; text-align: end; padding: calc(8 * var(--u)) calc(40 * var(--u)) calc(8 * var(--u)) 0; margin-right: calc(-40 * var(--u));
+  cursor: pointer; max-width: 100%; text-overflow: ellipsis; field-sizing: content;
+}
+.setting-select:focus-visible { outline: 2px solid var(--focus-fond); outline-offset: 4px; border-radius: 8px; }
+.setting-select option { color: #000; }
+.setting-updown { width: calc(28 * var(--u)); height: calc(28 * var(--u)); min-width: 18px; min-height: 18px; rotate: 90deg; pointer-events: none; }
+
+/* The apps' switch: a white pill with a dark knob when on, a grey one when off. */
+.switch {
+  -webkit-appearance: none; appearance: none; position: relative; flex: none; cursor: pointer; margin: 0;
+  width: max(calc(64 * var(--u)), 44px); height: max(calc(36 * var(--u)), 26px); border-radius: 999px;
+  background: rgba(255, 255, 255, 0.2); transition: background-color 180ms var(--ease);
+}
+.switch::after {
+  content: ''; position: absolute; top: 4px; left: 4px; height: calc(100% - 8px); aspect-ratio: 1; border-radius: 50%;
+  background: #fff; transition: left 220ms var(--spring), translate 220ms var(--spring), background-color 180ms var(--ease);
+}
+.switch:checked { background: #fff; }
+.switch:checked::after { background: var(--focus-encre); left: calc(100% - 4px); translate: -100% 0; }
+.switch:focus-visible { outline: 2px solid var(--focus-fond); outline-offset: 3px; }
+.reorder-list { list-style: none; margin: 0; padding: 0; }
+.reorder-row .check-field { display: flex; align-items: center; gap: calc(20 * var(--u)); font-size: var(--fs-option); font-weight: 600; min-width: 0; }
+.row-order .btn-text { min-width: 44px; font-size: var(--fs-strong); }
+
+@media (max-width: 899px) {
+  .settings-page { grid-template-columns: 1fr; padding-top: calc(var(--safe-t) + var(--nav-top) + 44px + 20px); }
+  .settings-page[data-pane]:not([data-pane='']) .settings-side { display: none; }
+  .settings-page[data-pane=''] .settings-panel { display: none; }
+  .settings-panel { min-height: 0; padding: 24px 20px; }
+  .settings-title { font-size: 34px; }
+  .settings-group { font-size: 13px; }
+  .settings-entry { font-size: 17px; padding: 0 16px; }
+  .settings-pane-title { font-size: 28px; }
+  .setting-label, .reorder-row .check-field { font-size: 17px; }
+  .setting-select { font-size: 15px; }
+  .settings-crumb { font-size: 15px; }
+}
+
+/* Sources et clés (setup/SourcesScreen.kt): the large title, the section heads in the panel title's size. */
+[data-screen='sources'] .page-title, [data-screen='account'] .page-title { font-size: calc(64 * var(--u)); line-height: 1.15; letter-spacing: -0.02em; }
+[data-screen='sources'] .section-title { font-family: var(--font-display); font-size: calc(46 * var(--u)); line-height: 1.2; font-weight: 600; margin: calc(56 * var(--u)) 0 calc(20 * var(--u)); }
+.source-card { border-radius: calc(28 * var(--u)); padding: calc(28 * var(--u)) calc(32 * var(--u)); gap: calc(24 * var(--u)); background: var(--plaque); min-height: calc(160 * var(--u)); }
+.source-card > .icon { width: calc(40 * var(--u)); height: calc(40 * var(--u)); min-width: 24px; min-height: 24px; margin-top: 2px; }
+.source-title strong, .source-title > :first-child { font-size: var(--fs-option); font-weight: 600; }
+.source-summary p { font-size: var(--fs-body); line-height: var(--lh-body); }
+.source-state { font-size: var(--fs-body); }
+.source-card:focus-visible { outline: none; background: var(--focus-fond); color: var(--focus-encre); }
+.source-card:focus-visible .source-summary p, .source-card:focus-visible .source-state { color: rgba(17, 17, 17, 0.62); }
+@media (hover: hover) and (pointer: fine) {
+  .source-card:hover { background: var(--focus-fond); color: var(--focus-encre); }
+  .source-card:hover .source-summary p, .source-card:hover .source-state { color: rgba(17, 17, 17, 0.62); }
+}
+.sources-grid { gap: calc(24 * var(--u)) calc(32 * var(--u)); }
+
+/* ================================================================ Live TV, lists and pills on the other pages */
+
+/* Segments take the search page's kind pills (SearchScreen.Tabs): 66 tall, the chosen one on a lighter grey. */
+.page .segmented-wrap { margin-left: calc(-1 * (var(--m) + var(--safe-l))); margin-right: calc(-1 * (var(--m) + var(--safe-r))); }
+.segmented { padding: calc(8 * var(--u)); border-radius: 999px; background: rgba(255, 255, 255, 0.06); gap: calc(8 * var(--u)); }
+.segment { display: inline-flex; align-items: center; justify-content: center; height: var(--btn-h); min-height: 40px; padding: 0 calc(30 * var(--u)); background: transparent; color: var(--texte); font-size: var(--fs-strong); }
+.segment[aria-selected='true'], .segment[aria-pressed='true'], .segment[aria-current='page'],
+.live-tabs .segment[aria-current='page'], .segmented button[aria-pressed='true'] { background: #474749; color: var(--texte); }
+.page-title { font-size: calc(64 * var(--u)); line-height: 1.15; letter-spacing: -0.02em; }
+@media (max-width: 599px) {
+  .page-title { font-size: 34px; }
+  .setting-select { font-size: 16px; }
+  .field { font-size: 16px; }
+}
+
 /* ---------------------------------------------------------------- Reduced motion */
 
 @media (prefers-reduced-motion: reduce) {
