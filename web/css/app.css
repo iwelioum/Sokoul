@@ -425,7 +425,7 @@ button, a, [role='button'], .card, .segment, .option {
 .editorial-heading-line { display: flex; justify-content: space-between; gap: 16px; align-items: baseline; }
 .editorial-heading .rail-title { margin: 0; padding: 0; }
 .editorial-more { display: inline-flex; gap: 6px; align-items: center; flex: none; color: var(--texte-2); font-size: var(--fs-sec); }
-.editorial-more:hover { color: var(--texte); }
+@media (hover: hover) and (pointer: fine) { .editorial-more:hover { color: var(--texte); } }
 .editorial-more .icon { width: 16px; height: 16px; }
 .editorial-tile, .offer-card {
   min-height: 84px;
@@ -440,7 +440,7 @@ button, a, [role='button'], .card, .segment, .option {
   background: var(--plaque);
   font-weight: 650;
 }
-.editorial-tile:hover, .offer-card:hover { background: var(--pilule); }
+@media (hover: hover) and (pointer: fine) { .editorial-tile:hover, .offer-card:hover { background: var(--pilule); } }
 .editorial-logo { width: 100%; max-height: 48px; object-fit: contain; }
 .editorial-ranked { position: relative; display: flex; align-items: end; padding-inline-start: 25px; flex: 0 0 auto; }
 .editorial-rank { position: absolute; inset: auto auto 22% -2px; z-index: 2; font-weight: 750; font-size: clamp(44px, 5vw, 82px); text-shadow: 0 3px 8px #000; pointer-events: none; }
@@ -1200,7 +1200,7 @@ body.is-playing { overflow: hidden; }
 
 .presents { display: flex; align-items: center; gap: calc(14 * var(--u)); margin-bottom: calc(12 * var(--u)); min-height: calc(36 * var(--u)); max-width: 100%; }
 .presents-logo { height: calc(36 * var(--u)); width: auto; max-width: calc(76 * var(--u)); object-fit: contain; object-position: left center; filter: brightness(0) invert(1); }
-.presents-label { font-size: var(--fs-caption); font-weight: 600; letter-spacing: calc(4 * var(--u)); color: var(--texte-bar); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.presents-label { text-transform: uppercase; font-size: var(--fs-caption); font-weight: 600; letter-spacing: calc(4 * var(--u)); color: var(--texte-bar); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 
 .hero-logo-wrap { margin: 0; height: calc(130 * var(--u)); width: min(100%, calc(430 * var(--u))); display: flex; align-items: center; }
 .hero-logo { max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; object-position: left center; filter: drop-shadow(0 0 calc(14 * var(--u)) rgba(0, 0, 0, 0.75)); }
@@ -1256,7 +1256,8 @@ body.is-playing { overflow: hidden; }
   font-size: calc(19 * var(--u)); font-weight: 700; letter-spacing: calc(3 * var(--u)); color: var(--texte-bar);
   padding: calc(4 * var(--u)) 0; min-height: 32px; border-radius: calc(8 * var(--u)); transition: color 140ms var(--ease);
 }
-.summary-more:hover, .summary-more:focus-visible { color: var(--texte); outline: none; }
+.summary-more:focus-visible { color: var(--texte); outline: none; }
+@media (hover: hover) and (pointer: fine) { .summary-more:hover { color: var(--texte); } }
 
 /* Buttons: PlayCard (84 tall), then round buttons 66 that open into a pill with their name. */
 .hero-actions { display: flex; flex-wrap: wrap; align-items: center; gap: calc(24 * var(--u)); margin-top: calc(26 * var(--u)); }
@@ -1328,7 +1329,8 @@ body.is-playing { overflow: hidden; }
   color: var(--texte-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   transition: color 220ms var(--ease);
 }
-.card-row:hover .row-heading, .card-row:focus-within .row-heading { color: var(--texte); }
+.card-row:focus-within .row-heading { color: var(--texte); }
+@media (hover: hover) and (pointer: fine) { .card-row:hover .row-heading { color: var(--texte); } }
 @media (hover: none) { .row-heading { color: var(--texte); } }
 .row-heading-skeleton { width: calc(300 * var(--u)); height: var(--lh-row); margin: 0 var(--m); border-radius: 8px; }
 .row-message { padding: calc(20 * var(--u)) var(--m) 0; }
@@ -1391,6 +1393,10 @@ body.is-playing { overflow: hidden; }
   font-family: var(--font-display); font-weight: 700; font-size: calc(30 * var(--u)); line-height: 1.1; letter-spacing: 0.02em;
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6); overflow-wrap: anywhere;
 }
+.card-name-text { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: break-word; hyphens: auto; max-width: 100%; }
+.art-landscape .card-name-text, .art-square .card-name-text { -webkit-line-clamp: 3; }
+/* Under a Top 10 numeral the name starts below it. */
+.tile-ranked .card-name { padding-top: calc(90 * var(--u)); }
 .art-poster .card-name { background: linear-gradient(to bottom, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.35) 50%, rgba(0, 0, 0, 0.65)); }
 
 /* The caption ("Film · Genre") inside the card's foot: while pointed at; always on a Top 10 card. */
@@ -1494,6 +1500,7 @@ body.is-playing { overflow: hidden; }
 .tile-tool:focus-visible .art-tool { color: var(--texte); }
 @media (hover: hover) and (pointer: fine) { .tile-tool:hover .art-tool { color: var(--texte); } }
 
+.home-hero > .page { padding-bottom: var(--section-above); }
 .rows-message { padding: calc(40 * var(--u)) calc(var(--m) + var(--safe-r)) 0 calc(var(--m) + var(--safe-l)); }
 
 /* A phone: the hero's text takes the width, the buttons wrap; tiles a little smaller than the TV's. */
@@ -1507,6 +1514,8 @@ body.is-playing { overflow: hidden; }
   .hero-actions { gap: calc(18 * var(--u)); }
   .hero-logo-wrap { height: calc(150 * var(--u)); width: min(100%, calc(480 * var(--u))); }
   .tagline-text { letter-spacing: calc(2 * var(--u)); }
+  /* A title without its logo needs its full name on a phone: three lines before it is cut. */
+  .hero-info .hero-title { -webkit-line-clamp: 3; }
 }
 /* A tablet held upright: the hero a little taller than wide, its text over the bottom, the full width. */
 @media (orientation: portrait) and (min-width: 600px) {
@@ -1750,7 +1759,7 @@ body.is-playing { overflow: hidden; }
   cursor: pointer; touch-action: none;
   transition: height 180ms var(--ease);
 }
-.player-timeline:hover, .player-timeline:focus-visible, .player-timeline:active {
+.player-timeline:focus-visible, .player-timeline:active, .player-progress:hover .player-timeline {
   height: calc(22 * var(--u)); min-height: 12px; outline: none;
   background: linear-gradient(to right, #fff calc(var(--p) * 100%), #3A3A3C 0);
 }
@@ -1846,7 +1855,8 @@ body[data-screen='settings'] { background: radial-gradient(120% 90% at 100% 0%, 
 }
 .settings-crumb { font-size: calc(24 * var(--u)); color: var(--texte-2); font-weight: 500; }
 .settings-crumb a { color: inherit; }
-.settings-crumb a:hover, .settings-crumb a:focus-visible { color: var(--texte); outline: none; }
+.settings-crumb a:focus-visible { color: var(--texte); outline: none; }
+@media (hover: hover) and (pointer: fine) { .settings-crumb a:hover { color: var(--texte); } }
 .settings-pane-title { margin: calc(8 * var(--u)) 0 calc(26 * var(--u)); font-family: var(--font-display); font-size: calc(46 * var(--u)); line-height: 1.2; font-weight: 700; }
 .settings-hint { font-size: var(--fs-body); color: var(--texte-2); }
 
@@ -1855,7 +1865,7 @@ body[data-screen='settings'] { background: radial-gradient(120% 90% at 100% 0%, 
   min-height: max(calc(86 * var(--u)), 52px); padding: 0 calc(16 * var(--u)); margin: 0 calc(-16 * var(--u));
   border-radius: var(--r-row); transition: background-color 140ms var(--ease);
 }
-.setting-row:hover { background: rgba(255, 255, 255, 0.06); }
+@media (hover: hover) and (pointer: fine) { .setting-row:hover { background: rgba(255, 255, 255, 0.06); } }
 .setting-label { font-size: var(--fs-option); line-height: var(--lh-option); font-weight: 600; min-width: 0; }
 .setting-value { position: relative; display: inline-flex; align-items: center; gap: calc(10 * var(--u)); color: var(--texte-2); flex: none; max-width: 55%; }
 .setting-select {

@@ -280,7 +280,7 @@ export async function render({ root, signal, go, params }) {
       if (signal.aborted) return;
       top.replaceChildren(heroItems.length
         ? hero(heroItems, `${store.user()?.id}|${profile}|${section}`, go, signal)
-        : h('div.page-top', h('h1.page-title.page-title-alone', label)));
+        : h('div.page', h('h1.page-title', label)));
 
       const needsBrands = rows.some((row) => row.links?.some((l) => /^shelf\/(platform|studio)\//.test(l.route)));
       const brands = needsBrands

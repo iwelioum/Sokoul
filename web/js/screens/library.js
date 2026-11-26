@@ -14,6 +14,16 @@ export async function render({ root, params, query, signal }) {
   let page = 1;
   let loading = false;
   setTitle(label);
+  // A row opened without its name in the address (a shared link, a reload of an old one) takes it from the plan.
+  if (row && !query.get('label')) {
+    api.section(section, { signal }).then((plan) => {
+      const named = plan.find((entry) => entry.id === row)?.title;
+      if (named && !signal.aborted) {
+        title.textContent = named;
+        setTitle(named);
+      }
+    }).catch(() => {});
+  }
   root.append(h('div.page', title, content, footer));
   content.append(grid, skeletonLines(3));
 

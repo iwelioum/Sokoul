@@ -58,7 +58,7 @@ function picture(src, cls = '') {
 
 /** The title in bold over a picture that has no logo (SmartPoster.PosterTitle). */
 function cardName(text) {
-  return h('span.card-name', text);
+  return h('span.card-name', h('span.card-name-text', { lang: document.documentElement.lang }, text));
 }
 
 /** A logo over the art; the title in text if it fails. */
