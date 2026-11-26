@@ -594,9 +594,16 @@ private fun Hero(
     androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxWidth().then(modifier).testTag("hero")) {
         // The text block, the logo and the buttons follow the hero's size: as drawn on a 1920 x 1080 screen, smaller
         // in a smaller window, never larger.
-        val upright = com.sokoul.pc.ui.Form.tabletPortrait
+        // A phone held upright lays its hero out like a tablet held upright: at 49 % of its width the text block cut the
+        // last buttons, squeezed the genres and wrapped the age rating one digit per line (renders, 2026-11-26).
+        val phoneUpright = com.sokoul.pc.ui.Form.isPortrait
+        val upright = com.sokoul.pc.ui.Form.tabletPortrait || phoneUpright
         val heroScale = if (upright) 1f else minOf(maxWidth.value / HERO_DESIGN_WIDTH, maxHeight.value / HERO_DESIGN_HEIGHT).coerceIn(HERO_MIN_SCALE, 1f)
-        val textWidth = if (upright) maxWidth * HERO_UPRIGHT_TEXT else maxWidth * HERO_TEXT_WIDTH / heroScale
+        val textWidth = when {
+            phoneUpright -> maxWidth - Metrics.PageMargin * 2
+            upright -> maxWidth * HERO_UPRIGHT_TEXT
+            else -> maxWidth * HERO_TEXT_WIDTH / heroScale
+        }
         val textBottom = if (upright) 64.dp else maxHeight * HERO_TEXT_BOTTOM
         val density = LocalDensity.current
         val rtl = androidx.compose.ui.platform.LocalLayoutDirection.current == androidx.compose.ui.unit.LayoutDirection.Rtl

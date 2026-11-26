@@ -38,7 +38,7 @@ import java.io.File
 @OptIn(androidx.compose.ui.InternalComposeUiApi::class)
 fun main(args: Array<String>) {
     val out = File(args.firstOrNull() ?: "renders").also { it.mkdirs() }
-    val realKeys = ProviderConfig.builtIn
+    val realKeys = ownerKeys(ProviderConfig.builtIn)
 
     fun scene(deps: AppDeps, width: Int = 1920, height: Int = 1080, splash: Boolean = false) =
         ImageComposeScene(width, height, Density(1f)) {
@@ -652,6 +652,27 @@ fun main(args: Array<String>) {
     }
     file.delete()
     kotlin.system.exitProcess(0)
+}
+
+/**
+ * The build's keys, completed with the ones saved in the PC app's own database when the build has none (no
+ * local.properties on this machine): opened read-only, kept in memory, never printed.
+ */
+private fun ownerKeys(built: () -> Map<String, String>): () -> Map<String, String> {
+    val saved: Map<String, String> by lazy {
+        val db = File(System.getenv("APPDATA") ?: return@lazy emptyMap(), "SokoulPC/sokoul.db")
+        if (!db.isFile) return@lazy emptyMap()
+        runCatching {
+            java.sql.DriverManager.getConnection("jdbc:sqlite:file:${db.absolutePath.replace('\\', '/')}?mode=ro").use { conn ->
+                conn.prepareStatement("SELECT key, value FROM settings WHERE key LIKE 'api_key_%'").use { st ->
+                    st.executeQuery().use { rs ->
+                        buildMap { while (rs.next()) rs.getString(2)?.takeIf { it.isNotBlank() }?.let { put(rs.getString(1).removePrefix("api_key_"), it) } }
+                    }
+                }
+            }
+        }.getOrDefault(emptyMap())
+    }
+    return { saved + built().filterValues { it.isNotBlank() } }
 }
 
 /** A title for the phone renders: the first trending film, read with the render's own key. */

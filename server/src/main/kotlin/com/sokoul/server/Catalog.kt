@@ -75,6 +75,27 @@ import java.time.LocalDate
     val watchLink: String? = null,
     val collection: TitleCollection? = null,
     val alertMarker: String? = null,
+    /** The one-line promise under the logo. */
+    val tagline: String? = null,
+    /** The studios or channels that present it, with their logos when TMDB has them (the apps' "PRÉSENTE" line). */
+    val brands: List<TitleBrand> = emptyList(),
+    /** ISO 639-1 codes of the languages spoken in it, the original one not repeated. */
+    val spokenLanguages: List<String> = emptyList(),
+    /** Series only: how many seasons it has. */
+    val seasonCount: Int? = null,
+    /** The director of a film, the creator of a series. */
+    val director: String? = null,
+    /** A poster without its lettering, for the title's logo to sit on. */
+    val cleanPoster: String? = null,
+)
+@Serializable data class TitleBrand(val name: String, val logo: String? = null)
+
+/** What a card draws (ui/SmartPoster.kt): the textless poster and backdrop, the title's logo and its first genre. */
+@Serializable data class ArtworkBody(
+    val cleanPoster: String? = null,
+    val backdrop: String? = null,
+    val logo: String? = null,
+    val genre: String? = null,
 )
 @Serializable data class EpisodeBody(
     /** The episode number in its season. */
@@ -137,9 +158,8 @@ class Catalog(
         val movie = kind == "movie"
         val genres = o.jArr("genres").mapNotNull { (it as? JsonObject)?.jStr("name") }
         val runtime = if (movie) o.jInt("runtime") else o.jArr("episode_run_time").firstNotNullOfOrNull { (it as? JsonPrimitive)?.intOrNull }
-        val logos = (o["images"] as? JsonObject)?.jArr("logos").orEmpty().mapNotNull { it as? JsonObject }
-        val logo = (logos.firstOrNull { it.jStr("iso_639_1") == language.take(2) } ?: logos.firstOrNull { it.jStr("iso_639_1") == "en" } ?: logos.firstOrNull())
-            ?.jStr("file_path")?.let { TmdbGateway.image(it, "w500") }
+        val art = artworkOf(o, language)
+        val logo = art.logo
         val cast = (o["credits"] as? JsonObject)?.jArr("cast").orEmpty().mapNotNull { it as? JsonObject }.take(10).mapNotNull { c ->
             val name = c.jStr("name") ?: return@mapNotNull null
             CastMember(name, c.jStr("character")?.takeIf { it.isNotBlank() }, TmdbGateway.image(c.jStr("profile_path"), "w185"), c.jInt("id"))
@@ -185,7 +205,7 @@ class Catalog(
             runtime = runtime?.takeIf { it > 0 },
             genres = genres,
             rating = (o["vote_average"] as? JsonPrimitive)?.doubleOrNull?.takeIf { it > 0 },
-            backdrop = TmdbGateway.image(o.jStr("backdrop_path"), "w1280"),
+            backdrop = art.backdrop?.let { TmdbGateway.image(it, "w1280") },
             poster = TmdbGateway.image(o.jStr("poster_path"), "w500"),
             logo = logo,
             cast = cast,
@@ -200,7 +220,53 @@ class Catalog(
             watchLink = watchRegion?.jStr("link")?.takeIf { it.startsWith("https://www.themoviedb.org/") },
             collection = collection,
             alertMarker = news(TitleAlert(kind, id, ""), o)?.marker,
+            tagline = o.jStr("tagline")?.takeIf { it.isNotBlank() },
+            brands = (o.jArr("networks") + o.jArr("production_companies")).mapNotNull { it as? JsonObject }
+                .mapNotNull { b -> TitleBrand(b.jStr("name") ?: return@mapNotNull null, TmdbGateway.image(b.jStr("logo_path"), "w300")) }
+                .sortedByDescending { it.logo != null }.distinctBy { it.name }.take(4),
+            spokenLanguages = o.jArr("spoken_languages").mapNotNull { (it as? JsonObject)?.jStr("iso_639_1") }
+                .filter { it != o.jStr("original_language") }.distinct().take(4),
+            seasonCount = if (movie) null else o.jInt("number_of_seasons")?.takeIf { it > 0 },
+            director = if (movie) {
+                (o["credits"] as? JsonObject)?.jArr("crew").orEmpty().mapNotNull { it as? JsonObject }.firstOrNull { it.jStr("job") == "Director" }?.jStr("name")
+            } else {
+                o.jArr("created_by").mapNotNull { it as? JsonObject }.firstOrNull()?.jStr("name")
+            },
+            cleanPoster = art.cleanPoster?.let { TmdbGateway.image(it, "w500") },
         )
+    }
+
+    /** A card's artwork, from the same answer the apps read (TmdbClient.details): cached like every TMDB answer. */
+    suspend fun artwork(userId: String, language: String, kind: String, id: Int): ArtworkBody {
+        val o = tmdb.get(keyOf(userId), "$kind/$id",
+            mapOf("append_to_response" to "images", "include_image_language" to "${language.take(2)},en,null"), language)
+        val art = artworkOf(o, language)
+        return ArtworkBody(
+            cleanPoster = art.cleanPoster?.let { TmdbGateway.image(it, "w342") },
+            backdrop = art.backdrop?.let { TmdbGateway.image(it, "w780") },
+            logo = art.logo,
+            genre = o.jArr("genres").firstNotNullOfOrNull { (it as? JsonObject)?.jStr("name") },
+        )
+    }
+
+    private class Art(val cleanPoster: String?, val backdrop: String?, val logo: String?)
+
+    /**
+     * The textless poster and backdrop and the logo, chosen as the apps choose them (TmdbClient.parse, ui/SmartPoster.kt):
+     * the interface language's logo, else the English one, else any; for a work in a script a French or English reader
+     * cannot read, only the English logo, so a card never shows a name nobody here can read.
+     */
+    private fun artworkOf(o: JsonObject, language: String): Art {
+        val images = o["images"] as? JsonObject
+        val logos = images?.jArr("logos").orEmpty().mapNotNull { it as? JsonObject }
+        val english = logos.firstOrNull { it.jStr("iso_639_1") == "en" }
+        val chosen = if (o.jStr("original_language") in UNREADABLE_SCRIPTS) english
+            else logos.firstOrNull { it.jStr("iso_639_1") == language.take(2) } ?: english ?: logos.firstOrNull()
+        val logo = chosen?.jStr("file_path")?.replace(".svg", ".png")?.let { TmdbGateway.image(it, "w500") }
+        val clean = images?.jArr("posters").orEmpty().mapNotNull { it as? JsonObject }.firstOrNull { it.jStr("iso_639_1") == null }?.jStr("file_path")
+        val backdrop = images?.jArr("backdrops").orEmpty().mapNotNull { it as? JsonObject }.firstOrNull { it.jStr("iso_639_1") == null }?.jStr("file_path")
+            ?: o.jStr("backdrop_path")
+        return Art(clean, backdrop, logo)
     }
 
     suspend fun followedNews(userId: String, language: String, profile: String): List<FollowedNews> {
@@ -333,6 +399,9 @@ class Catalog(
         const val MAX_CONTINUE = 20
         private val YOUTUBE_KEY = Regex("[A-Za-z0-9_-]{11}")
         val KINDS = setOf("movie", "tv")
+
+        /** Languages whose script a French or English reader cannot read (ui/SmartPoster.kt). */
+        private val UNREADABLE_SCRIPTS = setOf("ja", "zh", "cn", "ko", "th", "ar", "he", "fa", "hi", "ta", "te", "ru", "uk", "el", "bg", "ka")
 
         /** A synced image: a TMDB path, or a TMDB CDN address as the apps store it; anything else is not shown. */
         fun imageUrl(raw: String?, size: String): String? {

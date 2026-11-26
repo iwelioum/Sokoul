@@ -1,37 +1,24 @@
-// Title page: backdrop, logo or title, one metadata line, Play / Resume, synopsis; seasons and episodes for a series;
-// the cast row.
+// A title's page as the apps draw it (title/TitleScreen.kt, HeroDetails.kt): the picture the height of the screen with
+// the hero's text and buttons at its foot, then the episodes, the trailers, the cast, the titles like it and the details.
 
 import { api } from '../api.js';
 import { lang, t, runtime } from '../i18n.js';
 import * as store from '../store.js';
-import {
-  h, img, rail, thumbCard, skeletonRail, skeletonLines, problem, empty, primaryButton, roundButton, metaLine,
-  icon, personCard, posterCard, setTitle,
-} from '../ui.js';
+import { h, img, problem, roundButton, icon, setTitle } from '../ui.js';
+import { cardRow, skeletonRow, posterTile } from '../cards.js';
+import { heroInfo, playCard, labeledRound, cinemaLabels, formatDate } from '../hero.js';
 import { playHref } from './home.js';
 
 const RESUME_FROM_MS = 30_000;
 
 function showPanel(root, title, contents, className = '') {
   const dialog = h('dialog.title-panel.glass', { class: className, 'aria-label': title });
-  dialog.append(h('div.title-panel-head', h('h2.section-title', title), roundButton('close', t('close'), () => dialog.close())),
+  dialog.append(h('div.title-panel-head', h('h2.panel-title', title), roundButton('close', t('close'), () => dialog.close())),
     contents);
   dialog.addEventListener('close', () => dialog.remove(), { once: true });
   dialog.addEventListener('click', (event) => { if (event.target === dialog) dialog.close(); });
   root.append(dialog);
   dialog.showModal();
-}
-
-function about(root, data) {
-  const language = data.originalLanguage ? new Intl.DisplayNames([lang], { type: 'language', fallback: 'code' }).of(data.originalLanguage) : null;
-  const fields = [
-    [t('originalTitle'), data.originalTitle], [t('originalLanguage'), language],
-    [t('releaseDate'), data.releaseDate], [t('rating'), data.rating ? (data.rating.toFixed(1) + ' / 10') : null],
-    [t('classification'), data.certification],
-  ].filter(([, value]) => value);
-  showPanel(root, t('aboutTitle'), h('div.title-info', h('h3', data.title),
-    data.overview ? h('p.synopsis', data.overview) : null,
-    h('dl', fields.map(([label, value]) => h('div', h('dt', label), h('dd', value))))));
 }
 
 function previewTrailer(root, trailer) {
@@ -45,12 +32,85 @@ function previewTrailer(root, trailer) {
     'title-panel-wide');
 }
 
+/** "15 septembre 2021": a release date in full. */
+function longDate(iso) {
+  if (!iso) return null;
+  const date = new Date(`${iso.slice(0, 10)}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return iso;
+  return new Intl.DateTimeFormat(lang === 'en' ? 'en' : 'fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }).format(date);
+}
+
+function languageName(code) {
+  try {
+    const name = new Intl.DisplayNames([lang], { type: 'language' }).of(code);
+    return name ? name.charAt(0).toUpperCase() + name.slice(1) : code;
+  } catch {
+    return code;
+  }
+}
+
+/** The Details block: the synopsis, then what it is and who made it, in two columns (TitleDetails.DetailsBlock). */
+function details(kind, data) {
+  const series = kind === 'tv';
+  const writers = (data.crew || []).filter((c) => c.character === 'Writer' || c.character === 'Screenplay').map((c) => c.name);
+  const facts = [
+    series ? (data.seasonCount ? [t('factSeasons'), String(data.seasonCount)] : null) : (data.runtime ? [t('factLength'), runtime(data.runtime)] : null),
+    data.releaseDate ? [t(series ? 'factFirstAired' : 'factReleased'), longDate(data.releaseDate)] : null,
+    data.genres?.length ? [t('factGenres'), data.genres.join(', ')] : null,
+    data.certification ? [t('factRating'), data.certification] : null,
+    data.originalLanguage ? [t('factLanguage'), languageName(data.originalLanguage)] : null,
+    data.brands?.length ? [t('factStudios'), data.brands.slice(0, 3).map((b) => b.name).join(', ')] : null,
+  ].filter(Boolean);
+  const people = [
+    data.director ? [t(series ? 'factCreated' : 'factDirected'), data.director] : null,
+    writers.length ? [t('factWritten'), [...new Set(writers)].join(', ')] : null,
+    data.cast?.length ? [t('factStarring'), data.cast.slice(0, 5).map((p) => p.name).join(', ')] : null,
+  ].filter(Boolean);
+  const column = (rows) => h('dl.details-column', rows.map(([label, value]) => h('div', h('dt', label), h('dd', value))));
+  return h('section.card-row.details-row',
+    h('h2.row-heading', t('details')),
+    h('div.details-block',
+      h('div.details-synopsis', h('p.details-title', data.title),
+        data.tagline ? h('p.details-tagline', data.tagline) : null,
+        data.overview ? h('p.details-overview', data.overview) : null),
+      column(facts), column(people)));
+}
+
+function personTile(person) {
+  const initials = (person.name || '?').split(/\s+/).slice(0, 2).map((word) => word[0]).join('').toUpperCase();
+  const photo = img(person.photo, '');
+  return h(person.id ? 'a.tile.tile-person' : 'div.tile.tile-person', person.id ? { href: `#/person/${person.id}` } : null,
+    h('div.card-art.art-person', h('span.person-initials', { 'aria-hidden': 'true' }, initials), photo),
+    h('span.person-name', person.name), person.character ? h('span.person-role', person.character) : null);
+}
+
+function trailerTile(root, video, original) {
+  const language = /\bVF\b|français|french/i.test(video.name) && original !== 'fr' ? 'VF' : 'VO';
+  return h('button.tile.tile-trailer', { type: 'button', onClick: () => previewTrailer(root, video), 'aria-label': video.name },
+    h('div.card-art.art-trailer', img(`https://i.ytimg.com/vi/${video.key}/hqdefault.jpg`, ''), h('span.card-bottom-fade'),
+      h('span.trailer-text', h('span.trailer-caption', language), h('span.trailer-name', video.name || t('trailer')))));
+}
+
+function episodeTile(id, number, ep) {
+  const seen = store.resumeOf(store.resumeKey('tv', id, number, ep.number));
+  const part = seen ? (seen.finished ? 1 : seen.durationMs > 0 ? seen.positionMs / seen.durationMs : 0) : 0;
+  return h('a.tile.tile-episode', { href: playHref('tv', id, number, ep.number), 'aria-label': t('episodeTitle', { n: ep.number, name: ep.name || '' }) },
+    h('div.card-art.art-episode', img(ep.still, ''), h('span.episode-fade'),
+      seen?.finished ? icon('check', 'episode-seen') : null,
+      part > 0 ? h('span.episode-bar', h('span.episode-fill', { vars: { '--p': String(Math.min(1, part)) } })) : null,
+      h('span.episode-play', icon('play'), ep.runtime ? h('span', runtime(ep.runtime)) : null)),
+    h('div.episode-text',
+      h('span.episode-number', t('episodeUpper', { n: ep.number })),
+      h('span.episode-name', ep.name || ''),
+      ep.overview ? h('span.episode-overview', ep.overview) : null,
+      ep.airDate ? h('span.episode-date', formatDate(ep.airDate)) : null));
+}
+
 function skeleton() {
   return [
-    h('section.hero.hero-detail.hero-loading', { 'aria-hidden': 'true' },
+    h('section.hero.hero-title-page.hero-loading', { 'aria-hidden': 'true' },
       h('div.hero-art.skeleton'),
-      h('div.hero-body', skeletonLines(3, 'hero-lines'))),
-    h('div.rails', skeletonRail('thumb', 5)),
+      h('div.hero-body', h('div.skeleton.skeleton-logo'), h('div.skeleton.skeleton-line'), h('div.skeleton.skeleton-line.short'))),
   ];
 }
 
@@ -63,7 +123,7 @@ export async function render({ root, params, signal, go }) {
     data = await api.title(kind, id, { signal });
   } catch (e) {
     if (e.name === 'AbortError') return;
-    root.replaceChildren(h('div.page-top'), h('div.rails', problem(e, () => render({ root, params, signal, go }))));
+    root.replaceChildren(h('div.page-top'), h('div.rows-message', problem(e, () => render({ root, params, signal, go }))));
     return;
   }
   setTitle(data.title);
@@ -71,7 +131,7 @@ export async function render({ root, params, signal, go }) {
   const isTv = kind === 'tv';
   const canPlay = store.canPlayCertification(data.certification);
   const latest = store.latestResumeFor(kind, id);
-  const resumable = latest && !latest.finished && latest.positionMs > RESUME_FROM_MS;
+  const resumable = latest && !latest.finished && latest.positionMs > RESUME_FROM_MS && latest.durationMs > 0;
 
   // What Play starts: the film, or for a series the episode in progress, else the first episode.
   const firstSeason = isTv ? (data.seasons || []).find((s) => s.number > 0) || (data.seasons || [])[0] : null;
@@ -83,146 +143,92 @@ export async function render({ root, params, signal, go }) {
     target = {};
   }
 
-  const actions = h('div.actions');
+  const status = h('p.form-error.title-status', { role: 'status' });
+  const actions = h('div.hero-actions');
+  const cinema = !resumable ? cinemaLabels(kind, data) : null;
   if (target && canPlay) {
     const href = playHref(kind, id, target.season, target.episode);
-    let label;
-    if (isTv) label = t(resumable ? 'resumeEpisode' : 'playEpisode', { season: target.season, episode: target.episode });
-    else label = t(resumable ? 'resume' : 'play');
-    actions.append(primaryButton(label, () => go(href)));
-    if (resumable) actions.append(roundButton('restart', t('fromStart'), () => go(`${href}?from=start`)));
+    const left = resumable ? Math.max(1, Math.round((latest.durationMs - latest.positionMs) / 60000)) : null;
+    let label = t(resumable ? 'resume' : 'play');
+    if (isTv && resumable && target.season != null) label = `${t('resume')} ${t('episodeShort', { season: target.season, episode: target.episode })}`;
+    if (latest?.finished) label = t('watchAgain');
+    const sub = cinema?.[1] || (left ? t('left', { time: runtime(left) })
+      : latest?.finished ? t('alreadySeen')
+        : isTv ? (target.season != null ? `S${target.season} E${target.episode}` : null)
+          : (data.runtime ? runtime(data.runtime) : null));
+    actions.append(playCard({ label: cinema?.[0] || label, sub, progress: resumable ? latest.positionMs / latest.durationMs : null, onClick: () => go(href) }));
+    if (resumable && !cinema) actions.append(labeledRound('restart', t('startOver'), () => go(`${href}?from=start`)));
   }
-  const listStatus = h('p.form-error', { role: 'status' });
-  const listButton = roundButton('bookmark', t('addToList'), async () => {
-    listButton.disabled = true;
-    listStatus.textContent = '';
+
+  const guarded = (button, action, refresh) => async () => {
+    button.disabled = true;
+    status.textContent = '';
     try {
-      await store.toggleMyList(data);
-      updateListButton();
+      await action();
+      refresh();
     } catch {
-      listStatus.textContent = t('loadFailed');
+      status.textContent = t('loadFailed');
     } finally {
-      listButton.disabled = false;
+      button.disabled = false;
     }
-  }, 'list-toggle');
-  function updateListButton() {
-    const saved = store.inMyList(kind, id);
-    const label = t(saved ? 'removeFromList' : 'addToList');
-    listButton.setAttribute('aria-label', label);
-    listButton.setAttribute('aria-pressed', String(saved));
-    listButton.title = label;
-  }
-  updateListButton();
-  actions.append(listButton);
-  const follow = roundButton('bell', t('followTitle'), async () => {
-    follow.disabled = true;
-    listStatus.textContent = '';
-    try {
-      await store.toggleFollow(data);
-      updateFollow();
-    } catch {
-      listStatus.textContent = t('loadFailed');
-    } finally {
-      follow.disabled = false;
-    }
-  }, 'list-toggle');
-  function updateFollow() {
-    const followed = store.follows(kind, id);
-    follow.setAttribute('aria-pressed', String(followed));
-    const label = t(followed ? 'unfollowTitle' : 'followTitle');
-    follow.setAttribute('aria-label', label);
-    follow.title = label;
-  }
-  updateFollow();
-  actions.append(follow, roundButton('info', t('aboutTitle'), () => about(root, data)));
-  if (data.trailers?.length) actions.append(roundButton('film', t('trailers'), () => previewTrailer(root, data.trailers[0])));
+  };
+  const saved = () => store.inMyList(kind, id);
+  const list = labeledRound(saved() ? 'check' : 'plus', t(saved() ? 'inMyListShort' : 'myListShort'), () => {});
+  list.addEventListener('click', guarded(list, () => store.toggleMyList(data),
+    () => list.setLabel(t(saved() ? 'inMyListShort' : 'myListShort'), saved() ? 'check' : 'plus')));
+  const following = () => store.follows(kind, id);
+  const alert = labeledRound(following() ? 'bellOn' : 'bell', t(following() ? 'alertOn' : 'notifyMe'), () => {});
+  alert.addEventListener('click', guarded(alert, () => store.toggleFollow(data),
+    () => alert.setLabel(t(following() ? 'alertOn' : 'notifyMe'), following() ? 'bellOn' : 'bell')));
+  actions.append(list, alert, labeledRound('doc', t('about'), () => {
+    root.querySelector('.details-row')?.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center' });
+  }));
+  if (data.trailers?.length) actions.append(labeledRound('film', t('trailer'), () => previewTrailer(root, data.trailers[0])));
 
-  const heading = data.logo
-    ? h('h1.title-logo-wrap', img(data.logo, data.title, 'title-logo', true))
-    : h('h1.hero-title', data.title);
-  if (data.logo) {
-    // When the logo fails, fall back to the title in text.
-    const logoImg = heading.querySelector('img');
-    logoImg?.addEventListener('error', () => heading.replaceWith(h('h1.hero-title', data.title)), { once: true });
-  }
-
-  const progress = resumable && latest.durationMs > 0
-    ? h('div.title-progress', { 'aria-hidden': 'true' }, h('div.progress', h('div.progress-fill', { vars: { '--p': String(latest.positionMs / latest.durationMs) } })))
-    : null;
-
-  const top = h('section.hero.hero-detail',
-    h('div.hero-art', img(data.backdrop, '', 'hero-img', true)),
+  const top = h('section.hero.hero-title-page',
+    h('div.hero-art', img(data.backdrop || data.poster, '', 'hero-img', true)),
     h('div.hero-scrim'),
     h('div.hero-body',
-      heading,
-      metaLine([data.year, isTv ? t('series') : runtime(data.runtime), data.certification, ...(data.genres || []).slice(0, 2)], 'meta hero-meta'),
+      heroInfo(kind, data, { remainingMin: resumable ? Math.max(1, Math.round((latest.durationMs - latest.positionMs) / 60000)) : null }),
       actions,
-      !canPlay ? h('p.lead', t('kidsPlaybackBlocked')) : null,
-      listStatus,
-      progress,
-      data.overview ? h('p.synopsis', data.overview) : null,
-      data.collection ? h('a.btn.btn-secondary', { href: `#/collections/${data.collection.id}` }, data.collection.title) : null,
-    ),
-  );
+      !canPlay ? h('p.title-note', t('kidsPlaybackBlocked')) : null,
+      status,
+      data.collection ? h('a.pill-button', { href: `#/collections/${data.collection.id}` }, t('collectionOf', { name: data.collection.title })) : null));
 
-  const rails = h('div.rails');
-  root.replaceChildren(top, rails);
+  const rows = h('div.rows.title-rows');
+  root.replaceChildren(top, rows);
 
   if (isTv && (data.seasons || []).length) {
-    const seasonsWithEpisodes = data.seasons.filter((s) => s.episodeCount > 0 || s.number > 0);
-    const episodesSlot = h('div.episodes-slot');
-    let active = target?.season ?? seasonsWithEpisodes[0]?.number;
-    const pills = h('div.segmented', { role: 'tablist', 'aria-label': t('seasons') });
+    const seasons = data.seasons.filter((s) => s.number > 0 && (s.episodeCount ?? 1) > 0);
+    const shown = seasons.length ? seasons : data.seasons;
+    const slot = h('div.episodes-slot');
+    let active = target?.season ?? shown[0]?.number;
+    const pills = h('div.season-pills', { role: 'tablist', 'aria-label': t('seasons') });
     const loadSeason = async (number) => {
       active = number;
       pills.querySelectorAll('button').forEach((b) => b.setAttribute('aria-selected', String(Number(b.dataset.season) === number)));
-      episodesSlot.replaceChildren(skeletonRail('thumb', 5, false));
+      slot.replaceChildren(skeletonRow('episode', 4));
       try {
         const body = await api.season(id, number, { signal });
         if (active !== number) return;
         const eps = body.episodes || [];
-        if (!eps.length) {
-          episodesSlot.replaceChildren(empty(t('noEpisodes')));
-          return;
-        }
-        episodesSlot.replaceChildren(rail(null, eps.map((ep) => {
-          const r = store.resumeOf(store.resumeKey('tv', id, number, ep.number));
-          return thumbCard({
-            href: playHref('tv', id, number, ep.number),
-            image: ep.still,
-            title: t('episodeTitle', { n: ep.number, name: ep.name || '' }),
-            subtitle: [runtime(ep.runtime), ep.overview].filter(Boolean).join(' · '),
-            progress: r && r.durationMs > 0 && !r.finished ? r.positionMs / r.durationMs : null,
-          });
-        }), 'thumb episodes'));
+        slot.replaceChildren(eps.length ? cardRow(null, eps.map((ep) => episodeTile(id, number, ep)), { kind: 'episodes' })
+          : h('p.row-note', t('noEpisodes')));
       } catch (e) {
         if (e.name === 'AbortError' || active !== number) return;
-        episodesSlot.replaceChildren(problem(e, () => loadSeason(number)));
+        slot.replaceChildren(h('div.row-message', problem(e, () => loadSeason(number))));
       }
     };
-    seasonsWithEpisodes.forEach((s) => pills.append(h('button.segment', {
+    shown.forEach((s) => pills.append(h('button.season-pill', {
       type: 'button', role: 'tab', 'data-season': s.number, 'aria-selected': String(s.number === active),
       onClick: () => loadSeason(s.number),
-    }, s.name || t('season', { n: s.number }))));
-    rails.append(h('section.rail.rail-seasons',
-      h('h2.rail-title', t('episodes')),
-      h('div.segmented-wrap', pills),
-      episodesSlot));
+    }, s.number > 0 ? t('season', { n: s.number }) : (s.name || t('season', { n: 0 })))));
+    rows.append(h('section.card-row.episodes-row', h('div.season-scroll', pills), slot));
     if (active != null) loadSeason(active);
   }
 
-  if (data.trailers?.length) rails.append(rail(t('trailers'), data.trailers.map((video) =>
-    h('button.card.trailer-card', { type: 'button', onClick: () => previewTrailer(root, video) },
-      h('div.art.art-thumb', img(data.backdrop, ''), h('span.trailer-play', icon('play'))), h('span.card-title', video.name))), 'thumb'));
-  if (data.similar?.length) rails.append(rail(t('relatedTitles'), data.similar.map((item) => posterCard(item, true))));
-  if (data.cast?.length) rails.append(rail(t('cast'), data.cast.slice(0, 20).map(personCard), 'person'));
-  if (data.crew?.length) rails.append(rail(t('crew'), data.crew.map(personCard), 'person'));
-  if (data.watch?.length) {
-    rails.append(rail(t('howToWatch'), data.watch.map((offer) => {
-      const text = h('span', offer.name, h('small', t('watch' + offer.type)));
-      const logo = img(offer.logo, '', 'offer-logo');
-      return data.watchLink ? h('a.card.offer-card', { href: data.watchLink, target: '_blank', rel: 'noopener noreferrer' }, logo, text)
-        : h('div.card.offer-card', logo, text);
-    }), 'editorial-tiles'));
-  }
+  if (data.trailers?.length) rows.append(cardRow(t('trailers'), data.trailers.slice(0, 12).map((v) => trailerTile(root, v, data.originalLanguage)), { kind: 'trailers' }));
+  if (data.cast?.length) rows.append(cardRow(t('castCrew'), data.cast.slice(0, 20).map(personTile), { kind: 'people' }));
+  if (data.similar?.length) rows.append(cardRow(t('ifYouLiked'), data.similar.map((item) => posterTile(item)), { kind: 'poster' }));
+  rows.append(details(kind, data));
 }

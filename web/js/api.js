@@ -100,6 +100,8 @@ export const api = {
   syncPush: (changes, opts) => request('POST', '/api/sync', { changes }, opts),
   home: (profile, opts) => request('GET', `/api/catalog/home${q({ profile })}`, undefined, opts),
   title: (kind, id, opts) => request('GET', `/api/catalog/title/${enc(kind)}/${enc(id)}`, undefined, opts),
+  artwork: (kind, id, opts) => request('GET', `/api/catalog/artwork/${enc(kind)}/${enc(id)}`, undefined, opts),
+  brandTiles: (kind, opts) => request('GET', `/api/catalog/brand-tiles/${enc(kind)}`, undefined, opts),
   season: (id, season, opts) => request('GET', `/api/catalog/season/${enc(id)}/${enc(season)}`, undefined, opts),
   search: (text, opts = {}) => request('GET', `/api/catalog/search${q({ q: text, page: opts.page, type: opts.type })}`, undefined, opts),
   person: (id, opts) => request('GET', `/api/catalog/person/${enc(id)}`, undefined, opts),

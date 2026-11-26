@@ -51,9 +51,10 @@ const ROUTES = [
   [/^account$/, account, { nav: 'settings', back: true }],
 ];
 
+// The menu's pages and their icons, in the apps' order (App.kt).
 const SECTIONS = [
-  ['home', 'home'], ['myList', 'bookmark'], ['movies', 'film'], ['series', 'screen'],
-  ['anime', 'sparkles'], ['collections', 'layers'], ['tv', 'screen'], ['sports', 'trophy'],
+  ['home', 'home'], ['myList', 'myList'], ['movies', 'movies'], ['series', 'series'],
+  ['anime', 'anime'], ['collections', 'collections'], ['tv', 'tv'], ['sports', 'trophy'],
 ];
 
 const app = document.getElementById('app');
@@ -90,7 +91,12 @@ session.onUnauthorized(() => {
   if (!location.hash.startsWith('#/signin')) go('#/signin', true);
 });
 
-function renderNav(active, withBack) {
+/*
+ * The apps' bar (shell/NavShell.kt): the menu icon on the left and search on the right, two dark discs over the picture.
+ * The sections live in the menu behind the left icon. Scrolled, a black veil comes behind them; going down the bar
+ * leaves, going up brings it back. A page with a way back (a title) puts the back arrow in place of the menu.
+ */
+function renderNav(active, withBack, page = 'browse') {
   nav.querySelector('dialog[open]')?.close();
   if (!active) {
     nav.hidden = true;
@@ -105,31 +111,49 @@ function renderNav(active, withBack) {
   const visible = [...ordered].filter((id) => glyphs.has(id) &&
     !menuPrefs?.hidden?.includes(id) && (!profile?.kids || id !== 'sports'));
   const entry = (id, glyph) => h('a.nav-entry', { href: `#/${id}`, 'aria-current': active === id ? 'page' : null },
-    icon(glyph), h('span', t(id === 'series' ? 'seriesNav' : id)), active === id ? icon('check', 'nav-current') : null);
-  const panel = h('dialog.nav-panel.glass', { id: 'section-menu', 'aria-label': t('menu') },
-    h('nav', { 'aria-label': t('menu') },
-      profile ? h('a.nav-entry.nav-profile', { href: '#/profiles' }, avatar(profile, 'avatar-medium'),
-        h('span', profile.name, h('small', t('switchProfile')))) : null,
+    h('span.nav-entry-icon', icon(glyph)), h('span.nav-entry-label', t(id === 'series' ? 'seriesNav' : id)),
+    active === id ? icon('check', 'nav-current') : null);
+  const panel = h('dialog.nav-panel', { id: 'section-menu', 'aria-label': t('menu') },
+    h('nav.nav-list.glass', { 'aria-label': t('menu') },
+      profile ? h('a.nav-entry.nav-profile', { href: '#/profiles' }, avatar(profile, 'avatar-menu'),
+        h('span.nav-entry-label', profile.name, h('small', t('switchProfile')))) : null,
       h('hr'), visible.map((id) => entry(id, glyphs.get(id))), h('hr'), entry('settings', 'settings')));
   const menu = h('button.nav-button', { type: 'button', 'aria-label': t('menu'), title: t('menu'),
     'aria-haspopup': 'dialog', 'aria-controls': panel.id, 'aria-expanded': 'false',
     onClick: () => {
       panel.showModal();
       menu.setAttribute('aria-expanded', 'true');
-      (panel.querySelector('[aria-current="page"]') || panel.querySelector('a'))?.focus();
-    } }, icon('menu'));
+      nav.classList.add('is-menu-open');
+      (panel.querySelector('[aria-current="page"]') || panel.querySelector('a'))?.focus({ preventScroll: true });
+    } }, icon('menu', 'nav-menu-icon'));
   panel.addEventListener('click', (event) => {
     if (event.target === panel || event.target.closest('a')) panel.close();
   });
-  panel.addEventListener('close', () => menu.setAttribute('aria-expanded', 'false'));
-  nav.replaceChildren(h('div.nav-row',
-    menu,
-    withBack ? h('button.nav-button', { type: 'button', 'aria-label': t('back'), title: t('back'), onClick: () => back() }, icon('back')) : null,
-    h('a.nav-button.nav-search', { href: '#/search', 'aria-label': t('search'), title: t('search'),
-      'aria-current': active === 'search' ? 'page' : null }, icon('search'))), panel);
+  panel.addEventListener('close', () => {
+    menu.setAttribute('aria-expanded', 'false');
+    nav.classList.remove('is-menu-open');
+  });
+  const backButton = h('button.nav-button', { type: 'button', 'aria-label': t('back'), title: t('back'), onClick: () => back() }, icon('back'));
+  const left = withBack ? backButton : menu;
+  const search = page === 'title' ? null : h('a.nav-button.nav-search', { href: '#/search', 'aria-label': t('search'), title: t('search'),
+    'aria-current': active === 'search' ? 'page' : null }, icon('search', 'nav-search-icon'));
+  nav.replaceChildren(h('div.nav-veil', { 'aria-hidden': 'true' }), h('div.nav-row', left, search), panel);
+  nav.classList.remove('is-hidden', 'is-veiled');
   nav.hidden = false;
   document.body.classList.add('has-nav');
 }
+
+// The bar's veil and its leaving: at the top only the icons show; scrolled, the veil comes; down hides, up shows.
+let lastScroll = 0;
+window.addEventListener('scroll', () => {
+  const y = Math.max(0, window.scrollY);
+  const veiled = y > 40;
+  nav.classList.toggle('is-veiled', veiled);
+  if (Math.abs(y - lastScroll) > 6) {
+    nav.classList.toggle('is-hidden', veiled && y > lastScroll && !nav.classList.contains('is-menu-open'));
+    lastScroll = y;
+  }
+}, { passive: true });
 
 async function route() {
   const { path, query, hash } = parseHash();
@@ -175,7 +199,8 @@ async function route() {
   const controller = new AbortController();
   const root = h('div.screen', { 'data-screen': path.split('/')[0] });
   document.body.dataset.screen = path.split('/')[0];
-  renderNav(opts.nav === 'section' ? params.section : opts.nav, Boolean(opts.back || params.collection));
+  renderNav(opts.nav === 'section' ? params.section : opts.nav, Boolean(opts.back || params.collection), opts.nav);
+  lastScroll = 0;
   app.replaceChildren(root);
   const restoreTo = scrollMemory.get(hash);
   window.scrollTo(0, 0);

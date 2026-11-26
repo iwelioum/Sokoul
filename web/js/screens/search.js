@@ -1,32 +1,42 @@
 ﻿import { api } from '../api.js';
 import { t } from '../i18n.js';
-import { h, icon, posterCard, personCard, problem, empty, setTitle, skeletonLines, secondaryButton } from '../ui.js';
+import { h, icon, img, personCard, problem, empty, setTitle, skeletonLines, secondaryButton, titleHref } from '../ui.js';
+import { kindLabel } from '../cards.js';
 
 const DEBOUNCE_MS = 300;
 const TABS = [['all', 'allResults'], ['movie', 'movies'], ['tv', 'seriesNav'], ['person', 'people'],
   ['anime', 'anime'], ['manga', 'manga'], ['live', 'channelsTv']];
 
+/** A result (SearchScreen.ResultCard): the poster, the title, then its kind and year. */
+function resultCard(item) {
+  const meta = [item.kind === 'anime' || item.kind === 'manga' ? t(item.kind) : kindLabel(item.kind), item.year].filter(Boolean).join(' · ');
+  return h('a.result-card', { href: titleHref(item) },
+    h('span.result-poster', img(item.poster, '')),
+    h('span.result-text', h('span.result-title', item.title), meta ? h('span.result-meta', meta) : null));
+}
+
 export function render({ root, query, signal }) {
   setTitle(t('search'));
   let tab = TABS.some(([key]) => key === query.get('tab')) ? query.get('tab') : 'all';
-  const input = h('input.field.search-input', {
+  const input = h('input.search-field', {
     type: 'search', inputmode: 'search', enterkeyhint: 'search', autocomplete: 'off', autocorrect: 'off',
     autocapitalize: 'none', spellcheck: 'false', placeholder: t('searchPlaceholder'), 'aria-label': t('search'), maxlength: 100,
   });
   const results = h('div.search-results', { 'aria-live': 'polite' });
-  const filters = h('div.segmented', { 'aria-label': t('search') });
+  const filters = h('div.search-tabs', { 'aria-label': t('search') });
   for (const [id, label] of TABS) {
-    filters.append(h('button.segment', { type: 'button', 'data-search-tab': id,
+    filters.append(h('button.search-tab', { type: 'button', 'data-search-tab': id,
       onClick: () => { clearTimeout(timer); tab = id; run(true); } }, t(label)));
   }
-  const place = h('div.page', h('h1.page-title', t('search')),
-    h('form.search-box', { role: 'search', onSubmit: (event) => {
+  // The apps' search (search/SearchScreen.kt): the query in large type over a line, the kinds as pills, then results.
+  const place = h('div.page.search-page', h('h1.visually-hidden', t('search')),
+    h('form.search-header', { role: 'search', onSubmit: (event) => {
       event.preventDefault();
       clearTimeout(timer);
       run(true);
       input.blur();
-    } }, icon('search', 'search-icon'), input),
-    h('div.segmented-wrap', filters), results);
+    } }, icon('search', 'search-header-icon'), input, h('span.search-line', { 'aria-hidden': 'true' })),
+    h('div.search-tabs-wrap', filters), results);
   root.append(place);
 
   let timer;
@@ -49,9 +59,9 @@ export function render({ root, query, signal }) {
 
   function draw(more, text) {
     const parts = [];
-    if (all.titles.length) parts.push(h('div.grid', all.titles.map((item) => posterCard(item, true))));
+    if (all.titles.length) parts.push(h('div.result-grid', all.titles.map(resultCard)));
     if (all.people.length) parts.push(h('section.search-people',
-      h('h2.section-title', t('people')), h('div.grid.people-grid', all.people.map(personCard))));
+      h('h2.row-heading.search-heading', t('people')), h('div.people-grid', all.people.map(personCard))));
     if (all.channels.length) parts.push(h('ul.list', all.channels.map((item) => {
       const params = new URLSearchParams({ channel: item.id, q: item.name });
       return h('li', h('a.list-row.list-link', { href: '#/tv?' + params },
@@ -82,11 +92,13 @@ export function render({ root, query, signal }) {
 
     try {
       if (!text) {
-        const plan = await api.section('home', { signal: request.signal });
+        // Explore: the genres, as the apps' grid of tall tiles.
+        const plan = await api.section('movies', { signal: request.signal });
         if (request.signal.aborted) return;
-        const links = plan.filter((row) => row.links?.length).slice(0, 4).flatMap((row) => row.links.slice(0, 4));
-        results.replaceChildren(h('h2.section-title', t('explore')), h('div.search-explore',
-          links.map((link) => h('a.editorial-tile', { href: '#/' + link.route + '?label=' + encodeURIComponent(link.title) }, link.title))));
+        const links = plan.flatMap((row) => row.links || []).filter((link) => link.route.startsWith('shelf/genre/'));
+        results.replaceChildren(h('h2.row-heading.search-heading', t('explore')), h('div.explore-grid',
+          links.map((link, i) => h(`a.tile.tile-explore.genre-${i % 8}`, { href: '#/' + link.route + '?label=' + encodeURIComponent(link.title) },
+            h('div.card-art.art-explore', h('span.genre-shape'), h('span.explore-fade'), h('span.explore-name', link.title))))));
         return;
       }
       const response = await search(text, currentTab, currentPage, { signal: request.signal });

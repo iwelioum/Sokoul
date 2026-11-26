@@ -72,7 +72,7 @@ class WebFiles(root: File) {
         const val INDEX = "index.html"
 
         const val CSP = "default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; connect-src 'self'; " +
-            "img-src 'self' data: blob: https://image.tmdb.org https://assets.fanart.tv https://*.anilist.co " +
+            "img-src 'self' data: blob: https://image.tmdb.org https://i.ytimg.com https://assets.fanart.tv https://*.anilist.co " +
             "https://*.mangadex.org https://*.mangadex.network; media-src 'self' blob:; worker-src 'self' blob:; " +
             "frame-src https://www.youtube-nocookie.com; " +
             "manifest-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; object-src 'none'"

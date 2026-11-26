@@ -1,176 +1,245 @@
-﻿import { api } from '../api.js';
+﻿// A browsing page (Home, Films, Séries, Animés) as the apps draw it (home/HomeScreen.kt): a hero the height of the
+// screen, then every row of the page's plan from the server, in its order. Each row has one heading.
+
+import { api } from '../api.js';
 import { t, runtime } from '../i18n.js';
 import * as store from '../store.js';
 import { orderRows } from '../preferences.js';
+import { h, img, problem, empty, titleHref, setTitle, icon } from '../ui.js';
 import {
-  h, img, rail, posterCard, thumbCard, skeletonRail, skeletonLines, problem, empty, primaryButton, roundButton,
-  metaLine, titleHref, setTitle, icon,
-} from '../ui.js';
+  cardRow, skeletonRow, posterTile, landscapeTile, seeAllTile, continueTile, leftLabel,
+} from '../cards.js';
+import { heroInfo, playCard, labeledRound, dots, cinemaLabels } from '../hero.js';
 
 const carouselPositions = new Map();
+/** Titles a row shows before "See All" (HomeScreen.ROW_CAP), and a Top 10's ten. */
+const ROW_CAP = 10;
+const SLIDES = 8;
+const SLIDE_MS = 12_000;
 
 export function playHref(kind, id, season, episode) {
   return season != null && episode != null ? '#/play/' + [kind, id, season, episode].join('/') : '#/play/' + [kind, id].join('/');
 }
 
+const tmdbImage = (path, size) => (path?.startsWith('/') ? `https://image.tmdb.org/t/p/${size}${path}` : path);
+
+/** A "Continue watching" card (LandscapeCard 320 × 230). */
 export function continueCard(point) {
-  const leftMin = point.durationMs > 0 ? Math.max(1, Math.round((point.durationMs - point.positionMs) / 60000)) : 0;
-  const parts = [];
-  if (point.kind === 'tv' && point.season != null && point.episode != null) {
-    parts.push(t('episodeShort', { season: point.season, episode: point.episode }));
-  }
-  if (point.finished) parts.push(t('watched'));
-  else if (leftMin) parts.push(t('left', { time: runtime(leftMin) }));
-  return thumbCard({
+  return continueTile({
     href: playHref(point.kind, point.tmdbId, point.season, point.episode),
-    image: point.image?.startsWith('/') ? 'https://image.tmdb.org/t/p/w780' + point.image : point.image,
+    image: tmdbImage(point.image, 'w780'),
     title: point.title || '',
-    subtitle: parts.join(' · '),
+    meta: leftLabel(point),
     progress: point.durationMs > 0 ? Math.min(1, point.positionMs / point.durationMs) : null,
   });
 }
 
-function carousel(items, key, go, signal) {
+/* ---------------------------------------------------------------- Hero */
+
+function hero(items, key, go, signal) {
   let active = Math.min(items.length - 1, carouselPositions.get(key) || 0);
   let generation = 0;
-  const artwork = h('div.hero-art');
-  const content = h('div.hero-body');
-  const dots = h('div.hero-dots', { 'aria-label': t('featured') });
-  const section = h('section.hero.hero-carousel', artwork, h('div.hero-scrim'), content, dots);
-  const highlight = (item, info) => {
-    const heading = h('h1.hero-title', item.title);
-    if (info?.logo) {
-      const logo = img(info.logo, item.title, 'title-logo', true);
-      const logoWrap = h('h1.title-logo-wrap', logo);
-      logo.addEventListener('error', () => logoWrap.replaceWith(heading), { once: true });
-      return logoWrap;
-    }
-    return heading;
+  let timer = 0;
+  const art = h('div.hero-art');
+  const body = h('div.hero-body');
+  const dotsSlot = h('div.hero-dots-slot');
+  const section = h('section.hero.hero-home', { 'aria-roledescription': 'carousel', 'aria-label': t('featured') },
+    art, h('div.hero-scrim'), body, dotsSlot);
+
+  const schedule = () => {
+    clearTimeout(timer);
+    if (items.length < 2 || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    timer = setTimeout(() => {
+      // Only while it is on screen and nothing in it is being used, as the app advances only the hero in view.
+      if (signal.aborted) return;
+      if (document.hidden || window.scrollY > 40 || section.matches(':hover') || section.contains(document.activeElement)) schedule();
+      else change(active + 1);
+    }, SLIDE_MS);
   };
-  const change = (index, focus = false) => {
+  signal.addEventListener('abort', () => clearTimeout(timer), { once: true });
+
+  const buttons = (item, data) => {
+    const latest = item.kind === 'movie' || item.kind === 'tv' ? store.latestResumeFor(item.kind, item.id) : null;
+    const resumable = latest && !latest.finished && latest.durationMs > 0;
+    const cinema = !resumable ? cinemaLabels(item.kind, data) : null;
+    const left = resumable ? Math.max(1, Math.round((latest.durationMs - latest.positionMs) / 60000)) : null;
+    const standard = item.kind === 'movie' || item.kind === 'tv';
+    const play = playCard({
+      label: cinema?.[0] || t(resumable ? 'resume' : 'play'),
+      sub: cinema?.[1] || (left ? t('left', { time: runtime(left) }) : null),
+      progress: resumable ? latest.positionMs / latest.durationMs : null,
+      // As in the app, Play on the hero opens the title's page, where the version is chosen.
+      onClick: () => go(titleHref(item)),
+    });
+    const saved = () => store.inMyList(item.kind, item.id);
+    const list = labeledRound(saved() ? 'check' : 'plus', t(saved() ? 'inMyListShort' : 'myListShort'), async () => {
+      list.disabled = true;
+      try {
+        await store.toggleMyList({ ...item, ...(data || {}), kind: item.kind, id: item.id, poster: item.poster, backdrop: item.backdrop });
+        list.setLabel(t(saved() ? 'inMyListShort' : 'myListShort'), saved() ? 'check' : 'plus');
+      } catch { /* the button stays as it was; the store keeps the change for the next push */ } finally {
+        list.disabled = false;
+      }
+    });
+    return h('div.hero-actions', play, standard ? list : null,
+      labeledRound('info', t('about'), () => go(titleHref(item))),
+      items.length > 1 ? labeledRound('next', t('next'), () => change(active + 1, true)) : null);
+  };
+
+  const draw = (item, data, current) => {
+    if (current !== generation) return;
+    const info = data
+      ? heroInfo(item.kind, { ...data, overview: data.overview || item.overview })
+      : heroInfo(item.kind, { title: item.title, year: item.year, overview: item.overview });
+    body.replaceChildren(info, buttons(item, data));
+  };
+
+  const change = (index, focusNext = false) => {
     active = (items.length + index) % items.length;
     carouselPositions.set(key, active);
     const current = ++generation;
     const item = items[active];
+    // The new picture fades in over the old one (Crossfade, 300 ms).
+    const picture = img(item.backdrop || item.poster, '', 'hero-img', true);
+    if (picture) {
+      art.append(picture);
+      picture.addEventListener('load', () => {
+        [...art.children].filter((c) => c !== picture).forEach((c) => setTimeout(() => c.remove(), 320));
+      }, { once: true });
+    }
+    body.replaceChildren();
     const standard = item.kind === 'movie' || item.kind === 'tv';
-    const play = item.kind === 'movie' ? playHref('movie', item.id) : titleHref(item);
-    const draw = (info) => {
-      content.replaceChildren(highlight(item, info),
-        metaLine([item.year, t(({ movie: 'movie', tv: 'series', anime: 'anime', manga: 'manga' })[item.kind]),
-          ...(info?.genres || []).slice(0, 2)], 'meta hero-meta'),
-        info?.overview ? h('p.synopsis.hero-synopsis', info.overview) : null,
-        h('div.actions', standard ? primaryButton(t('play'), () => go(play)) : null,
-          roundButton('info', t('moreInfo'), () => go(titleHref(item)))));
-    };
-    artwork.replaceChildren(img(item.backdrop || item.poster, '', 'hero-img', true) || h('div.hero-art-placeholder'));
-    draw();
-    if (standard) api.title(item.kind, item.id, { signal }).then((info) => {
-      if (!signal.aborted && current === generation && !content.contains(document.activeElement)) draw(info);
-    }).catch(() => {});
-    dots.replaceChildren(...items.map((entry, i) => h('button.hero-dot', {
-      type: 'button', 'aria-label': entry.title, 'aria-pressed': String(i === active),
-      onClick: () => change(i, true),
-    })));
-    if (focus) dots.children[active]?.focus();
+    if (standard) {
+      api.title(item.kind, item.id, { signal }).then((data) => {
+        if (data.backdrop && picture && current === generation) picture.src = data.backdrop;
+        draw(item, data, current);
+      }).catch(() => draw(item, null, current));
+    } else {
+      draw(item, null, current);
+    }
+    dotsSlot.replaceChildren(items.length > 1 ? dots(items.length, active, (i) => change(i), items.map((i) => i.title)) : '');
+    if (focusNext) requestAnimationFrame(() => body.querySelector('.labeled-round:last-child')?.focus({ preventScroll: true }));
+    schedule();
   };
-  if (items.length > 1) {
-    section.append(h('div.hero-controls', roundButton('prev', t('previous'), () => change(active - 1)),
-      roundButton('next', t('next'), () => change(active + 1))));
-    section.addEventListener('keydown', (event) => {
-      if (!dots.contains(document.activeElement) || !['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
-      event.preventDefault();
-      change(active + (event.key === 'ArrowRight' ? 1 : -1), true);
-    });
-  }
   change(active);
   return section;
 }
 
-function header(row, href) {
-  // One title per row, a word or a short phrase: no kicker above it, no line under it.
-  return h('div.editorial-heading',
-    h('div.editorial-heading-line', h('h2.rail-title', row.title),
-      href ? h('a.editorial-more', { href, 'aria-label': t('seeAllOf', { title: row.title }) }, t('loadMore'), icon('chevron')) : null));
+/* ---------------------------------------------------------------- Link rows (home/PageRows.kt) */
+
+const MOODS = { chills: 0, light: 1, family: 2, puzzle: 3, emotions: 4, adrenaline: 5 };
+const linkHref = (link) => '#/' + link.route + '?label=' + encodeURIComponent(link.title);
+
+function moodTile(link) {
+  const mood = Object.keys(MOODS).find((m) => link.route.endsWith('-' + m)) || 'chills';
+  return h(`a.tile.tile-landscape.tile-mood.mood-${mood}`, { href: linkHref(link) },
+    h('div.card-art.art-landscape.mood-art', h('span.mood-glow'), h('span.mood-veil'), h('span.mood-name', link.title)));
 }
 
-function linkShelf(row) {
-  return h('section.editorial-shelf', header(row), rail(null, row.links.map((link) =>
-    h('a.card.editorial-tile', { href: '#/' + link.route + '?label=' + encodeURIComponent(link.title) },
-      link.image ? img(link.image, '', 'editorial-logo') : null, h('span', link.title))), 'editorial-tiles'));
+function platformTile(link, brand) {
+  const art = h('div.card-art.art-platform');
+  const name = () => art.replaceChildren(h('span.platform-name', link.title));
+  if (brand?.color) {
+    art.style.setProperty('--brand', brand.color);
+    art.style.setProperty('--brand-accent', brand.accent || brand.color);
+  }
+  const logo = brand?.logo ? img(brand.logo, link.title, '', false) : null;
+  if (logo) {
+    logo.addEventListener('error', name, { once: true });
+    art.append(logo);
+  } else name();
+  return h('a.tile.tile-platform', { href: linkHref(link), 'aria-label': link.title }, art);
 }
 
-function mediaShelf(row, items, section, more) {
-  const layout = row.style.toLowerCase();
+function studioTile(link, brand) {
+  const art = h('div.card-art.art-studio');
+  const name = () => art.replaceChildren(h('span.studio-name', link.title));
+  const logo = brand?.logo ? img(brand.logo, link.title, 'studio-logo', false) : null;
+  if (logo) {
+    logo.addEventListener('error', name, { once: true });
+    art.append(logo);
+  } else name();
+  return h('a.tile.tile-studio', { href: linkHref(link), 'aria-label': link.title }, art);
+}
+
+function sagaTile(link) {
+  const art = h('div.card-art.art-landscape.saga-art', h('span.card-fade'));
+  const logo = link.image ? img(link.image, link.title, 'saga-logo', false) : null;
+  if (logo) {
+    logo.addEventListener('error', () => logo.replaceWith(h('span.saga-name', link.title)), { once: true });
+    art.append(logo);
+  } else art.append(h('span.saga-name', link.title));
+  art.append(h('span.saga-label', t('collectionLabel')));
+  return h('a.tile.tile-landscape.tile-saga', { href: '#/' + link.route, 'aria-label': link.title }, art);
+}
+
+const TOOL_ICONS = { 'discover/releases': 'calendar', 'discover/pick': 'casino', history: 'history', 'anime-calendar': 'calendar', manga: 'manga' };
+
+function toolTile(link) {
+  const glyph = TOOL_ICONS[link.route];
+  return h('a.tile.tile-tool', { href: linkHref(link) },
+    h('div.card-art.art-tool', glyph ? icon(glyph, 'tool-icon') : null, h('span.tool-name', link.title)));
+}
+
+function genreTile(link, index) {
+  return h(`a.tile.tile-landscape.tile-genre.genre-${index % 8}`, { href: linkHref(link), 'vars': { '--lean': String(0.30 + 0.08 * (index % 4)) } },
+    h('div.card-art.art-landscape.genre-art', h('span.genre-shape'), h('span.genre-edge'), h('span.genre-name', link.title)));
+}
+
+function linkRow(row, brands) {
+  const family = row.links[0]?.route.split('/').slice(0, 2).join('/');
+  let cards;
+  let kind = 'tiles';
+  if (family === 'shelf/mood') cards = row.links.map(moodTile);
+  else if (family === 'shelf/platform') {
+    kind = 'platforms';
+    cards = row.links.map((l) => platformTile(l, brands?.platforms?.[l.route.split('-').pop()]));
+  } else if (family === 'shelf/studio') {
+    kind = 'studios';
+    cards = row.links.map((l) => studioTile(l, brands?.studios?.[l.route.split('/').pop()]));
+  } else if (family?.startsWith('collections')) cards = row.links.map(sagaTile);
+  else if (family === 'shelf/genre') cards = row.links.map(genreTile);
+  else {
+    kind = 'tools';
+    cards = row.links.map(toolTile);
+  }
+  return cardRow(row.title, cards, { kind, id: row.id });
+}
+
+/* ---------------------------------------------------------------- Title rows */
+
+function titleRow(row, result, section) {
+  const style = row.style || 'Poster';
+  const items = result.items.slice(0, ROW_CAP);
   const cards = items.map((item, index) => {
-    if (layout === 'landscape') return thumbCard({ href: titleHref(item), image: item.backdrop || item.poster, title: item.title });
-    if (layout === 'top10') return h('div.editorial-ranked', h('span.editorial-rank', { 'aria-hidden': 'true' }, index + 1), posterCard(item, true));
-    return posterCard(item, true);
+    if (style === 'Landscape') return landscapeTile(item);
+    if (style === 'Square') return landscapeTile(item, { square: true });
+    if (style === 'Top10') return posterTile(item, { rank: index + 1 });
+    return posterTile(item);
   });
-  const href = more ? '#/row/' + [section, row.id].map(encodeURIComponent).join('/') + '?label=' + encodeURIComponent(row.title) : null;
-  return h('section.editorial-shelf', header(row, href), rail(null, cards, 'editorial-' + layout));
+  if (style !== 'Top10' && (result.more || result.items.length > ROW_CAP)) {
+    cards.push(seeAllTile(style, '#/row/' + [section, row.id].map(encodeURIComponent).join('/') + '?label=' + encodeURIComponent(row.title), row.title));
+  }
+  const kind = { Landscape: 'landscape', Square: 'square' }[style] || 'poster';
+  return cardRow(row.title, cards, { kind, id: row.id });
 }
+
+/* ---------------------------------------------------------------- Page */
 
 export async function render({ root, signal, go, params }) {
   const section = params.section || 'home';
   const label = t(section === 'series' ? 'seriesNav' : section);
   const profile = store.currentProfile()?.id;
-  const hero = h('div.editorial-hero', h('section.hero.hero-loading', { 'aria-hidden': 'true' },
-    h('div.hero-art.skeleton'), h('div.hero-body', skeletonLines(2))));
-  const body = h('div.rails.editorial-rails', skeletonRail('poster'), skeletonRail('poster'));
+  const top = h('div.home-hero', h('section.hero.hero-home.hero-loading', { 'aria-hidden': 'true' },
+    h('div.hero-art.skeleton'), h('div.hero-body', h('div.skeleton.skeleton-logo'), h('div.skeleton.skeleton-line'), h('div.skeleton.skeleton-line.short'))));
+  const body = h('div.rows', skeletonRow('poster'), skeletonRow('poster'));
   setTitle(label);
-  root.replaceChildren(hero, body);
+  root.replaceChildren(top, body);
   const resolved = new Map();
   let observer;
   let noticeTimer;
   signal.addEventListener('abort', () => observer?.disconnect(), { once: true });
   signal.addEventListener('abort', () => clearTimeout(noticeTimer), { once: true });
-
-  async function load() {
-    try {
-      const all = await api.section(section, { signal });
-      if (signal.aborted) return;
-      const rows = orderRows(all, section);
-      const featured = rows.find((row) => row.style === 'Top10') || rows.find((row) => row.id === 'anime-popular') ||
-        rows.find((row) => !row.links?.length && row.id !== 'because');
-      if (featured) {
-        const selection = await rowData(featured);
-        if (signal.aborted) return;
-        const items = selection.items.filter((item) => item.backdrop || item.poster).slice(0, 5);
-        hero.replaceChildren(items.length ? carousel(items, `${store.user()?.id}|${profile}|${section}`, go, signal)
-          : h('div.page', h('h1.page-title', label)));
-      } else hero.replaceChildren(h('div.page', h('h1.page-title', label)));
-
-      body.replaceChildren();
-      if (section === 'home') {
-        const resume = store.continueWatching();
-        if (resume.length) body.append(rail(t('continueWatching'), resume.map(continueCard), 'thumb'));
-        const follows = store.followedTitles();
-        if (follows.length) body.append(rail(t('followingTitles'), follows.map((i) => posterCard(i, true))));
-      }
-      observer?.disconnect();
-      observer = new IntersectionObserver((entries) => {
-        entries.forEach((entry) => {
-          if (!entry.isIntersecting) return;
-          observer.unobserve(entry.target);
-          const row = rows.find((item) => item.id === entry.target.dataset.shelf);
-          if (row) loadShelf(row, entry.target);
-        });
-      }, { rootMargin: '500px 0px' });
-      for (const row of rows) {
-        if (row.links?.length) body.append(linkShelf(row));
-        else {
-          const slot = h('div.editorial-slot', { 'data-shelf': row.id }, skeletonRail('poster', 4));
-          body.append(slot);
-          observer.observe(slot);
-        }
-      }
-      if (!body.childElementCount) body.append(empty(t('homeEmpty')));
-    } catch (error) {
-      if (signal.aborted) return;
-      hero.replaceChildren(h('div.page-top'));
-      body.replaceChildren(problem(error, load));
-    }
-  }
 
   function rowData(row) {
     if (!resolved.has(row.id)) {
@@ -182,14 +251,74 @@ export async function render({ root, signal, go, params }) {
     }
     return resolved.get(row.id);
   }
-  async function loadShelf(row, slot) {
+
+  async function loadRow(row, slot) {
     try {
       const result = await rowData(row);
       if (signal.aborted) return;
-      if (result.items.length) slot.replaceChildren(mediaShelf(row, result.items, section, result.more));
+      // A row with too few titles never shows (PageRow.MIN_ITEMS).
+      if (result.items.length >= 3) slot.replaceChildren(titleRow(row, result, section));
       else slot.remove();
     } catch (error) {
-      if (!signal.aborted) slot.replaceChildren(header(row), problem(error, () => loadShelf(row, slot)));
+      if (!signal.aborted) slot.replaceChildren(h('section.card-row', h('h2.row-heading', row.title), h('div.row-message', problem(error, () => loadRow(row, slot)))));
+    }
+  }
+
+  async function load() {
+    try {
+      const all = await api.section(section, { signal });
+      if (signal.aborted) return;
+      const rows = orderRows(all, section);
+      const featured = rows.find((row) => row.style === 'Top10') || rows.find((row) => row.id === 'anime-popular') ||
+        rows.find((row) => !row.links?.length && row.id !== 'because');
+      let heroItems = [];
+      if (featured) {
+        try {
+          heroItems = (await rowData(featured)).items.filter((item) => item.backdrop || item.poster).slice(0, SLIDES);
+        } catch { /* no hero: the page starts with its rows */ }
+      }
+      if (signal.aborted) return;
+      top.replaceChildren(heroItems.length
+        ? hero(heroItems, `${store.user()?.id}|${profile}|${section}`, go, signal)
+        : h('div.page-top', h('h1.page-title.page-title-alone', label)));
+
+      const needsBrands = rows.some((row) => row.links?.some((l) => /^shelf\/(platform|studio)\//.test(l.route)));
+      const brands = needsBrands
+        ? api.brandTiles(section === 'series' ? 'tv' : 'movie', { signal }).catch(() => null) : Promise.resolve(null);
+
+      body.replaceChildren();
+      if (section === 'home') {
+        const resume = store.continueWatching();
+        if (resume.length) body.append(cardRow(t('continueWatching'), resume.map(continueCard), { kind: 'continue', id: 'continue' }));
+        const follows = store.followedTitles();
+        if (follows.length) body.append(cardRow(t('followingTitles'), follows.map((i) => posterTile(i)), { id: 'followed' }));
+      }
+      observer?.disconnect();
+      observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          observer.unobserve(entry.target);
+          const row = rows.find((item) => item.id === entry.target.dataset.shelf);
+          if (row) loadRow(row, entry.target);
+        });
+      }, { rootMargin: '600px 0px' });
+      for (const row of rows) {
+        if (row.links?.length) {
+          const slot = h('div.row-slot');
+          body.append(slot);
+          brands.then((b) => { if (!signal.aborted) slot.replaceWith(linkRow(row, b)); });
+        } else {
+          const kind = { Landscape: 'landscape', Square: 'square' }[row.style] || 'poster';
+          const slot = h('div.row-slot', { 'data-shelf': row.id }, skeletonRow(kind, 7));
+          body.append(slot);
+          observer.observe(slot);
+        }
+      }
+      if (!body.childElementCount) body.append(h('div.rows-message', empty(t('homeEmpty'))));
+    } catch (error) {
+      if (signal.aborted) return;
+      top.replaceChildren(h('div.page-top'));
+      body.replaceChildren(h('div.rows-message', problem(error, load)));
     }
   }
 

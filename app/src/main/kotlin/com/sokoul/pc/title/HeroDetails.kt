@@ -172,7 +172,7 @@ fun Facts(info: TmdbInfo?, remainingMin: Int?) {
         val parts = listOfNotNull(
             year?.toString(),
             minutes?.let { durationLabel(it) },
-            info?.seasons?.takeIf { it > 0 && info.runtimeMin == null }?.let { L("$it seasons", "$it saisons").text() },
+            info?.seasons?.takeIf { it > 0 && info.runtimeMin == null }?.let { if (it == 1) L("1 season", "1 saison").text() else L("$it seasons", "$it saisons").text() },
         )
         Label(parts.joinToString("   ·   "), Type.Meta, Palette.OnBackground, maxLines = 1)
         if (minutes != null && minutes > 0 && (info?.seasons == null)) {
@@ -190,7 +190,10 @@ fun Facts(info: TmdbInfo?, remainingMin: Int?) {
 /** The kind of work, its genres and its age rating, as small outlined pills. */
 @Composable
 fun GenrePills(kind: String, info: TmdbInfo?) {
-    Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+    // Wraps rather than squeezes: on a phone held upright the last genre shrank to an empty pill and the age rating
+    // stood one digit per line (render, 2026-11-26).
+    @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+    androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Box(Modifier.clip(RoundedCornerShape(50)).background(Palette.PillFill).padding(horizontal = 22.dp, vertical = 9.dp)) {
             Label(com.sokoul.pc.home.typeLabel(kind), Type.Body.copy(fontWeight = FontWeight.Bold), maxLines = 1)
         }
@@ -199,7 +202,7 @@ fun GenrePills(kind: String, info: TmdbInfo?) {
                 Label(g, Type.Body, Palette.OnBackground, maxLines = 1)
             }
         }
-        info?.certification?.takeIf { it.isNotBlank() }?.let { Spacer(Modifier.width(6.dp)); OutlinedBadge(it) }
+        info?.certification?.takeIf { it.isNotBlank() }?.let { Box(Modifier.padding(start = 6.dp).align(Alignment.CenterVertically)) { OutlinedBadge(it) } }
     }
 }
 

@@ -26,6 +26,9 @@ import java.time.LocalDate
     val id: String, val title: String,
     val style: String = "Poster", val links: List<ShelfLink> = emptyList(),
 )
+/** The platforms' and studios' logos and colours for their tiles (home/PageRows.kt), by the slug their links end with. */
+@Serializable data class BrandTile(val logo: String? = null, val color: String? = null, val accent: String? = null)
+@Serializable data class BrandTiles(val platforms: Map<String, BrandTile>, val studios: Map<String, BrandTile>)
 @Serializable data class ShelfPage(val items: List<CatalogItem>, val more: Boolean = false)
 
 /** Resolves the PC page plans with the signed-in account's catalogue and viewing history. */
@@ -71,6 +74,29 @@ class Editorial(
                 PageRow.Reading -> null
             }
         }
+
+    /** The services' logos from TMDB's provider list (FR, then US), the studios' from their company page. */
+    suspend fun brandTiles(userId: String, language: String, kind: String): BrandTiles = coroutineScope {
+        val key = catalog.keyOf(userId)
+        val providers = listOf("FR", "US").map { region ->
+            async {
+                runCatching { tmdb.get(key, "watch/providers/$kind", mapOf("watch_region" to region), language) }.getOrNull()
+                    ?.jArr("results").orEmpty().mapNotNull { it as? JsonObject }
+                    .mapNotNull { p -> p.jInt("provider_id")?.let { id -> id to TmdbGateway.image(p.jStr("logo_path"), "w300") } }.toMap()
+            }
+        }.awaitAll().reduce { fr, us -> us + fr.filterValues { it != null } }
+        val studios = Studio.entries.map { studio ->
+            async {
+                studio.name.lowercase() to BrandTile(runCatching { tmdb.get(key, "company/${studio.companyId}", emptyMap(), language) }.getOrNull()
+                    ?.jStr("logo_path")?.let { TmdbGateway.image(it, "w300") })
+            }
+        }.awaitAll().toMap()
+        fun hex(argb: Long) = "#%06X".format(argb and 0xFFFFFF)
+        BrandTiles(
+            Platform.entries.associate { it.name.lowercase() to BrandTile(providers[it.providerId], hex(it.color), hex(it.accent)) },
+            studios,
+        )
+    }
 
     suspend fun row(
         userId: String, language: String, section: String, id: String, pageNumber: Int, profile: String?,

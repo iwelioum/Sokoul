@@ -263,6 +263,11 @@ private fun Route.catalogRoutes(services: Services) {
         call.respond(catalog.title(call.session.userId, call.language(), kind, idParam(call.parameters["id"])))
     }
 
+    get("/catalog/artwork/{kind}/{id}") {
+        val kind = kindParam(call.parameters["kind"])
+        call.respond(catalog.artwork(call.session.userId, call.language(), kind, idParam(call.parameters["id"])))
+    }
+
     get("/catalog/season/{id}/{season}") {
         val season = call.parameters["season"]?.toIntOrNull()?.takeIf { it in 0..999 } ?: throw ApiError(400, "invalid_season")
         call.respond(catalog.season(call.session.userId, call.language(), idParam(call.parameters["id"]), season))
@@ -292,6 +297,10 @@ private fun Route.catalogRoutes(services: Services) {
     }
     get("/catalog/collections/{id}") {
         call.respond(services.sagas.detail(call.session.userId, call.language(), call.parameters["id"].orEmpty()))
+    }
+    get("/catalog/brand-tiles/{kind}") {
+        val kind = kindParam(call.parameters["kind"])
+        call.respond(services.editorial.brandTiles(call.session.userId, call.language(), kind))
     }
     get("/catalog/sections/{section}") {
         call.respond(services.editorial.plan(call.parameters["section"].orEmpty(), call.language()))
